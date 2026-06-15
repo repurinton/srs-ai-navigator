@@ -4,6 +4,7 @@ import type { UseCase } from "@/data/schema";
 import { TRACK_META } from "@/data/tracks";
 import { SERVICE_LINE_COLOR } from "@/data/service-lines";
 import { priorityScore, recommendation } from "@/lib/scoring";
+import { clearanceUrl, grantUrl } from "@/lib/links";
 
 const MATURITY_COLOR: Record<string, string> = {
   "Standard of Care": "#2e9e6b",
@@ -185,16 +186,19 @@ export function UseCaseModal({
           {clearances.length > 0 && (
             <Group title="Regulatory clearances">
               <ul className="space-y-1.5">
-                {clearances.map((c, i) => (
-                  <li key={i} className="text-xs text-[var(--color-steel)]">
-                    <strong className="text-[var(--color-ink)]">{str(c.product) || str(c.company)}</strong>
-                    {c.company && c.product ? ` — ${str(c.company)}` : ""}
-                    {c.type ? ` · ${str(c.type)}` : ""}
-                    {c.number ? ` ${str(c.number)}` : ""}
-                    {c.year ? ` (${str(c.year)})` : ""}
-                    {c.url ? <> · <Ext href={str(c.url)} /></> : null}
-                  </li>
-                ))}
+                {clearances.map((c, i) => {
+                  const url = clearanceUrl(c);
+                  return (
+                    <li key={i} className="text-xs text-[var(--color-steel)]">
+                      <strong className="text-[var(--color-ink)]">{str(c.product) || str(c.company)}</strong>
+                      {c.company && c.product ? ` — ${str(c.company)}` : ""}
+                      {c.type ? ` · ${str(c.type)}` : ""}
+                      {c.number ? ` ${str(c.number)}` : ""}
+                      {c.year ? ` (${str(c.year)})` : ""}
+                      {url ? <> · <Ext href={url} /></> : null}
+                    </li>
+                  );
+                })}
               </ul>
             </Group>
           )}
@@ -203,14 +207,17 @@ export function UseCaseModal({
           {grants.length > 0 && (
             <Group title="Federal grants">
               <ul className="space-y-1.5">
-                {grants.map((g, i) => (
-                  <li key={i} className="text-xs text-[var(--color-steel)]">
-                    {g.agency ? <strong className="text-[var(--color-ink)]">{str(g.agency)}</strong> : null}
-                    {g.title ? ` — ${str(g.title)}` : ""}
-                    {g.id ? ` (${str(g.id)})` : g.program ? ` (${str(g.program)})` : ""}
-                    {g.url ? <> · <Ext href={str(g.url)} /></> : null}
-                  </li>
-                ))}
+                {grants.map((g, i) => {
+                  const url = grantUrl(g);
+                  return (
+                    <li key={i} className="text-xs text-[var(--color-steel)]">
+                      {g.agency ? <strong className="text-[var(--color-ink)]">{str(g.agency)}</strong> : null}
+                      {g.title ? ` — ${str(g.title)}` : ""}
+                      {g.id ? ` (${str(g.id)})` : g.program ? ` (${str(g.program)})` : ""}
+                      {url ? <> · <Ext href={url} /></> : null}
+                    </li>
+                  );
+                })}
               </ul>
             </Group>
           )}
