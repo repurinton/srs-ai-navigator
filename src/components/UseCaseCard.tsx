@@ -14,9 +14,11 @@ const MATURITY_COLOR: Record<string, string> = {
 export function UseCaseCard({
   uc,
   lens,
+  onOpen,
 }: {
   uc: UseCase;
   lens: "service-line" | "track";
+  onOpen?: (uc: UseCase) => void;
 }) {
   const accent =
     lens === "track" && uc.track
@@ -33,8 +35,17 @@ export function UseCaseCard({
 
   return (
     <article
-      className="group flex flex-col rounded-[var(--radius-card)] border border-[var(--color-line)] bg-white p-4 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-lift)]"
+      className="group flex cursor-pointer flex-col rounded-[var(--radius-card)] border border-[var(--color-line)] bg-white p-4 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-lift)]"
       style={{ borderTop: `3px solid ${accent}` }}
+      onClick={() => onOpen?.(uc)}
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (onOpen && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onOpen(uc);
+        }
+      }}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <span

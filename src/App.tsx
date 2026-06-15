@@ -6,6 +6,7 @@ import { TRACK_META } from "@/data/tracks";
 import { SERVICE_LINE_COLOR, SERVICE_LINE_ICON } from "@/data/service-lines";
 import { UseCaseCard } from "@/components/UseCaseCard";
 import { RadarView } from "@/components/RadarView";
+import { UseCaseModal } from "@/components/UseCaseModal";
 import { Home } from "@/components/Home";
 import { Header } from "@/components/Header";
 import type { UseCase } from "@/data/schema";
@@ -24,7 +25,7 @@ export default function App() {
   const [lens, setLens] = useState<Lens>("service-line");
   const [filter, setFilter] = useState<string>("all");
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<UseCase | null>(null);
+  const [modalUc, setModalUc] = useState<UseCase | null>(null);
 
   function switchLens(next: Lens) {
     setLens(next);
@@ -156,7 +157,7 @@ export default function App() {
           <>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
               {filtered.map((uc) => (
-                <UseCaseCard key={uc.id} uc={uc} lens={lens} />
+                <UseCaseCard key={uc.id} uc={uc} lens={lens} onOpen={setModalUc} />
               ))}
             </div>
             {filtered.length === 0 && (
@@ -168,22 +169,12 @@ export default function App() {
         )}
 
         {/* Radar */}
-        {view === "radar" && (
-          <>
-            <RadarView ucs={filtered} onSelect={setSelected} />
-            {selected && (
-              <div className="mx-auto mt-4 max-w-md">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-steel)]">
-                  Selected use case
-                </p>
-                <UseCaseCard uc={selected} lens={lens} />
-              </div>
-            )}
-          </>
-        )}
+        {view === "radar" && <RadarView ucs={filtered} onSelect={setModalUc} />}
         </>
         )}
       </main>
+
+      <UseCaseModal uc={modalUc} lens={lens} onClose={() => setModalUc(null)} />
 
       <footer className="border-t border-[var(--color-line)] bg-white px-5 py-4 text-center text-xs text-[var(--color-steel)]">
         SRS 2026 — Robotic Surgery &amp; Surgical AI Navigator · Society of Robotic
