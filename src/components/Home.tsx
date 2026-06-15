@@ -4,6 +4,7 @@ import { useCases } from "@/data/use-cases";
 import { SERVICE_LINES, TRACKS } from "@/data/schema";
 import { SERVICE_LINE_COLOR, SERVICE_LINE_ICON } from "@/data/service-lines";
 import { TRACK_META } from "@/data/tracks";
+import { priorityScore, recommendation } from "@/lib/scoring";
 import {
   IMPACT_PERSPECTIVES,
   MATURITY_SPECTRUM,
@@ -29,6 +30,48 @@ export function Home({
     for (const u of useCases) if (u.maturity in maturity) maturity[u.maturity]++;
     return { total, fda, maturity };
   }, []);
+
+  const analytics = useMemo(() => {
+    const total = useCases.length;
+
+    // Adoption plays (from the scoring model)
+    const plays: Record<string, number> = { "Adopt Now": 0, "Pilot & Scale": 0, "Watch & Partner": 0 };
+    for (const u of useCases) plays[recommendation(priorityScore(u)).label]++;
+
+    // Competitive landscape — top deploying systems
+    const systemCounts: Record<string, number> = {};
+    for (const u of useCases) for (const s of u.deployedAt) systemCounts[s] = (systemCounts[s] ?? 0) + 1;
+    const topSystems = Object.entries(systemCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const withDeployments = useCases.filter((u) => u.deployedAt.length > 0).length;
+
+    // Investment profile — tier distribution
+    const tierCounts: Record<string, number> = {};
+    for (const t of INVESTMENT_LADDER) tierCounts[t.key] = 0;
+    for (const u of useCases) if (u.investmentTier && u.investmentTier in tierCounts) tierCounts[u.investmentTier]++;
+
+    // Autonomy distribution (bucketed to the strategic buckets)
+    const autonomy: Record<string, number> = { "Decision Support": 0, Augmentation: 0, Autonomous: 0 };
+    for (const u of useCases) {
+      const a = (u.autonomyLevel ?? "").toLowerCase();
+      if (a.includes("autonom") || a.includes("automation")) autonomy["Autonomous"]++;
+      else if (a.includes("augment")) autonomy["Augmentation"]++;
+      else autonomy["Decision Support"]++;
+    }
+
+    // Patient-proximity distribution (bucketed to the radar's poles)
+    const proximity: Record<string, number> = { Internal: 0, "Clinical Operations": 0, External: 0 };
+    for (const u of useCases) {
+      const p = (u.patientProximity ?? "").toLowerCase();
+      if (p.includes("direct") || p.includes("patient-facing") || p.includes("consumer")) proximity["External"]++;
+      else if (p.includes("clinical operations")) proximity["Clinical Operations"]++;
+      else proximity["Internal"]++;
+    }
+
+    return { total, plays, topSystems, withDeployments, tierCounts, autonomy, proximity };
+  }, []);
+
+  const socBp = stats.maturity["Standard of Care"] + stats.maturity["Best Practice"];
+  const emerging = stats.maturity["Emerging Research"];
 
   return (
     <div className="space-y-12 pb-8">
@@ -260,6 +303,102 @@ export function Home({
         </div>
       </Section>
 
+      {/* ── Strategic implications banner ────────────────────────── */}
+      <section
+        className="rounded-[var(--radius-card)] px-7 py-7 text-white sm:px-9"
+        style={{ background: "linear-gradient(135deg, var(--color-ink) 0%, var(--color-navy) 70%, var(--color-navy-600) 130%)" }}
+      >
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+          What it means
+        </p>
+        <h2 className="mt-1 text-xl font-bold">Strategic implications</h2>
+        <p className="mt-1.5 mb-5 max-w-2xl text-sm text-white/65">
+          Where the {analytics.total} use cases land when scored for readiness — and how to play each tier.
+        </p>
+        <div className="grid gap-6 sm:grid-cols-3">
+          {[
+            { key: "Adopt Now", color: "#5fd3a0", count: analytics.plays["Adopt Now"], copy: `Established console platforms, robotic joint replacement, and FDA-cleared surgical imaging AI are proven and accessible. ${socBp} use cases are already Standard of Care or Best Practice — immediate value with minimal clinical risk.` },
+            { key: "Pilot & Scale", color: "#f6b860", count: analytics.plays["Pilot & Scale"], copy: "Surgical AI — phase recognition, critical-view detection, skills assessment — plus digital-surgery data platforms and telesurgery are maturing fast. Prioritize pilots that build the data and capability for the next wave." },
+            { key: "Watch & Partner", color: "#a99bff", count: analytics.plays["Watch & Partner"], copy: `Higher levels of autonomy (LASR 3+), humanoids, and autonomous soft-tissue tasks remain investigational. Engage through academic partnerships and vendor advisory boards. ${emerging} Emerging Research use cases frame the long-term horizon.` },
+          ].map((p) => (
+            <div key={p.key}>
+              <div className="mb-1.5 flex items-baseline gap-2">
+                <span className="text-2xl font-bold" style={{ color: p.color }}>{p.count}</span>
+                <span className="text-sm font-bold" style={{ color: p.color }}>{p.key}</span>
+              </div>
+              <p className="text-[13px] leading-relaxed text-white/80">{p.copy}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Landscape analytics ──────────────────────────────────── */}
+      <Section
+        kicker="The landscape in numbers"
+        title="Competitive landscape & investment profile"
+        intro="A read on where these use cases are already running, what they cost to adopt, and how they distribute across autonomy and patient proximity."
+      >
+        <div className="grid gap-3 lg:grid-cols-2">
+          <Panel
+            title="Competitive landscape"
+            subtitle={`${analytics.withDeployments} of ${analytics.total} use cases have verified deployments at peer health systems`}
+          >
+            <div className="space-y-2.5">
+              {analytics.topSystems.map(([name, count]) => (
+                <DistBar key={name} label={name} count={`${count} use cases`} pct={(count / analytics.total) * 100} color="var(--color-teal)" />
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Investment profile" subtitle="Not “how much does AI cost” but “how much are we already paying for?”">
+            <div className="space-y-2.5">
+              {INVESTMENT_LADDER.map((t) => {
+                const count = analytics.tierCounts[t.key] ?? 0;
+                return (
+                  <DistBar
+                    key={t.key}
+                    label={t.key}
+                    count={`${count} · ${Math.round((count / analytics.total) * 100)}%`}
+                    pct={(count / analytics.total) * 100}
+                    color={t.color}
+                  />
+                );
+              })}
+            </div>
+          </Panel>
+
+          <Panel title="By autonomy level" subtitle="How independently the AI acts">
+            <div className="space-y-2.5">
+              {([
+                ["Decision Support", "#6C5B7B"],
+                ["Augmentation", "#0078C8"],
+                ["Autonomous", "#00A4B3"],
+              ] as const).map(([k, color]) => {
+                const count = analytics.autonomy[k] ?? 0;
+                return (
+                  <DistBar key={k} label={k} count={`${count} · ${Math.round((count / analytics.total) * 100)}%`} pct={(count / analytics.total) * 100} color={color} />
+                );
+              })}
+            </div>
+          </Panel>
+
+          <Panel title="By patient proximity" subtitle="How close to the patient — the radar's horizontal axis">
+            <div className="space-y-2.5">
+              {([
+                ["Internal", "#3a5a7d"],
+                ["Clinical Operations", "#0078C8"],
+                ["External", "#00A6A6"],
+              ] as const).map(([k, color]) => {
+                const count = analytics.proximity[k] ?? 0;
+                return (
+                  <DistBar key={k} label={k} count={`${count} · ${Math.round((count / analytics.total) * 100)}%`} pct={(count / analytics.total) * 100} color={color} />
+                );
+              })}
+            </div>
+          </Panel>
+        </div>
+      </Section>
+
       {/* ── Two ways to navigate ─────────────────────────────────── */}
       <Section
         kicker="Two ways in"
@@ -346,6 +485,30 @@ function Panel({
       <h3 className="text-sm font-bold text-[var(--color-ink)]">{title}</h3>
       <p className="mb-3 text-[11px] text-[var(--color-steel)]">{subtitle}</p>
       {children}
+    </div>
+  );
+}
+
+function DistBar({
+  label,
+  count,
+  pct,
+  color,
+}: {
+  label: string;
+  count: string;
+  pct: number;
+  color: string;
+}) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-[12px] font-semibold text-[var(--color-ink)]">
+        <span>{label}</span>
+        <span className="text-[var(--color-steel)]">{count}</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-cloud)]">
+        <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 1.5)}%`, background: color }} />
+      </div>
     </div>
   );
 }
