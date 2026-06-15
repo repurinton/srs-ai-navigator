@@ -189,22 +189,31 @@ export function Home({
         intro="The field's shared language for machine independence — from a tool the surgeon fully controls to systems that act on their own. Today's clinical robots live at Levels 1–2; the frontier sessions look ahead."
       >
         <div className="rounded-[var(--radius-card)] border border-[var(--color-line)] bg-white p-5 shadow-[var(--shadow-card)]">
-          <div className="flex items-end gap-2 overflow-x-auto pb-2">
+          <div className="mb-4 flex items-center gap-3 text-[10px] font-bold uppercase tracking-wide text-[var(--color-steel)]">
+            <span className="shrink-0">Less autonomy</span>
+            <div
+              className="h-1.5 flex-1 rounded-full"
+              style={{ background: "linear-gradient(to right, var(--color-teal), var(--color-track-humanoids))" }}
+            />
+            <span className="shrink-0">More autonomy</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {AUTONOMY_LASR.map((a, i) => {
               const t = i / (AUTONOMY_LASR.length - 1);
               const color = `color-mix(in srgb, var(--color-teal) ${100 - t * 70}%, var(--color-track-humanoids) ${t * 70}%)`;
               return (
-                <div key={a.level} className="flex min-w-[120px] flex-1 flex-col">
+                <div
+                  key={a.level}
+                  className="flex flex-col items-center rounded-lg border border-[var(--color-line)] bg-[var(--color-mist)] p-3 text-center"
+                >
                   <div
-                    className="mb-2 flex items-end justify-center rounded-t-md pb-1 text-sm font-bold text-white"
-                    style={{ height: `${40 + i * 22}px`, background: color }}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white"
+                    style={{ background: color }}
                   >
                     {a.level}
                   </div>
-                  <h4 className="text-[12px] font-bold leading-tight text-[var(--color-ink)]">
-                    {a.label}
-                  </h4>
-                  <p className="mt-0.5 text-[11px] leading-snug text-[var(--color-steel)]">{a.def}</p>
+                  <h4 className="mt-2 text-[12px] font-bold leading-tight text-[var(--color-ink)]">{a.label}</h4>
+                  <p className="mt-1 text-[11px] leading-snug text-[var(--color-steel)]">{a.def}</p>
                 </div>
               );
             })}
@@ -229,26 +238,89 @@ export function Home({
         title="Proximity, cost, and evidence"
         intro="Beyond impact and maturity, three axes shape where a use case fits and how fast it can move."
       >
-        <div className="grid gap-3 lg:grid-cols-3">
-          {/* Proximity */}
+        <div className="grid gap-3">
+          {/* Proximity — a spectrum that mirrors the radar's X-axis */}
           <Panel title="Patient proximity" subtitle="How close to the patient — the Radar's horizontal axis">
-            <div className="mb-3 flex h-1.5 overflow-hidden rounded-full">
-              {PROXIMITY_SCALE.map((p) => (
-                <div key={p.key} className="flex-1" style={{ background: p.color }} />
+            <div className="relative mb-5 mt-6">
+              <div
+                className="h-2.5 rounded-full"
+                style={{ background: "linear-gradient(to right, #3a5a7d, #0078C8, #00A6A6)" }}
+              />
+              <span className="absolute -top-5 left-0 text-[10px] font-bold uppercase tracking-wide text-[var(--color-steel)]">
+                ← Internal
+              </span>
+              <span className="absolute -top-5 right-0 text-[10px] font-bold uppercase tracking-wide text-[var(--color-steel)]">
+                External →
+              </span>
+              {PROXIMITY_SCALE.map((p, i) => (
+                <span
+                  key={p.key}
+                  className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border-2 border-white"
+                  style={{ left: `calc(${[6, 50, 94][i]}% - 8px)`, background: p.color }}
+                />
               ))}
             </div>
-            <Ladder items={PROXIMITY_SCALE} />
+            <div className="grid gap-3 sm:grid-cols-3">
+              {PROXIMITY_SCALE.map((p) => (
+                <div key={p.key}>
+                  <div className="flex items-center gap-1.5 text-[12px] font-bold text-[var(--color-ink)]">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: p.color }} />
+                    {p.key}
+                  </div>
+                  <p className="mt-0.5 text-[11px] leading-snug text-[var(--color-steel)]">{p.def}</p>
+                </div>
+              ))}
+            </div>
           </Panel>
 
-          {/* Investment */}
-          <Panel title="Investment tier" subtitle="The cost of getting it into the OR">
-            <Ladder items={INVESTMENT_LADDER} />
-          </Panel>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {/* Investment — an ascending cost ladder */}
+            <Panel title="Investment tier" subtitle="The cost of getting it into the OR">
+              <div className="flex items-end gap-3" style={{ height: "118px" }}>
+                {INVESTMENT_LADDER.map((t, i) => (
+                  <div key={t.key} className="flex flex-1 flex-col items-center justify-end">
+                    <span className="mb-1.5 text-[11px] font-bold text-[var(--color-ink)]">
+                      {["Included", "$50K–500K", "$500K–5M", "$5M+"][i]}
+                    </span>
+                    <div className="w-full rounded-t-md" style={{ height: `${28 + i * 26}px`, background: t.color }} />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 grid grid-cols-4 gap-2 border-t border-[var(--color-line)] pt-2 text-center">
+                {INVESTMENT_LADDER.map((t) => (
+                  <span key={t.key} className="text-[10px] font-semibold leading-tight text-[var(--color-steel)]">
+                    {t.key}
+                  </span>
+                ))}
+              </div>
+            </Panel>
 
-          {/* Evidence */}
-          <Panel title="Evidence strength" subtitle="The rigor behind the claim">
-            <Ladder items={EVIDENCE_SCALE} />
-          </Panel>
+            {/* Evidence — a signal-strength meter */}
+            <Panel title="Evidence strength" subtitle="The rigor behind the claim">
+              <div className="space-y-2.5">
+                {EVIDENCE_SCALE.map((e, i) => {
+                  const filled = EVIDENCE_SCALE.length - i;
+                  return (
+                    <div key={e.key} className="flex items-center gap-3">
+                      <div className="flex items-end gap-0.5" style={{ height: "18px" }}>
+                        {EVIDENCE_SCALE.map((_, b) => (
+                          <span
+                            key={b}
+                            className="w-1.5 rounded-sm"
+                            style={{ height: `${6 + b * 3}px`, background: b < filled ? e.color : "var(--color-cloud)" }}
+                          />
+                        ))}
+                      </div>
+                      <div className="text-[11px] leading-snug">
+                        <strong className="text-[var(--color-ink)]">{e.key}</strong>
+                        <span className="text-[var(--color-steel)]"> — {e.def}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Panel>
+          </div>
         </div>
       </Section>
 
@@ -509,22 +581,6 @@ function DistBar({
       <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-cloud)]">
         <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 1.5)}%`, background: color }} />
       </div>
-    </div>
-  );
-}
-
-function Ladder({ items }: { items: { key: string; color: string; def: string }[] }) {
-  return (
-    <div className="space-y-2">
-      {items.map((it) => (
-        <div key={it.key} className="flex items-start gap-2.5">
-          <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: it.color }} />
-          <div>
-            <span className="text-[12px] font-bold text-[var(--color-ink)]">{it.key}</span>
-            <span className="text-[11px] text-[var(--color-steel)]"> — {it.def}</span>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
