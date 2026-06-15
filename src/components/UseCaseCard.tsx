@@ -1,34 +1,49 @@
 import type { ReactNode } from "react";
 import type { UseCase } from "@/data/schema";
 import { TRACK_META } from "@/data/tracks";
+import { SERVICE_LINE_COLOR } from "@/data/service-lines";
 import { priorityScore, recommendation } from "@/lib/scoring";
 
-const MATURITY_COLOR: Record<UseCase["maturity"], string> = {
-  "Clinical Standard": "#2e9e6b",
-  Established: "#2bb3ff",
-  Emerging: "#f2a33c",
-  Investigational: "#7c5cff",
+const MATURITY_COLOR: Record<string, string> = {
+  "Standard of Care": "#2e9e6b",
+  "Best Practice": "#2bb3ff",
+  Frontier: "#f2a33c",
+  "Emerging Research": "#7c5cff",
 };
 
-export function UseCaseCard({ uc }: { uc: UseCase }) {
-  const trackColor = `var(${TRACK_META[uc.track].colorVar})`;
+export function UseCaseCard({
+  uc,
+  lens,
+}: {
+  uc: UseCase;
+  lens: "service-line" | "track";
+}) {
+  const accent =
+    lens === "track" && uc.track
+      ? `var(${TRACK_META[uc.track].colorVar})`
+      : (SERVICE_LINE_COLOR[uc.serviceLines[0] ?? "Cross-Cutting"] ??
+        "var(--color-steel)");
+
+  const badge =
+    lens === "track" && uc.track
+      ? TRACK_META[uc.track].label
+      : (uc.serviceLines[0] ?? "Cross-Cutting");
+
   const rec = recommendation(priorityScore(uc));
 
   return (
     <article
       className="group flex flex-col rounded-[var(--radius-card)] border border-[var(--color-line)] bg-white p-4 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-lift)]"
-      style={{ borderTop: `3px solid ${trackColor}` }}
+      style={{ borderTop: `3px solid ${accent}` }}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <span
           className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
-          style={{ background: trackColor }}
+          style={{ background: accent }}
         >
-          {TRACK_META[uc.track].label}
+          {badge}
         </span>
-        <span className="font-mono text-[11px] text-[var(--color-steel)]">
-          {uc.id}
-        </span>
+        <span className="font-mono text-[11px] text-[var(--color-steel)]">{uc.id}</span>
       </div>
 
       <h3 className="mb-1.5 text-[15px] font-bold leading-snug text-[var(--color-ink)]">
@@ -39,17 +54,17 @@ export function UseCaseCard({ uc }: { uc: UseCase }) {
       </p>
 
       <div className="mb-3 flex flex-wrap gap-1.5">
-        <Tag color={MATURITY_COLOR[uc.maturity]}>{uc.maturity}</Tag>
+        <Tag color={MATURITY_COLOR[uc.maturity] ?? "var(--color-steel)"}>{uc.maturity}</Tag>
         {uc.fdaCleared && <Tag color="#2e9e6b">FDA Cleared</Tag>}
-        <Tag color="var(--color-steel)">{uc.autonomyLevel}</Tag>
+        {uc.aiType && <Tag color="var(--color-steel)">{uc.aiType}</Tag>}
       </div>
 
       <div className="mt-auto flex items-center justify-between border-t border-[var(--color-line)] pt-2.5">
-        <span className="text-[11px] text-[var(--color-steel)]">
-          {uc.keyPlatforms[0] ?? uc.keyVendors[0] ?? "—"}
+        <span className="truncate text-[11px] text-[var(--color-steel)]">
+          {uc.keyPlatforms?.[0] ?? uc.keyVendors[0] ?? "—"}
         </span>
         <span
-          className="rounded px-2 py-0.5 text-[11px] font-bold"
+          className="shrink-0 rounded px-2 py-0.5 text-[11px] font-bold"
           style={{ color: rec.color, background: `${rec.color}1a` }}
         >
           {rec.label}
