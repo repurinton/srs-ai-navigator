@@ -59,6 +59,12 @@ entries from deployment lists. The generated output is
 
 ## Status
 
-Dual-lens Explorer (service lines + robotic tracks), search, and adoption-readiness
-scoring over the full 272-case dataset. Next: additional views (Roadmap,
-landscape, Methodology), a use-case detail modal, and shareable filtered URLs.
+- **Overview** — a graphical landing page framing the key concepts: the five
+  impact perspectives, the maturity spectrum, the Levels of Autonomy in Surgical
+  Robotics (0–5), patient proximity, investment/evidence ladders, and the
+  adoption-readiness scoring model (`src/data/concepts.ts`, `src/components/Home.tsx`).
+- **Use Case Explorer** — dual-lens (service lines + robotic tracks), search.
+- **Radar View** — Autonomy vs. Patient Proximity, ported from the original.
+
+Over the full 272-case dataset. Next: Roadmap view, a use-case detail modal, and
+shareable filtered URLs.
