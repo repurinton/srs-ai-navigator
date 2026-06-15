@@ -6,14 +6,21 @@ import { TRACK_META } from "@/data/tracks";
 import { SERVICE_LINE_COLOR, SERVICE_LINE_ICON } from "@/data/service-lines";
 import { UseCaseCard } from "@/components/UseCaseCard";
 import { RadarView } from "@/components/RadarView";
+import { Home } from "@/components/Home";
 import { Header } from "@/components/Header";
 import type { UseCase } from "@/data/schema";
 
 type Lens = "service-line" | "track";
-type View = "explorer" | "radar";
+type View = "home" | "explorer" | "radar";
+
+const VIEW_LABELS: Record<View, string> = {
+  home: "Overview",
+  explorer: "Use Case Explorer",
+  radar: "Radar View",
+};
 
 export default function App() {
-  const [view, setView] = useState<View>("explorer");
+  const [view, setView] = useState<View>("home");
   const [lens, setLens] = useState<Lens>("service-line");
   const [filter, setFilter] = useState<string>("all");
   const [query, setQuery] = useState("");
@@ -22,6 +29,16 @@ export default function App() {
   function switchLens(next: Lens) {
     setLens(next);
     setFilter("all");
+  }
+
+  function navigateFromHome(
+    nextView: "explorer" | "radar",
+    nextLens?: Lens,
+    nextFilter?: string,
+  ) {
+    if (nextLens) setLens(nextLens);
+    setFilter(nextFilter ?? "all");
+    setView(nextView);
   }
 
   const filtered = useMemo(() => {
@@ -69,7 +86,7 @@ export default function App() {
       <main className="mx-auto w-full max-w-[1280px] flex-1 px-5 py-6">
         {/* View navigation */}
         <div className="mb-4 flex gap-5 border-b border-[var(--color-line)]">
-          {(["explorer", "radar"] as const).map((v) => (
+          {(["home", "explorer", "radar"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -79,12 +96,16 @@ export default function App() {
                 color: view === v ? "var(--color-navy)" : "var(--color-steel)",
               }}
             >
-              {v === "explorer" ? "Use Case Explorer" : "Radar View"}
+              {VIEW_LABELS[v]}
             </button>
           ))}
         </div>
 
-        {/* Lens toggle */}
+        {view === "home" && <Home onNavigate={navigateFromHome} />}
+
+        {/* Lens toggle (Explorer/Radar only) */}
+        {view !== "home" && (
+        <>
         <div className="mb-4 inline-flex rounded-lg border border-[var(--color-line)] bg-white p-1">
           <LensButton active={lens === "service-line"} onClick={() => switchLens("service-line")}>
             Service Lines
@@ -159,6 +180,8 @@ export default function App() {
               </div>
             )}
           </>
+        )}
+        </>
         )}
       </main>
 
