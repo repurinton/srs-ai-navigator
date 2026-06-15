@@ -5,14 +5,19 @@ import { SERVICE_LINES, TRACKS } from "@/data/schema";
 import { TRACK_META } from "@/data/tracks";
 import { SERVICE_LINE_COLOR, SERVICE_LINE_ICON } from "@/data/service-lines";
 import { UseCaseCard } from "@/components/UseCaseCard";
+import { RadarView } from "@/components/RadarView";
 import { Header } from "@/components/Header";
+import type { UseCase } from "@/data/schema";
 
 type Lens = "service-line" | "track";
+type View = "explorer" | "radar";
 
 export default function App() {
+  const [view, setView] = useState<View>("explorer");
   const [lens, setLens] = useState<Lens>("service-line");
   const [filter, setFilter] = useState<string>("all");
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<UseCase | null>(null);
 
   function switchLens(next: Lens) {
     setLens(next);
@@ -62,6 +67,23 @@ export default function App() {
       <Header />
 
       <main className="mx-auto w-full max-w-[1280px] flex-1 px-5 py-6">
+        {/* View navigation */}
+        <div className="mb-4 flex gap-5 border-b border-[var(--color-line)]">
+          {(["explorer", "radar"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className="-mb-px border-b-2 px-1 pb-2.5 text-[13px] font-bold uppercase tracking-wide transition-colors"
+              style={{
+                borderColor: view === v ? "var(--color-teal)" : "transparent",
+                color: view === v ? "var(--color-navy)" : "var(--color-steel)",
+              }}
+            >
+              {v === "explorer" ? "Use Case Explorer" : "Radar View"}
+            </button>
+          ))}
+        </div>
+
         {/* Lens toggle */}
         <div className="mb-4 inline-flex rounded-lg border border-[var(--color-line)] bg-white p-1">
           <LensButton active={lens === "service-line"} onClick={() => switchLens("service-line")}>
@@ -108,17 +130,35 @@ export default function App() {
           </p>
         )}
 
-        {/* Cards */}
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
-          {filtered.map((uc) => (
-            <UseCaseCard key={uc.id} uc={uc} lens={lens} />
-          ))}
-        </div>
+        {/* Explorer: card grid */}
+        {view === "explorer" && (
+          <>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
+              {filtered.map((uc) => (
+                <UseCaseCard key={uc.id} uc={uc} lens={lens} />
+              ))}
+            </div>
+            {filtered.length === 0 && (
+              <p className="py-16 text-center text-[var(--color-steel)]">
+                No use cases match your filters.
+              </p>
+            )}
+          </>
+        )}
 
-        {filtered.length === 0 && (
-          <p className="py-16 text-center text-[var(--color-steel)]">
-            No use cases match your filters.
-          </p>
+        {/* Radar */}
+        {view === "radar" && (
+          <>
+            <RadarView ucs={filtered} onSelect={setSelected} />
+            {selected && (
+              <div className="mx-auto mt-4 max-w-md">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-steel)]">
+                  Selected use case
+                </p>
+                <UseCaseCard uc={selected} lens={lens} />
+              </div>
+            )}
+          </>
         )}
       </main>
 
