@@ -1,17 +1,31 @@
 import { z } from "zod";
 
 /**
- * SRS 2026 data model.
+ * SRS 2026 data model — a superset that preserves the original National Service
+ * Line AI Navigator taxonomy (de-branded; `platformAlignment` removed) and adds
+ * an optional robotic-surgery lens so use cases can be navigated by either
+ * service line OR meeting track ("parallel lenses").
  *
- * Reworked from the National Service Line AI Navigator's service-line-centric
- * schema into a robotic-surgery-centric one organized around the meeting's
- * tracks (Urology, Telesurgery, Surgical AI, Digital Surgery, Orthopedics,
- * Humanoids) and surgical specialties. The satellite data files from the
- * original (vendors, sources, deployments, investment tiers) remain joinable
- * by `id`.
+ * Curated free-text fields (autonomyLevel, patientProximity, evidenceTier,
+ * aiType, impacts) are kept lenient (z.string()) to preserve the original
+ * curation without flattening its nuance. Fields the scoring model depends on
+ * (maturity, complexity, investmentTier) use strict enums.
  */
 
-// Meeting tracks — the primary lens of the navigator.
+// ── Lens A: service lines (canonical, normalized from the original data) ──────
+export const SERVICE_LINES = [
+  "Cancer",
+  "Heart, Lung & Vascular",
+  "Orthopedics",
+  "Neurosciences",
+  "Gastrointestinal",
+  "Women’s Health",
+  "Cross-Cutting",
+] as const;
+export const ServiceLineSchema = z.enum(SERVICE_LINES);
+export type ServiceLine = z.infer<typeof ServiceLineSchema>;
+
+// ── Lens B: robotic-surgery meeting tracks ───────────────────────────────────
 export const TRACKS = [
   "Robotic Platforms",
   "Urology",
@@ -24,100 +38,89 @@ export const TRACKS = [
 export const TrackSchema = z.enum(TRACKS);
 export type Track = z.infer<typeof TrackSchema>;
 
-// Surgical specialties a use case applies to (a case can span several).
-export const SPECIALTIES = [
-  "Urology",
-  "Gynecology",
-  "General Surgery",
-  "Colorectal",
-  "Thoracic",
-  "Cardiac",
-  "Head & Neck / ENT",
-  "Orthopedics",
-  "Neurosurgery / Spine",
-  "Multispecialty",
-  "Non-clinical",
-] as const;
-export const SpecialtySchema = z.enum(SPECIALTIES);
-
-// Levels of Autonomy in Surgical Robotics (Yang et al., Sci. Robotics 2017).
-export const AUTONOMY_LEVELS = [
-  "0 — No Autonomy",
-  "1 — Robot Assistance",
-  "2 — Task Autonomy",
-  "3 — Conditional Autonomy",
-  "4 — High Autonomy",
-  "5 — Full Autonomy",
-] as const;
-export const AutonomySchema = z.enum(AUTONOMY_LEVELS);
-
+// Strict enums (scoring depends on these) ─────────────────────────────────────
 export const MATURITY_LEVELS = [
-  "Clinical Standard",
-  "Established",
-  "Emerging",
-  "Investigational",
+  "Standard of Care",
+  "Best Practice",
+  "Frontier",
+  "Emerging Research",
 ] as const;
 export const MaturitySchema = z.enum(MATURITY_LEVELS);
-
-export const EVIDENCE_TIERS = [
-  "RCT / Meta-Analysis",
-  "Peer-Reviewed",
-  "Regulatory Cleared",
-  "Early Clinical",
-  "Preclinical / Concept",
-] as const;
-export const EvidenceSchema = z.enum(EVIDENCE_TIERS);
-
-export const SETTINGS = ["Clinical", "Non-clinical", "Both"] as const;
-export const SettingSchema = z.enum(SETTINGS);
 
 export const COMPLEXITY = ["Low", "Medium", "High", "Very High"] as const;
 export const ComplexitySchema = z.enum(COMPLEXITY);
 
 export const INVESTMENT_TIERS = [
-  "Software Add-On",
-  "Capital — Mid",
-  "Capital — Major",
-  "Program & Infrastructure",
+  "Platform-Included",
+  "Incremental SaaS",
+  "Enterprise Investment",
+  "Capital & Infrastructure",
 ] as const;
 export const InvestmentSchema = z.enum(INVESTMENT_TIERS);
 
-const RegClearanceSchema = z.object({
-  product: z.string(),
-  company: z.string(),
-  type: z.string(), // 510(k), De Novo, PMA, CE Mark, etc.
-  number: z.string().optional(),
-  year: z.number().int().optional(),
-  url: z.string().url().optional(),
-});
+export const SETTINGS = ["Clinical", "Non-clinical", "Both"] as const;
+export const SettingSchema = z.enum(SETTINGS);
 
-export const UseCaseSchema = z.object({
-  id: z.string().regex(/^[A-Z]{2,4}-\d{2,3}$/),
-  name: z.string(),
-  description: z.string(),
-  track: TrackSchema,
-  specialties: z.array(SpecialtySchema).min(1),
-  setting: SettingSchema,
-  autonomyLevel: AutonomySchema,
-  maturity: MaturitySchema,
-  evidenceTier: EvidenceSchema,
-  fdaCleared: z.boolean(),
-  keyPlatforms: z.array(z.string()),
-  keyVendors: z.array(z.string()),
-  keyMetric: z.string(),
-  source: z.string(),
-  implementationComplexity: ComplexitySchema,
-  investmentTier: InvestmentSchema,
-  regulatory: z.array(RegClearanceSchema).default([]),
-});
+// Loose object schemas for citation/clearance arrays (preserve all keys).
+const LooseRecord = z.object({}).passthrough();
+
+// Curated free-text fields may be absent or explicitly null in the source data.
+const optStr = z.string().nullish();
+
+export const UseCaseSchema = z
+  .object({
+    id: z.string().regex(/^[A-Za-z0-9-]+$/),
+    name: z.string(),
+    description: z.string(),
+
+    // Lens A — service line (present for migrated cases; optional for robotics)
+    serviceLines: z.array(ServiceLineSchema).default([]),
+    subSpecialty: optStr,
+
+    // Curated taxonomy (lenient to preserve original variants; may be null)
+    autonomyLevel: optStr,
+    patientProximity: optStr,
+    evidenceTier: optStr,
+    aiType: optStr,
+    metricsImpacted: z.array(z.string()).default([]),
+    primaryImpact: optStr,
+    secondaryImpact: optStr,
+
+    // Scoring inputs (strict)
+    maturity: MaturitySchema,
+    implementationComplexity: ComplexitySchema,
+    investmentTier: InvestmentSchema.nullable().default(null),
+
+    // Evidence / sourcing
+    fdaCleared: z.boolean().default(false),
+    keyVendors: z.array(z.string()).default([]),
+    keyMetric: optStr,
+    source: optStr,
+    federalGrants: z.array(LooseRecord).optional(),
+    fdaClearances: z.array(LooseRecord).optional(),
+    deployedAt: z.array(z.string()).default([]),
+
+    // Lens B — robotic-surgery (optional)
+    track: TrackSchema.optional(),
+    specialties: z.array(z.string()).optional(),
+    roboticsClass: z.string().optional(),
+    setting: SettingSchema.optional(),
+    surgicalAutonomyLevel: z.string().optional(),
+
+    lens: z.enum(["service-line", "robotics"]).default("service-line"),
+    keyPlatforms: z.array(z.string()).optional(),
+  })
+  .refine((uc) => uc.serviceLines.length > 0 || uc.track !== undefined, {
+    message: "Use case must belong to at least one lens (serviceLines or track)",
+  });
 
 export type UseCase = z.infer<typeof UseCaseSchema>;
 
-/** Validate the full dataset at module load; fail loudly on bad data. */
+/** Validate the full dataset; fail loudly on bad data or duplicate ids. */
 export function parseUseCases(raw: unknown[]): UseCase[] {
   const result = z.array(UseCaseSchema).safeParse(raw);
   if (!result.success) {
-    console.error("Invalid use-case data:", result.error.format());
+    console.error("Invalid use-case data:", result.error.issues.slice(0, 12));
     throw new Error("SRS 2026 use-case data failed schema validation.");
   }
   const ids = new Set<string>();

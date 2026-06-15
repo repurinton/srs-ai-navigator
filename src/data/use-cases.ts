@@ -1,12 +1,12 @@
 import { parseUseCases, type UseCase } from "./schema";
+import { serviceLineUseCasesRaw } from "./service-line-use-cases.generated";
 
 /**
- * Seed dataset for SRS 2026 — a representative slice across every track to
- * validate the schema and UI end-to-end. This will be expanded into the full
- * library (and the relevant robotic-surgery entries migrated from the original
- * National Service Line AI Navigator dataset).
+ * Hand-authored robotic-surgery use cases (the meeting-track lens), written from
+ * public sources. Authored in a robotics-native shape and transformed below into
+ * the canonical schema so they sit alongside the migrated service-line dataset.
  */
-const raw: unknown[] = [
+const roboticsNative: Array<Record<string, unknown>> = [
   // ── Robotic Platforms ─────────────────────────────────────────────
   {
     id: "PLT-01",
@@ -531,4 +531,99 @@ const raw: unknown[] = [
   },
 ];
 
-export const useCases: UseCase[] = parseUseCases(raw);
+// ── Transform robotics-native entries into the canonical (de-branded) schema ──
+const MATURITY_MAP: Record<string, string> = {
+  "Clinical Standard": "Standard of Care",
+  Established: "Best Practice",
+  Emerging: "Frontier",
+  Investigational: "Emerging Research",
+};
+const INVESTMENT_MAP: Record<string, string> = {
+  "Software Add-On": "Incremental SaaS",
+  "Capital — Mid": "Enterprise Investment",
+  "Capital — Major": "Capital & Infrastructure",
+  "Program & Infrastructure": "Capital & Infrastructure",
+};
+// Levels of Autonomy in Surgical Robotics → original autonomy buckets
+const AUTONOMY_MAP: Record<string, string> = {
+  "0 — No Autonomy": "Decision Support",
+  "1 — Robot Assistance": "Augmentation",
+  "2 — Task Autonomy": "Augmentation",
+  "3 — Conditional Autonomy": "Autonomous",
+  "4 — High Autonomy": "Autonomous",
+  "5 — Full Autonomy": "Autonomous",
+};
+// Best-fit service-line tag(s) for robotics cases (default Cross-Cutting)
+const SERVICE_LINE_BY_ID: Record<string, string[]> = {
+  "PLT-03": ["Heart, Lung & Vascular"],
+  "PLT-04": ["Cancer"],
+  "PLT-05": ["Heart, Lung & Vascular"],
+  "URO-01": ["Cancer"],
+  "URO-02": ["Cancer"],
+  "URO-03": ["Cancer"],
+  "ORT-01": ["Orthopedics"],
+  "ORT-02": ["Orthopedics"],
+  "ORT-03": ["Orthopedics", "Neurosciences"],
+  "DIG-02": ["Orthopedics"],
+};
+const AI_TYPE_BY_ID: Record<string, string> = {
+  "SAI-01": "Computer Vision",
+  "SAI-02": "Computer Vision",
+  "SAI-03": "Computer Vision",
+  "SAI-04": "Generative AI",
+  "SAI-05": "Robotics",
+  "DIG-01": "Computer Vision",
+  "DIG-02": "Simulation / Digital Twin",
+};
+const PROXIMITY_BY_TRACK: Record<string, string> = {
+  Humanoids: "Back Office",
+  "Surgical AI": "Clinical Operations",
+  "Digital Surgery": "Clinical Operations",
+};
+
+function s(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+function arr(v: unknown): string[] {
+  return Array.isArray(v) ? (v as string[]) : [];
+}
+
+const roboticsCanonical: unknown[] = roboticsNative.map((uc) => {
+  const id = s(uc.id); // native id (e.g. "ORT-01") — used for lookups
+  const track = s(uc.track);
+  return {
+    id: `RS-${id}`, // namespaced to avoid collisions with the migrated dataset
+    name: s(uc.name),
+    description: s(uc.description),
+    serviceLines: SERVICE_LINE_BY_ID[id] ?? ["Cross-Cutting"],
+    subSpecialty: arr(uc.specialties)[0],
+    autonomyLevel: AUTONOMY_MAP[s(uc.autonomyLevel)] ?? "Augmentation",
+    surgicalAutonomyLevel: s(uc.autonomyLevel),
+    patientProximity: PROXIMITY_BY_TRACK[track] ?? "Direct Care",
+    evidenceTier: s(uc.evidenceTier),
+    aiType: AI_TYPE_BY_ID[id] ?? "Robotics",
+    metricsImpacted: ["Quality", "Growth"],
+    primaryImpact: "Quality",
+    secondaryImpact: "Growth",
+    maturity: MATURITY_MAP[s(uc.maturity)] ?? "Frontier",
+    implementationComplexity: s(uc.implementationComplexity) || "High",
+    investmentTier: INVESTMENT_MAP[s(uc.investmentTier)] ?? "Incremental SaaS",
+    fdaCleared: Boolean(uc.fdaCleared),
+    keyVendors: arr(uc.keyVendors),
+    keyPlatforms: arr(uc.keyPlatforms),
+    keyMetric: s(uc.keyMetric),
+    source: s(uc.source),
+    fdaClearances: Array.isArray(uc.regulatory) ? uc.regulatory : [],
+    deployedAt: [],
+    track,
+    specialties: arr(uc.specialties),
+    setting: s(uc.setting) || undefined,
+    lens: "robotics",
+  };
+});
+
+export const useCases: UseCase[] = parseUseCases([
+  ...serviceLineUseCasesRaw,
+  ...roboticsCanonical,
+]);
+

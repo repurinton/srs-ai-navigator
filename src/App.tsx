@@ -1,51 +1,90 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useCases } from "@/data/use-cases";
-import { TRACKS } from "@/data/schema";
-import type { Track } from "@/data/schema";
+import { SERVICE_LINES, TRACKS } from "@/data/schema";
 import { TRACK_META } from "@/data/tracks";
+import { SERVICE_LINE_COLOR, SERVICE_LINE_ICON } from "@/data/service-lines";
 import { UseCaseCard } from "@/components/UseCaseCard";
 import { Header } from "@/components/Header";
 
-type TrackFilter = Track | "all";
+type Lens = "service-line" | "track";
 
 export default function App() {
-  const [track, setTrack] = useState<TrackFilter>("all");
+  const [lens, setLens] = useState<Lens>("service-line");
+  const [filter, setFilter] = useState<string>("all");
   const [query, setQuery] = useState("");
+
+  function switchLens(next: Lens) {
+    setLens(next);
+    setFilter("all");
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return useCases.filter((uc) => {
-      if (track !== "all" && uc.track !== track) return false;
+      if (lens === "service-line") {
+        if (filter !== "all" && !uc.serviceLines.includes(filter as never)) return false;
+      } else {
+        if (filter === "all") {
+          if (!uc.track) return false; // track lens shows robotic-surgery cases
+        } else if (uc.track !== filter) {
+          return false;
+        }
+      }
       if (!q) return true;
       return (
         uc.name.toLowerCase().includes(q) ||
         uc.description.toLowerCase().includes(q) ||
+        (uc.subSpecialty?.toLowerCase().includes(q) ?? false) ||
+        (uc.aiType?.toLowerCase().includes(q) ?? false) ||
         uc.keyVendors.some((v) => v.toLowerCase().includes(q)) ||
-        uc.keyPlatforms.some((p) => p.toLowerCase().includes(q)) ||
-        uc.specialties.some((s) => s.toLowerCase().includes(q))
+        (uc.keyPlatforms?.some((p) => p.toLowerCase().includes(q)) ?? false) ||
+        (uc.specialties?.some((sp) => sp.toLowerCase().includes(q)) ?? false)
       );
     });
-  }, [track, query]);
+  }, [lens, filter, query]);
+
+  const chips =
+    lens === "service-line"
+      ? SERVICE_LINES.map((sl) => ({
+          key: sl,
+          label: `${SERVICE_LINE_ICON[sl]} ${sl}`,
+          color: SERVICE_LINE_COLOR[sl],
+        }))
+      : TRACKS.map((t) => ({
+          key: t,
+          label: TRACK_META[t].label,
+          color: `var(${TRACK_META[t].colorVar})`,
+        }));
 
   return (
     <div className="min-h-full flex flex-col">
       <Header />
 
       <main className="mx-auto w-full max-w-[1280px] flex-1 px-5 py-6">
-        {/* Track navigation */}
+        {/* Lens toggle */}
+        <div className="mb-4 inline-flex rounded-lg border border-[var(--color-line)] bg-white p-1">
+          <LensButton active={lens === "service-line"} onClick={() => switchLens("service-line")}>
+            Service Lines
+          </LensButton>
+          <LensButton active={lens === "track"} onClick={() => switchLens("track")}>
+            Robotic Tracks
+          </LensButton>
+        </div>
+
+        {/* Filter chips for the active lens */}
         <div className="mb-5 flex flex-wrap gap-2">
-          <TrackChip active={track === "all"} onClick={() => setTrack("all")}>
-            All Tracks
+          <TrackChip active={filter === "all"} onClick={() => setFilter("all")}>
+            {lens === "service-line" ? "All Service Lines" : "All Tracks"}
           </TrackChip>
-          {TRACKS.map((t) => (
+          {chips.map((c) => (
             <TrackChip
-              key={t}
-              active={track === t}
-              color={`var(${TRACK_META[t].colorVar})`}
-              onClick={() => setTrack(t)}
+              key={c.key}
+              active={filter === c.key}
+              color={c.color}
+              onClick={() => setFilter(c.key)}
             >
-              {TRACK_META[t].label}
+              {c.label}
             </TrackChip>
           ))}
         </div>
@@ -63,16 +102,16 @@ export default function App() {
           </span>
         </div>
 
-        {track !== "all" && (
+        {lens === "track" && filter !== "all" && (
           <p className="mb-5 max-w-3xl text-sm leading-relaxed text-[var(--color-steel)]">
-            {TRACK_META[track].blurb}
+            {TRACK_META[filter as keyof typeof TRACK_META].blurb}
           </p>
         )}
 
         {/* Cards */}
         <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
           {filtered.map((uc) => (
-            <UseCaseCard key={uc.id} uc={uc} />
+            <UseCaseCard key={uc.id} uc={uc} lens={lens} />
           ))}
         </div>
 
@@ -88,6 +127,29 @@ export default function App() {
         Surgery Annual Meeting · July 23–26, 2026 · Fort Lauderdale, FL
       </footer>
     </div>
+  );
+}
+
+function LensButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-md px-4 py-1.5 text-xs font-bold transition-colors"
+      style={{
+        background: active ? "var(--color-navy)" : "transparent",
+        color: active ? "white" : "var(--color-steel)",
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
