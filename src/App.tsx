@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useCases } from "@/data/use-cases";
-import { SERVICE_LINES, TRACKS } from "@/data/schema";
+import { SERVICE_LINES, TRACKS, MATURITY_LEVELS } from "@/data/schema";
 import { TRACK_META } from "@/data/tracks";
+import { priorityScore } from "@/lib/scoring";
 import { SERVICE_LINE_COLOR, SERVICE_LINE_ICON } from "@/data/service-lines";
 import { UseCaseCard } from "@/components/UseCaseCard";
 import { RadarView } from "@/components/RadarView";
@@ -13,6 +14,7 @@ import type { UseCase } from "@/data/schema";
 
 type Lens = "service-line" | "track";
 type View = "home" | "explorer" | "radar";
+type SortBy = "readiness" | "name" | "maturity";
 
 const VIEW_LABELS: Record<View, string> = {
   home: "Overview",
@@ -20,12 +22,39 @@ const VIEW_LABELS: Record<View, string> = {
   radar: "Radar View",
 };
 
+const AUTONOMY_BUCKETS = ["Decision Support", "Augmentation", "Autonomous"] as const;
+const MATURITY_RANK: Record<string, number> = {
+  "Standard of Care": 0,
+  "Best Practice": 1,
+  Frontier: 2,
+  "Emerging Research": 3,
+};
+
+function autonomyBucket(a: string | null | undefined): string {
+  const s = (a ?? "").toLowerCase();
+  if (s.includes("autonom") || s.includes("automation")) return "Autonomous";
+  if (s.includes("augment")) return "Augmentation";
+  return "Decision Support";
+}
+
 export default function App() {
   const [view, setView] = useState<View>("home");
   const [lens, setLens] = useState<Lens>("service-line");
   const [filter, setFilter] = useState<string>("all");
   const [query, setQuery] = useState("");
+  const [maturity, setMaturity] = useState<string>("all");
+  const [fda, setFda] = useState<string>("all"); // all | yes | no
+  const [autonomy, setAutonomy] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("readiness");
   const [modalUc, setModalUc] = useState<UseCase | null>(null);
+
+  const facetsActive = maturity !== "all" || fda !== "all" || autonomy !== "all";
+
+  function clearFacets() {
+    setMaturity("all");
+    setFda("all");
+    setAutonomy("all");
+  }
 
   function switchLens(next: Lens) {
     setLens(next);
@@ -54,6 +83,10 @@ export default function App() {
           return false;
         }
       }
+      if (maturity !== "all" && uc.maturity !== maturity) return false;
+      if (fda === "yes" && !uc.fdaCleared) return false;
+      if (fda === "no" && uc.fdaCleared) return false;
+      if (autonomy !== "all" && autonomyBucket(uc.autonomyLevel) !== autonomy) return false;
       if (!q) return true;
       return (
         uc.name.toLowerCase().includes(q) ||
@@ -65,7 +98,20 @@ export default function App() {
         (uc.specialties?.some((sp) => sp.toLowerCase().includes(q)) ?? false)
       );
     });
-  }, [lens, filter, query]);
+  }, [lens, filter, query, maturity, fda, autonomy]);
+
+  const displayed = useMemo(() => {
+    const arr = [...filtered];
+    if (sortBy === "name") arr.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortBy === "maturity")
+      arr.sort(
+        (a, b) =>
+          (MATURITY_RANK[a.maturity] ?? 9) - (MATURITY_RANK[b.maturity] ?? 9) ||
+          priorityScore(b) - priorityScore(a),
+      );
+    else arr.sort((a, b) => priorityScore(b) - priorityScore(a));
+    return arr;
+  }, [filtered, sortBy]);
 
   const chips =
     lens === "service-line"
@@ -133,15 +179,50 @@ export default function App() {
           ))}
         </div>
 
-        {/* Search + count */}
-        <div className="mb-5 flex flex-wrap items-center gap-3">
+        {/* Search */}
+        <div className="mb-3 flex flex-wrap items-center gap-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search use cases, platforms, vendors, specialties…"
             className="w-full max-w-md rounded-lg border border-[var(--color-line)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--color-teal)] focus:ring-2 focus:ring-[var(--color-teal)]/20"
           />
-          <span className="text-sm text-[var(--color-steel)]">
+        </div>
+
+        {/* Facet filters + sort */}
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <FacetSelect value={maturity} onChange={setMaturity} label="Maturity">
+            <option value="all">All maturity</option>
+            {MATURITY_LEVELS.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </FacetSelect>
+          <FacetSelect value={fda} onChange={setFda} label="FDA">
+            <option value="all">FDA: any</option>
+            <option value="yes">FDA cleared</option>
+            <option value="no">Not cleared</option>
+          </FacetSelect>
+          <FacetSelect value={autonomy} onChange={setAutonomy} label="Autonomy">
+            <option value="all">All autonomy</option>
+            {AUTONOMY_BUCKETS.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </FacetSelect>
+          <span className="mx-1 h-5 w-px bg-[var(--color-line)]" />
+          <FacetSelect value={sortBy} onChange={(v) => setSortBy(v as SortBy)} label="Sort">
+            <option value="readiness">Sort: Readiness</option>
+            <option value="maturity">Sort: Maturity</option>
+            <option value="name">Sort: A–Z</option>
+          </FacetSelect>
+          {facetsActive && (
+            <button
+              onClick={clearFacets}
+              className="rounded-lg px-2.5 py-2 text-xs font-semibold text-[var(--color-teal)] hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
+          <span className="ml-auto text-sm text-[var(--color-steel)]">
             {filtered.length} use case{filtered.length === 1 ? "" : "s"}
           </span>
         </div>
@@ -156,7 +237,7 @@ export default function App() {
         {view === "explorer" && (
           <>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
-              {filtered.map((uc) => (
+              {displayed.map((uc) => (
                 <UseCaseCard key={uc.id} uc={uc} lens={lens} onOpen={setModalUc} />
               ))}
             </div>
@@ -230,5 +311,28 @@ function TrackChip({
     >
       {children}
     </button>
+  );
+}
+
+function FacetSelect({
+  value,
+  onChange,
+  label,
+  children,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded-lg border border-[var(--color-line)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-ink)] outline-none focus:border-[var(--color-teal)]"
+    >
+      {children}
+    </select>
   );
 }
