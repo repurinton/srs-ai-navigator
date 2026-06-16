@@ -44,4 +44,28 @@ export const deploymentAugments: Record<string, string[]> = {
   "WH-19": ["AdventHealth"],
   "WH-21": ["AdventHealth"],
   "WH-26": ["AdventHealth"],
+
+  // ── Robotic-surgery deployments (robotics-lens cases, RS-*) ───────────────
+  // These are notable high-volume programs and pioneers (illustrative, not
+  // exhaustive — established robotic platforms like da Vinci are broadly adopted).
+  //
+  // Telesurgery: AdventHealth Global Robotics Institute (Orlando) performed the
+  // world's first FDA-IDE robotic telesurgery on a human (Orlando→Angola, 2025).
+  // Source: MicroPort MedBot / PR Newswire 2025.
+  "RS-TELE-01": ["AdventHealth"],
+  "RS-TELE-02": ["AdventHealth"],
+  // Robotic urology: Vattikuti Urology Institute (Henry Ford) — invented robotic
+  // prostatectomy, 10,000+ cases, first in Michigan for single-port. (Wikipedia/VUI)
+  "RS-URO-01": ["Henry Ford Health", "Cleveland Clinic", "Mayo Clinic"],
+  "RS-URO-02": ["Henry Ford Health", "Cleveland Clinic"],
+  "RS-URO-03": ["Memorial Sloan Kettering", "MD Anderson Cancer Center"],
+  "RS-PLT-02": ["Henry Ford Health"], // single-port (first in Michigan)
+  // Thoracic / head & neck robotic programs (high-volume cancer centers).
+  "RS-PLT-03": ["MD Anderson Cancer Center", "Memorial Sloan Kettering", "Mayo Clinic"],
+  "RS-PLT-04": ["Penn Medicine", "MD Anderson Cancer Center"], // TORS (Penn = inventors)
+  "RS-PLT-05": ["Cleveland Clinic", "Mayo Clinic"], // robotic bronchoscopy
+  // Robotic orthopedics (notable high-volume joint/spine programs).
+  "RS-ORT-01": ["Hospital for Special Surgery", "Cleveland Clinic", "Mayo Clinic"],
+  "RS-ORT-02": ["Hospital for Special Surgery", "Cleveland Clinic"],
+  "RS-ORT-03": ["Hospital for Special Surgery", "NYU Langone"],
 };
