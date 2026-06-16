@@ -41,7 +41,7 @@ export function Home({
     // Competitive landscape — top deploying systems
     const systemCounts: Record<string, number> = {};
     for (const u of useCases) for (const s of u.deployedAt) systemCounts[s] = (systemCounts[s] ?? 0) + 1;
-    const topSystems = Object.entries(systemCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const topSystems = Object.entries(systemCounts).sort((a, b) => b[1] - a[1]).slice(0, 12);
     const withDeployments = useCases.filter((u) => u.deployedAt.length > 0).length;
 
     // Investment profile — tier distribution
@@ -413,7 +413,7 @@ export function Home({
         <div className="grid gap-3 lg:grid-cols-2">
           <Panel
             title="Competitive landscape"
-            subtitle={`${analytics.withDeployments} of ${analytics.total} use cases have verified deployments at peer health systems`}
+            subtitle={`Verified public deployments at peer health systems — illustrative, not exhaustive, and weighted toward large US academic centers. ${analytics.withDeployments} of ${analytics.total} use cases mapped.`}
           >
             <div className="space-y-2.5">
               {analytics.topSystems.map(([name, count]) => (
