@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { useCases } from "@/data/use-cases";
 import { SERVICE_LINES, TRACKS } from "@/data/schema";
@@ -80,8 +80,6 @@ export function Home({
 
   const socBp = stats.maturity["Standard of Care"] + stats.maturity["Best Practice"];
   const emerging = stats.maturity["Emerging Research"];
-
-  const [landscapeTab, setLandscapeTab] = useState<"ai" | "robotic">("ai");
 
   return (
     <div className="space-y-12 pb-8">
@@ -420,50 +418,23 @@ export function Home({
         title="Competitive landscape & investment profile"
         intro="A read on where these use cases are already running, what they cost to adopt, and how they distribute across autonomy and patient proximity."
       >
-        <div className="grid gap-3 lg:grid-cols-2">
-          {(() => {
-            const L = landscapeTab === "ai" ? analytics.landscapeAI : analytics.landscapeRobotic;
-            const color = landscapeTab === "ai" ? "var(--color-teal)" : "var(--color-track-humanoids)";
-            return (
-              <div className="rounded-[var(--radius-card)] border border-[var(--color-line)] bg-white p-5 shadow-[var(--shadow-card)]">
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-bold text-[var(--color-ink)]">Competitive landscape</h3>
-                  <div className="inline-flex rounded-lg border border-[var(--color-line)] p-0.5">
-                    {(["ai", "robotic"] as const).map((k) => (
-                      <button
-                        key={k}
-                        onClick={() => setLandscapeTab(k)}
-                        className="rounded-md px-2.5 py-1 text-[11px] font-bold transition-colors"
-                        style={{
-                          background: landscapeTab === k ? "var(--color-navy)" : "transparent",
-                          color: landscapeTab === k ? "white" : "var(--color-steel)",
-                        }}
-                      >
-                        {k === "ai" ? "AI use cases" : "Robotic surgery"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <p className="mb-3 text-[11px] text-[var(--color-steel)]">
-                  Verified public deployments — illustrative, not exhaustive
-                  {landscapeTab === "ai" ? ", and academic-weighted" : " (robotic platforms are broadly adopted)"}.{" "}
-                  {L.withDeployments} of {L.total} {landscapeTab === "ai" ? "AI" : "robotic"} use cases mapped.
-                </p>
-                {L.top.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {L.top.map(([name, count]) => (
-                      <DistBar key={name} label={name} count={`${count} use cases`} pct={(count / L.total) * 100} color={color} />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="py-6 text-center text-[11px] text-[var(--color-steel)]">
-                    No deployments mapped yet for this category.
-                  </p>
-                )}
-              </div>
-            );
-          })()}
+        {/* Competitive landscape — AI and robotic shown side by side */}
+        <div className="mb-3 grid gap-3 lg:grid-cols-2">
+          <LandscapeCard
+            label="Competitive landscape · AI use cases"
+            color="var(--color-teal)"
+            note="academic-weighted"
+            data={analytics.landscapeAI}
+          />
+          <LandscapeCard
+            label="Competitive landscape · Robotic surgery"
+            color="var(--color-track-humanoids)"
+            note="robotic platforms are broadly adopted"
+            data={analytics.landscapeRobotic}
+          />
+        </div>
 
+        <div className="grid gap-3 lg:grid-cols-2">
           <Panel title="Investment profile" subtitle="Not “how much does AI cost” but “how much are we already paying for?”">
             <div className="space-y-2.5">
               {INVESTMENT_LADDER.map((t) => {
@@ -516,8 +487,8 @@ export function Home({
       {/* ── Two ways to navigate ─────────────────────────────────── */}
       <Section
         kicker="Two ways in"
-        title="Navigate by service line or by track"
-        intro="The same library, two lenses. Browse by clinical service line, or by the meeting's robotic-surgery tracks. Pick a starting point:"
+        title="Navigate by service line or by robotics category"
+        intro="The same library, two lenses. Browse by clinical service line, or by robotics category (organized by the type of robotic application). Pick a starting point:"
       >
         <div className="grid gap-3 lg:grid-cols-2">
           <Panel title="Clinical service lines" subtitle="The original navigator taxonomy">
@@ -534,7 +505,7 @@ export function Home({
               ))}
             </div>
           </Panel>
-          <Panel title="Robotic-surgery tracks" subtitle="The SRS 2026 meeting tracks">
+          <Panel title="Robotics categories" subtitle="By type of robotic application">
             <div className="flex flex-wrap gap-2">
               {TRACKS.map((t) => (
                 <button
@@ -599,6 +570,40 @@ function Panel({
       <h3 className="text-sm font-bold text-[var(--color-ink)]">{title}</h3>
       <p className="mb-3 text-[11px] text-[var(--color-steel)]">{subtitle}</p>
       {children}
+    </div>
+  );
+}
+
+function LandscapeCard({
+  label,
+  color,
+  note,
+  data,
+}: {
+  label: string;
+  color: string;
+  note: string;
+  data: { top: [string, number][]; withDeployments: number; total: number };
+}) {
+  return (
+    <div className="rounded-[var(--radius-card)] border border-[var(--color-line)] bg-white p-5 shadow-[var(--shadow-card)]">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
+        <h3 className="text-sm font-bold text-[var(--color-ink)]">{label}</h3>
+      </div>
+      <p className="mb-3 text-[11px] text-[var(--color-steel)]">
+        Verified public deployments — illustrative, not exhaustive, {note}. {data.withDeployments} of{" "}
+        {data.total} use cases mapped.
+      </p>
+      {data.top.length > 0 ? (
+        <div className="space-y-2.5">
+          {data.top.map(([name, count]) => (
+            <DistBar key={name} label={name} count={`${count} use cases`} pct={(count / data.total) * 100} color={color} />
+          ))}
+        </div>
+      ) : (
+        <p className="py-6 text-center text-[11px] text-[var(--color-steel)]">No deployments mapped yet.</p>
+      )}
     </div>
   );
 }

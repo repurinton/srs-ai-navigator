@@ -586,10 +586,36 @@ const AI_TYPE_BY_ID: Record<string, string> = {
   "DIG-01": "Computer Vision",
   "DIG-02": "Simulation / Digital Twin",
 };
-const PROXIMITY_BY_TRACK: Record<string, string> = {
-  Humanoids: "Back Office",
-  "Surgical AI": "Clinical Operations",
-  "Digital Surgery": "Clinical Operations",
+// Robotics category (the navigator's own taxonomy, by robot architecture/role).
+const CATEGORY_BY_ID: Record<string, string> = {
+  "PLT-01": "Soft-Tissue Surgical Robotics",
+  "PLT-02": "Soft-Tissue Surgical Robotics",
+  "PLT-03": "Soft-Tissue Surgical Robotics",
+  "PLT-04": "Soft-Tissue Surgical Robotics",
+  "URO-01": "Soft-Tissue Surgical Robotics",
+  "URO-02": "Soft-Tissue Surgical Robotics",
+  "URO-03": "Soft-Tissue Surgical Robotics",
+  "PLT-05": "Flexible & Endoluminal Robotics",
+  "ORT-01": "Orthopedic & Spine Robotics",
+  "ORT-02": "Orthopedic & Spine Robotics",
+  "ORT-03": "Orthopedic & Spine Robotics",
+  "TELE-01": "Telesurgery & Remote Surgery",
+  "TELE-02": "Telesurgery & Remote Surgery",
+  "SAI-01": "Surgical Intelligence",
+  "SAI-02": "Surgical Intelligence",
+  "SAI-03": "Surgical Intelligence",
+  "SAI-04": "Surgical Intelligence",
+  "SAI-05": "Surgical Intelligence",
+  "DIG-01": "Surgical Intelligence",
+  "DIG-02": "Surgical Intelligence",
+  "HUM-01": "Service & Non-Clinical Robotics",
+  "HUM-02": "Service & Non-Clinical Robotics",
+  "HUM-03": "Service & Non-Clinical Robotics",
+  "HUM-04": "Service & Non-Clinical Robotics",
+};
+const PROXIMITY_BY_CATEGORY: Record<string, string> = {
+  "Service & Non-Clinical Robotics": "Back Office",
+  "Surgical Intelligence": "Clinical Operations",
 };
 
 function s(v: unknown): string {
@@ -601,7 +627,7 @@ function arr(v: unknown): string[] {
 
 const roboticsCanonical: unknown[] = roboticsNative.map((uc) => {
   const id = s(uc.id); // native id (e.g. "ORT-01") — used for lookups
-  const track = s(uc.track);
+  const category = CATEGORY_BY_ID[id] ?? "Soft-Tissue Surgical Robotics";
   return {
     id: `RS-${id}`, // namespaced to avoid collisions with the migrated dataset
     name: s(uc.name),
@@ -610,7 +636,7 @@ const roboticsCanonical: unknown[] = roboticsNative.map((uc) => {
     subSpecialty: arr(uc.specialties)[0],
     autonomyLevel: AUTONOMY_MAP[s(uc.autonomyLevel)] ?? "Augmentation",
     surgicalAutonomyLevel: s(uc.autonomyLevel),
-    patientProximity: PROXIMITY_BY_TRACK[track] ?? "Direct Care",
+    patientProximity: PROXIMITY_BY_CATEGORY[category] ?? "Direct Care",
     evidenceTier: s(uc.evidenceTier),
     aiType: AI_TYPE_BY_ID[id] ?? "Robotics",
     metricsImpacted: ["Quality", "Growth"],
@@ -626,7 +652,7 @@ const roboticsCanonical: unknown[] = roboticsNative.map((uc) => {
     source: s(uc.source),
     fdaClearances: Array.isArray(uc.regulatory) ? uc.regulatory : [],
     deployedAt: [],
-    track,
+    track: category,
     specialties: arr(uc.specialties),
     setting: s(uc.setting) || undefined,
     lens: "robotics",

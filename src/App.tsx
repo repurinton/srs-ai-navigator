@@ -112,14 +112,14 @@ export default function App() {
             Service Lines
           </LensButton>
           <LensButton active={lens === "track"} onClick={() => switchLens("track")}>
-            Robotic Tracks
+            Robotics Categories
           </LensButton>
         </div>
 
         {/* Filter chips for the active lens */}
         <div className="mb-5 flex flex-wrap gap-2">
           <TrackChip active={filter === "all"} onClick={() => setFilter("all")}>
-            {lens === "service-line" ? "All Service Lines" : "All Tracks"}
+            {lens === "service-line" ? "All Service Lines" : "All Categories"}
           </TrackChip>
           {chips.map((c) => (
             <TrackChip

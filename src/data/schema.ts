@@ -25,15 +25,17 @@ export const SERVICE_LINES = [
 export const ServiceLineSchema = z.enum(SERVICE_LINES);
 export type ServiceLine = z.infer<typeof ServiceLineSchema>;
 
-// ── Lens B: robotic-surgery meeting tracks ───────────────────────────────────
+// ── Lens B: robotics categories ──────────────────────────────────────────────
+// Organized by the robot's architecture/role (a single consistent dimension),
+// rather than the SRS meeting's mix of specialty + modality + platform + robot
+// type. This is the navigator's own taxonomy, not the meeting track list.
 export const TRACKS = [
-  "Robotic Platforms",
-  "Urology",
-  "Telesurgery",
-  "Surgical AI",
-  "Digital Surgery",
-  "Orthopedics",
-  "Humanoids",
+  "Soft-Tissue Surgical Robotics",
+  "Orthopedic & Spine Robotics",
+  "Flexible & Endoluminal Robotics",
+  "Telesurgery & Remote Surgery",
+  "Surgical Intelligence",
+  "Service & Non-Clinical Robotics",
 ] as const;
 export const TrackSchema = z.enum(TRACKS);
 export type Track = z.infer<typeof TrackSchema>;
