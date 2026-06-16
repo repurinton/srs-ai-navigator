@@ -68,4 +68,18 @@ export const deploymentAugments: Record<string, string[]> = {
   "RS-ORT-01": ["Hospital for Special Surgery", "Cleveland Clinic", "Mayo Clinic"],
   "RS-ORT-02": ["Hospital for Special Surgery", "Cleveland Clinic"],
   "RS-ORT-03": ["Hospital for Special Surgery", "NYU Langone"],
+
+  // Multi-port soft-tissue (da Vinci) — broadly adopted; high-volume programs
+  // incl. AdventHealth's Global Robotics Institute.
+  "RS-PLT-01": ["AdventHealth", "Cleveland Clinic", "Mayo Clinic", "Henry Ford Health"],
+
+  // Autonomous soft-tissue tasks (STAR / SRT-H research). Source: Johns Hopkins
+  // / Children's National; Science Robotics 2025.
+  "RS-SAI-05": ["Johns Hopkins Medicine", "Children's National Hospital"],
+
+  // Hospital logistics robots (Moxi, Diligent Robotics). Source: The Robot Report.
+  "RS-HUM-01": ["Northwestern Medicine", "Cedars-Sinai", "MultiCare Health System", "Children's Hospital Los Angeles"],
+
+  // UV-C disinfection robots (Xenex LightStrike). Source: Xenex; Henry Ford Health.
+  "RS-HUM-03": ["Mayo Clinic", "MD Anderson Cancer Center", "Henry Ford Health", "HonorHealth"],
 };

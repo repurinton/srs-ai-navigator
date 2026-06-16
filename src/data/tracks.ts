@@ -7,54 +7,51 @@ export interface TrackMeta {
   colorVar: string; // CSS custom property name from index.css @theme
 }
 
+/**
+ * Robotics categories — organized by the robot's architecture/role rather than
+ * by surgical specialty or meeting theme. Color vars are reused from index.css.
+ */
 export const TRACK_META: Record<Track, TrackMeta> = {
-  "Robotic Platforms": {
-    key: "Robotic Platforms",
-    label: "Robotic Platforms",
+  "Soft-Tissue Surgical Robotics": {
+    key: "Soft-Tissue Surgical Robotics",
+    label: "Soft-Tissue Surgical",
     blurb:
-      "Soft-tissue and orthopedic surgical robots — multi-port, single-port, and emerging competitors reshaping the platform market.",
-    colorVar: "--color-track-platforms",
-  },
-  Urology: {
-    key: "Urology",
-    label: "Urology",
-    blurb:
-      "The founding home of robotic surgery — prostatectomy, partial nephrectomy, cystectomy, and beyond.",
+      "Rigid multi-port and single-port telemanipulator consoles for soft-tissue surgery across urology, gynecology, general, thoracic, and head & neck.",
     colorVar: "--color-track-urology",
   },
-  Telesurgery: {
-    key: "Telesurgery",
-    label: "Telesurgery",
+  "Orthopedic & Spine Robotics": {
+    key: "Orthopedic & Spine Robotics",
+    label: "Orthopedic & Spine",
     blurb:
-      "Remote and tele-mentored surgery enabled by low-latency networks, following the society's Telesurgery Guidelines.",
-    colorVar: "--color-track-telesurgery",
-  },
-  "Surgical AI": {
-    key: "Surgical AI",
-    label: "Surgical AI",
-    blurb:
-      "Computer vision and ML for intraoperative guidance, surgical phase recognition, skills assessment, and autonomy.",
-    colorVar: "--color-track-surgical-ai",
-  },
-  "Digital Surgery": {
-    key: "Digital Surgery",
-    label: "Digital Surgery",
-    blurb:
-      "The connected OR — data capture, video analytics, digital twins, and end-to-end surgical data platforms.",
-    colorVar: "--color-track-digital",
-  },
-  Orthopedics: {
-    key: "Orthopedics",
-    label: "Orthopedics",
-    blurb:
-      "Robotic-assisted joint replacement and spine — haptic guidance, planning, and navigation.",
+      "Haptic-guided and navigated bone surgery — robotic joint replacement and pedicle-screw placement with planning and alignment.",
     colorVar: "--color-track-ortho",
   },
-  Humanoids: {
-    key: "Humanoids",
-    label: "Humanoids",
+  "Flexible & Endoluminal Robotics": {
+    key: "Flexible & Endoluminal Robotics",
+    label: "Flexible & Endoluminal",
     blurb:
-      "Frontier humanoid and mobile robotics for clinical assistance and non-clinical hospital operations.",
+      "Flexible robots that navigate natural orifices and lumens — robotic bronchoscopy today, with endoluminal and catheter robotics emerging.",
+    colorVar: "--color-track-surgical-ai",
+  },
+  "Telesurgery & Remote Surgery": {
+    key: "Telesurgery & Remote Surgery",
+    label: "Telesurgery & Remote",
+    blurb:
+      "Remote and tele-mentored operation over low-latency networks, following the society's Telesurgery Guidelines.",
+    colorVar: "--color-track-telesurgery",
+  },
+  "Surgical Intelligence": {
+    key: "Surgical Intelligence",
+    label: "Surgical Intelligence",
+    blurb:
+      "The software layer around the robot — intraoperative AI, surgical-phase and safety recognition, skills assessment, digital surgery data, and autonomy research.",
+    colorVar: "--color-track-digital",
+  },
+  "Service & Non-Clinical Robotics": {
+    key: "Service & Non-Clinical Robotics",
+    label: "Service & Non-Clinical",
+    blurb:
+      "Mobile and humanoid robots for hospital operations — logistics, disinfection, pharmacy automation, and frontier clinical-assist.",
     colorVar: "--color-track-humanoids",
   },
 };
