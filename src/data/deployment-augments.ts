@@ -82,4 +82,21 @@ export const deploymentAugments: Record<string, string[]> = {
 
   // UV-C disinfection robots (Xenex LightStrike). Source: Xenex; Henry Ford Health.
   "RS-HUM-03": ["Mayo Clinic", "MD Anderson Cancer Center", "Henry Ford Health", "HonorHealth"],
+
+  // ── Surgical intelligence (Theator) ───────────────────────────────────────
+  // Mount Sinai: live-streamed surgery with real-time structuring on Theator's
+  // platform. Mayo Clinic & University of Miami: auto-generated operative reports.
+  // Source: Theator customer stories.
+  "RS-SAI-01": ["Mount Sinai Health System"], // surgical-phase recognition
+  "RS-SAI-02": ["Mount Sinai Health System"], // critical-view-of-safety detection
+  "RS-SAI-04": ["Mayo Clinic", "University of Miami Health System"], // GenAI operative notes
+  "RS-DIG-01": ["Mount Sinai Health System"], // connected-OR video platform
+
+  // Preoperative digital twins / 3D planning (Surgical Theater). Source:
+  // Surgical Theater / Business Wire; named at these centers.
+  "RS-DIG-02": ["NYU Langone", "Mount Sinai Health System", "Stanford Health Care", "Mayo Clinic", "UCLA Health"],
+
+  // Pharmacy automation — UCSF's robotic pharmacy (Swisslog PillPick + RIVA).
+  // Source: UCSF; Pharmaceutical Technology.
+  "RS-HUM-04": ["UCSF Health"],
 };
