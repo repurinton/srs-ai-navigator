@@ -109,7 +109,7 @@ export function Home({
           <Stat value={stats.total} label="Use cases" />
           <Stat value={stats.fda} label="FDA cleared" />
           <Stat value={SERVICE_LINES.length} label="Service lines" />
-          <Stat value={TRACKS.length} label="Robotic tracks" />
+          <Stat value={TRACKS.length} label="Robotics categories" />
         </div>
 
         <div className="mt-7 flex flex-wrap gap-3">
