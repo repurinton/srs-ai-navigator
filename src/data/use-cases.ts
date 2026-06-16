@@ -1,5 +1,16 @@
 import { parseUseCases, type UseCase } from "./schema";
 import { serviceLineUseCasesRaw } from "./service-line-use-cases.generated";
+import { deploymentAugments } from "./deployment-augments";
+
+// Merge evidence-backed deployment additions into a raw use-case's deployedAt.
+function withAugmentedDeployments(uc: unknown): unknown {
+  const rec = uc as { id?: unknown; deployedAt?: unknown };
+  const id = typeof rec.id === "string" ? rec.id : "";
+  const extra = deploymentAugments[id];
+  if (!extra) return uc;
+  const existing = Array.isArray(rec.deployedAt) ? (rec.deployedAt as string[]) : [];
+  return { ...rec, deployedAt: Array.from(new Set([...existing, ...extra])) };
+}
 
 /**
  * Hand-authored robotic-surgery use cases (the meeting-track lens), written from
@@ -622,8 +633,7 @@ const roboticsCanonical: unknown[] = roboticsNative.map((uc) => {
   };
 });
 
-export const useCases: UseCase[] = parseUseCases([
-  ...serviceLineUseCasesRaw,
-  ...roboticsCanonical,
-]);
+export const useCases: UseCase[] = parseUseCases(
+  [...serviceLineUseCasesRaw, ...roboticsCanonical].map(withAugmentedDeployments),
+);
 
