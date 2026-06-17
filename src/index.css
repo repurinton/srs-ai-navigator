@@ -50,6 +50,37 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ===========================================================================
+   Telesurgery map — cinematic animations
+   =========================================================================== */
+@keyframes tele-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes tele-ring {
+  0% { transform: scale(0.4); opacity: 0.9; }
+  70% { opacity: 0; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+@keyframes tele-node-in {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.tele-arc {
+  stroke-dasharray: 1;
+  animation: tele-draw 1.5s ease forwards;
+}
+.tele-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tele-ring 2.2s ease-out infinite;
+}
+.tele-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tele-node-in 0.5s ease forwards;
+}
+
 /* Subtle scrollbar treatment for the navigator panes */
 * {
   scrollbar-width: thin;
