@@ -162,7 +162,9 @@ export function TelesurgeryMap() {
                   <>
                     <circle className="tele-ring" cx={a[0]} cy={a[1]} r={6} fill="none" stroke="#4ECDC4" strokeWidth={1.1} />
                     <circle className="tele-ring" cx={b[0]} cy={b[1]} r={7} fill="none" stroke={dotColor} strokeWidth={1.3} />
-                    <text x={a[0]} y={a[1] - 9} textAnchor="middle" fontSize={9} fontWeight={700} fill="#bde7ff">{e.from.city}</text>
+                    <text x={a[0]} y={a[1] - 9} textAnchor="middle" fontSize={9} fontWeight={700} fill={e.fromVenue ? "#ffe6a8" : "#bde7ff"}>
+                      {e.fromVenue ? "AdventHealth · Orlando" : e.from.city}
+                    </text>
                     <text x={b[0]} y={b[1] + 16} textAnchor="middle" fontSize={9} fontWeight={700} fill={e.hero ? "#ffe6a8" : "#ffc2d6"}>{e.to.city}</text>
                   </>
                 )}
@@ -212,6 +214,9 @@ export function TelesurgeryMap() {
                 <p className="mt-0.5 text-[12px] font-semibold text-white/80">
                   {active.from.city} → {active.to.city} · {fmt(active.distanceKm)} km · {active.platform}
                 </p>
+                {active.fromVenue && (
+                  <p className="mt-1 text-[11px] font-semibold text-[#ffd36e]">📍 {active.fromVenue}</p>
+                )}
                 <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-white/60">{active.note}</p>
                 <p className="mt-1 text-[10px] italic text-white/40">Source: {active.source}</p>
               </div>
