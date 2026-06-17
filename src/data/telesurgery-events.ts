@@ -36,6 +36,7 @@ const CASABLANCA: GeoPoint = { city: "Casablanca", country: "Morocco", lat: 33.5
 const NEW_DELHI: GeoPoint = { city: "New Delhi", country: "India", lat: 28.61, lng: 77.21 };
 const JAIPUR: GeoPoint = { city: "Jaipur", country: "India", lat: 26.91, lng: 75.79 };
 const ORLANDO: GeoPoint = { city: "Orlando", country: "USA", lat: 28.54, lng: -81.38 };
+const PEACHTREE: GeoPoint = { city: "Peachtree Corners, GA", country: "USA", lat: 33.97, lng: -84.22 };
 const LUANDA: GeoPoint = { city: "Luanda", country: "Angola", lat: -8.84, lng: 13.23 };
 const SAO_PAULO: GeoPoint = { city: "São Paulo", country: "Brazil", lat: -23.55, lng: -46.63 };
 
@@ -131,6 +132,19 @@ export const teleEvents: TeleEvent[] = [
     note: "Dr. Vipul Patel operated from AdventHealth's Global Robotics Institute in Orlando on a patient in Luanda, Angola — the world's first FDA-IDE telesurgery on a human (~17,000 km network path, ~90 min).",
     source: "MicroPort MedBot / PR Newswire, 2025",
     hero: true,
+  },
+  {
+    id: "intuitive-davinci5-2025",
+    date: "2025-07-15",
+    t: 2025.54,
+    title: "da Vinci 5 telesurgery — the dominant platform arrives",
+    from: PEACHTREE,
+    to: STRASBOURG,
+    distanceKm: 6900,
+    platform: "Intuitive da Vinci 5 (dual console)",
+    procedure: "Demonstration (tissue model)",
+    note: "Intuitive demonstrated da Vinci 5 telesurgery — surgeons in Georgia and Strasbourg passing instrument control with haptic feedback across 4,000+ miles — unveiled at the Society of Robotic Surgery meeting. (Research; not yet cleared for clinical use.)",
+    source: "Intuitive Surgical / The Robot Report, 2025",
   },
 ];
 
