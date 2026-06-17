@@ -199,7 +199,7 @@ export function TelesurgeryMap() {
             <div className="flex items-start gap-2">
               <div className="flex flex-col items-start gap-1">
                 <span className="font-mono text-[11px] text-[var(--color-accent)]">
-                  {new Date(active.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                  {new Date(active.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })}
                 </span>
                 {active.hero && (
                   <span className="rounded-full bg-[#ffd36e] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#3a2a00]">
