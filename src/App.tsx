@@ -9,17 +9,19 @@ import { UseCaseCard } from "@/components/UseCaseCard";
 import { RadarView } from "@/components/RadarView";
 import { UseCaseModal } from "@/components/UseCaseModal";
 import { Home } from "@/components/Home";
+import { TelesurgeryMap } from "@/components/TelesurgeryMap";
 import { Header } from "@/components/Header";
 import type { UseCase } from "@/data/schema";
 
 type Lens = "service-line" | "track";
-type View = "home" | "explorer" | "radar";
+type View = "home" | "explorer" | "radar" | "telesurgery";
 type SortBy = "readiness" | "name" | "maturity";
 
 const VIEW_LABELS: Record<View, string> = {
   home: "Overview",
   explorer: "Use Case Explorer",
   radar: "Radar View",
+  telesurgery: "Telesurgery Map",
 };
 
 const AUTONOMY_BUCKETS = ["Decision Support", "Augmentation", "Autonomous"] as const;
@@ -133,7 +135,7 @@ export default function App() {
       <main className="mx-auto w-full max-w-[1280px] flex-1 px-5 py-6">
         {/* View navigation */}
         <div className="mb-4 flex gap-5 border-b border-[var(--color-line)]">
-          {(["home", "explorer", "radar"] as const).map((v) => (
+          {(["home", "explorer", "radar", "telesurgery"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -149,9 +151,10 @@ export default function App() {
         </div>
 
         {view === "home" && <Home onNavigate={navigateFromHome} />}
+        {view === "telesurgery" && <TelesurgeryMap />}
 
         {/* Lens toggle (Explorer/Radar only) */}
-        {view !== "home" && (
+        {view !== "home" && view !== "telesurgery" && (
         <>
         <div className="mb-4 inline-flex rounded-lg border border-[var(--color-line)] bg-white p-1">
           <LensButton active={lens === "service-line"} onClick={() => switchLens("service-line")}>
