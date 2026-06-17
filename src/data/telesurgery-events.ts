@@ -22,6 +22,7 @@ export interface TeleEvent {
   procedure: string;
   note: string;
   source: string;
+  fromVenue?: string; // originating institution (console site)
   hero?: boolean;
 }
 
@@ -116,8 +117,9 @@ export const teleEvents: TeleEvent[] = [
     distanceKm: 6600,
     platform: "MicroPort Toumai",
     procedure: "Connectivity demonstration (model)",
-    note: "First remote surgical connection between North and South America — Orlando to São Paulo — proving the link before first-in-human.",
+    note: "First remote surgical connection between North and South America — from AdventHealth's Global Robotics Institute in Orlando to São Paulo — proving the link before first-in-human.",
     source: "J. Robotic Surgery (PMC), 2025",
+    fromVenue: "AdventHealth Global Robotics Institute · Celebration, FL",
   },
   {
     id: "orlando-angola-2025",
@@ -131,6 +133,7 @@ export const teleEvents: TeleEvent[] = [
     procedure: "Radical prostatectomy",
     note: "Dr. Vipul Patel operated from AdventHealth's Global Robotics Institute in Orlando on a patient in Luanda, Angola — the world's first FDA-IDE telesurgery on a human (~17,000 km network path, ~90 min).",
     source: "MicroPort MedBot / PR Newswire, 2025",
+    fromVenue: "AdventHealth Global Robotics Institute · Celebration, FL",
     hero: true,
   },
   {
