@@ -202,7 +202,7 @@ const rawEvents: TeleEvent[] = [
     kind: "telesurgery",
     date: "2025-06-14",
     t: 2025.45,
-    title: "First FDA-cleared telesurgery on a human",
+    title: "First FDA-authorized human telesurgery under IDE",
     from: ORLANDO,
     to: LUANDA,
     distanceKm: 10800,

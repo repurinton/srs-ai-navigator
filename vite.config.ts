@@ -3,8 +3,8 @@ import { fileURLToPath, URL } from "node:url";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-// Static, serverless build — output is a self-contained set of files
-// that can be hosted on any static host (S3/CloudFront, Netlify, GitHub Pages).
+// The static output remains compatible with ordinary hosts. The post-build
+// packaging step also emits a Cloudflare Workers entrypoint for Sites.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {

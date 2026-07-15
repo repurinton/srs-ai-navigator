@@ -3,10 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Society of Robotic Surgery 2026 — Robotic Surgery & Surgical AI Navigator",
+  "description": "AI Transforming Hospital Operations — SRS 2026 executive presentation experience",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/prepare-sites-build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "migrate": "node scripts/migrate-original.mjs"

@@ -31,14 +31,16 @@ function has(v: string | null | undefined, needle: string): boolean {
 // AUTONOMY (vertical): how independently does the AI act?
 export function computeAutonomyScore(uc: UseCase): number {
   const a = uc.autonomyLevel ?? "";
+  const isSemiAutonomous = has(a, "Semi-Autonomous");
+  const isAutonomous = !isSemiAutonomous && (has(a, "Autonomous") || a === "Automation");
   let base: number;
-  if (has(a, "Autonomous") || a === "Automation") base = 8;
-  else if (has(a, "Semi-Autonomous")) base = 6.5;
+  if (isSemiAutonomous) base = 6.5;
+  else if (isAutonomous) base = 8;
   else if (a === "Augmentation") base = 5;
   else base = 2; // Decision Support, Infrastructure, etc.
 
   let mod = 0;
-  if (has(a, "Autonomous") && uc.fdaCleared) mod += 0.8;
+  if (isAutonomous && uc.fdaCleared) mod += 0.8;
   if (a === "Augmentation" && has(uc.aiType, "Robotics")) mod += 1.2;
   if (a === "Augmentation" && has(uc.aiType, "Signal Processing")) mod += 0.6;
   if (

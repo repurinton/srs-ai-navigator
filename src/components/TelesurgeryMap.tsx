@@ -303,7 +303,7 @@ function EventCaption({ e }: { e: TeleEvent }) {
         </span>
         {e.hero && (
           <span className="rounded-full bg-[#ffd36e] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#3a2a00]">
-            ★ First FDA-cleared
+            ★ FDA-authorized IDE
           </span>
         )}
         {isPlatform && (

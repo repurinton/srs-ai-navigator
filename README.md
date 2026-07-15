@@ -1,70 +1,73 @@
-# SRS 2026 — Robotic Surgery & Surgical AI Navigator
+# AI Transforming Hospital Operations
 
-An interactive navigator of robotic surgery, telesurgery, surgical AI, digital
-surgery, and humanoid use cases, built for the **Society of Robotic Surgery 2026
-Annual Meeting** (July 23–26, 2026, Fort Lauderdale, FL — _"Innovation Continues"_).
+An executive presentation experience for the Society of Robotic Surgery 2026. The project combines a deterministic, conference-ready web demonstration with an editable PowerPoint deck.
 
-This is the modernized successor to the original single-file National Service
-Line AI Navigator, rebuilt on a typed, component-based stack and reorganized
-around the meeting's tracks.
+The central thesis:
 
-## Stack
+> The hospital is already full of intelligence. It is short on coordination. Agentic AI turns stranded capacity into care by closing the gap between signal and action under human control.
 
-- **Vite + React 19 + TypeScript** — fast, type-safe SPA
-- **Tailwind CSS v4** — design tokens in `src/index.css` (`@theme`)
-- **Zod** — the use-case dataset is schema-validated at load (`src/data/schema.ts`)
-- **Fully serverless** — `npm run build` emits a static `dist/` deployable to any
-  static host (S3/CloudFront, Netlify, GitHub Pages). No backend.
+## The six transformation levers
 
-## Develop
+The experience treats six levers as one enterprise operating architecture:
+
+1. **Clinical Diagnosis** — episodic interpretation becomes a continuously updated routing decision.
+2. **Digital Front Door** — fragmented channels become one persistent relationship that resolves needs.
+3. **Robotics** — a precision instrument becomes a distributed capacity platform.
+4. **Longitudinal Care** — visits become a continuously managed queue of risks, needs, and interventions.
+5. **Task Automation** — isolated tasks become governed outcomes that are planned, executed, and verified.
+6. **Precision Medicine** — a specialist report becomes a learning operating model.
+
+Their impact compounds when they share context, governed action rights, and one causal scorecard.
+
+## Presentation flow
+
+The web app is organized as six chapters with direct links and arrow-key navigation:
+
+- `#thesis` — the coordination gap and executive case for change
+- `#levers` — the six-lever transformation architecture
+- `#case` — a synthetic robotic case with parallel agent work and two named approvals
+- `#model` — governed autonomy and the 90-day operating model
+- `#portfolio` — the 272-case evidence library
+- `#timeline` — the telesurgery and robotic-platform arc
+
+The case demonstration is intentionally deterministic for stage reliability. It contains no patient data, makes no clinical decision, distinguishes reversible work from consequential approvals, and labels all outcomes as modeled.
+
+## Presentation artifact
+
+The editable deck is at:
+
+- `outputs/AI-Transforming-Hospital-Operations-SRS-2026.pptx`
+
+The deck mirrors the web narrative and includes speaker notes, evidence grades, primary-source footers, and explicit modeling assumptions.
+
+## Develop and verify
 
 ```bash
 npm install
-npm run dev        # local dev server
-npm run typecheck  # tsc project check
-npm run build      # static production build → dist/
-npm run preview    # preview the production build
+npm run dev
+npm run typecheck
+npm run build
+npm run preview
 ```
 
-## Data: parallel lenses
+The production build is static and deployable without a backend. The evidence-heavy Portfolio and Timeline chapters are split from the initial bundle and preloaded during idle time for presentation reliability.
 
-Every use case can be navigated by **two lenses**:
+## Architecture
 
-- **Service lines** — Cancer, Heart/Lung/Vascular, Orthopedics, Neurosciences,
-  Gastrointestinal, Women's Health, Cross-Cutting (the original taxonomy).
-- **Robotic-surgery tracks** — Robotic Platforms, Urology, Telesurgery, Surgical
-  AI, Digital Surgery, Orthopedics, Humanoids (the meeting tracks).
+- React 19 + TypeScript + Vite
+- Tailwind CSS v4 design tokens in `src/index.css`
+- Zod validation for the use-case corpus
+- 272 total use cases: 248 service-line cases and 24 robotics-native cases
+- Hash-addressable presentation chapters
+- Deterministic live-case state machine with audit, assumptions, and approval gates
+- Lazy-loaded evidence library and telesurgery map
 
-The dataset combines **248 cases migrated** from the original navigator (curation,
-taxonomy, scoring inputs, and investment tiers preserved) with **24 hand-authored
-robotic-surgery cases** — 272 total.
+## Evidence and limitations
 
-### De-branding
+The app separates three kinds of content:
 
-The migration (`scripts/migrate-original.mjs`, run via `npm run migrate`) scrubs
-organization-specific content for public use: it removes the `platformAlignment`
-field (tied to a specific platform stack) and strips originating-organization
-entries from deployment lists. The generated output is
-`src/data/service-line-use-cases.generated.ts`.
+- **External evidence** — linked to primary or peer-reviewed sources where used in the executive story.
+- **Curated portfolio data** — directional and not a financial recommendation.
+- **Modeled demonstration outputs** — synthetic illustrations, not clinical advice or a financial forecast.
 
-## Structure
-
-- `src/data/schema.ts` — Zod schema + types (both lenses; lenient on curated fields)
-- `src/data/service-line-use-cases.generated.ts` — migrated, de-branded dataset
-- `src/data/use-cases.ts` — aggregator (migrated + robotics, transformed & validated)
-- `src/data/tracks.ts` · `src/data/service-lines.ts` — lens metadata + colors
-- `src/lib/scoring.ts` — adoption-readiness score (platformAlignment removed, reweighted)
-- `src/components/` — UI components
-- `src/App.tsx` — app shell (lens toggle, filter chips, search, card grid)
-
-## Status
-
-- **Overview** — a graphical landing page framing the key concepts: the five
-  impact perspectives, the maturity spectrum, the Levels of Autonomy in Surgical
-  Robotics (0–5), patient proximity, investment/evidence ladders, and the
-  adoption-readiness scoring model (`src/data/concepts.ts`, `src/components/Home.tsx`).
-- **Use Case Explorer** — dual-lens (service lines + robotic tracks), search.
-- **Radar View** — Autonomy vs. Patient Proximity, ported from the original.
-
-Over the full 272-case dataset. Next: Roadmap view, a use-case detail modal, and
-shareable filtered URLs.
+See `docs/executive-story.md` for the narrative logic, audience misconceptions, talk track, demo runbook, and evidence discipline.
