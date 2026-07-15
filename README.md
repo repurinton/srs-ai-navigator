@@ -30,7 +30,7 @@ The web app is organized as six chapters with direct links and arrow-key navigat
 - `#portfolio` — the 272-case evidence library
 - `#timeline` — the telesurgery and robotic-platform arc
 
-The Hospital Lab replays the same 600 synthetic episodes across a fixed 30-day demand trace inside an animated 2.5D medical-center cutaway. Cars, valet, EMS, patients, caregivers, imaging, robotic ORs, recovery beds, and discharge flow remain in motion while live callouts expose each pain point and the next constraint. Each lever changes disclosed operating parameters while clinical priority, demand, and physical assets remain fixed. Case 7B then drills from the system view into parallel agent work and two named approvals. Neither mode contains patient data or makes a clinical decision.
+The Hospital Lab replays the same 600 synthetic episodes across a fixed 30-day demand trace inside an animated 2.5D medical-center cutaway. Cars, valet, EMS, patients, caregivers, imaging, robotic ORs, recovery beds, and discharge flow remain in motion while live callouts expose each pain point and the next constraint. On phones, a constraint-following camera keeps the active care area legible while raster-locked motion paths keep every actor on the correct road, corridor, or room. Each lever changes disclosed operating parameters while clinical priority, demand, and physical assets remain fixed. Case 7B then drills from the system view into parallel agent work and two named approvals. Neither mode contains patient data or makes a clinical decision.
 
 ## Presentation artifact
 

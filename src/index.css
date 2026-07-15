@@ -1440,11 +1440,19 @@ select:focus-visible {
   .section-title { font-size: 2.55rem; }
   .authority-label { display: none; }
   .handoff-line { display: none; }
+  .lab-mode-bar > div > div:first-child { display: none; }
+  .lab-mode-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .lab-mode-tabs button { min-height: 44px; }
   .twin-control-bar { align-items: stretch; }
   .twin-control-bar-immersive { border-radius: 14px; }
   .twin-control-bar > div:first-child { display: grid; width: 100%; }
   .twin-command-actions { align-items: stretch; flex-direction: column; }
-  .twin-command-actions > div:first-child { display: grid; width: 100%; }
+  .twin-command-actions > div:first-child { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; width: 100%; }
+  .twin-command-actions > div:first-child .button-primary { grid-column: 1 / -1; }
+  .twin-command-actions button,
+  .button-small-ghost,
+  .button-ghost,
+  .twin-assumptions summary { min-height: 44px; }
   .twin-step-count { width: 100%; justify-content: flex-end; }
   .twin-stage-caption { border-radius: 0 0 14px 14px; }
   .twin-stage-caption > div { padding: 0.85rem; }

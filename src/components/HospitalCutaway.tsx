@@ -67,11 +67,11 @@ const LEVER_BEACONS: Record<LeverId, CutawayAnchor> = {
 };
 
 const ZONE_LABELS = [
-  { label: "CT + MRI", x: 36, y: 13 },
-  { label: "Robotic ORs", x: 55, y: 34 },
-  { label: "Recovery + beds", x: 76, y: 36 },
-  { label: "EMS", x: 13, y: 38 },
-  { label: "Valet + arrivals", x: 41, y: 73 },
+  { id: "imaging", label: "CT + MRI", x: 36, y: 13 },
+  { id: "robotics", label: "Robotic ORs", x: 55, y: 29.5 },
+  { id: "recovery", label: "Recovery + beds", x: 76, y: 36 },
+  { id: "emergency", label: "EMS", x: 13, y: 38 },
+  { id: "arrivals", label: "Valet + arrivals", x: 41, y: 73 },
 ] as const;
 
 function clampPosition(value: number) {
@@ -106,26 +106,64 @@ function buildAutomaticPainPoints(simulation: SimulationResult): HospitalPainPoi
     });
 }
 
-function MotionActor({ className, children, delay }: { className: string; children?: ReactNode; delay: string }) {
+function MotionActor({
+  visualClassName,
+  routeClassName,
+  children,
+  delay,
+}: {
+  visualClassName: string;
+  routeClassName: string;
+  children?: ReactNode;
+  delay: string;
+}) {
   return (
-    <span className={`cutaway-actor ${className}`} style={{ "--actor-delay": delay } as SceneStyle} aria-hidden="true">
-      {children}
+    <span
+      className={`cutaway-motion-track ${routeClassName}`}
+      style={{ "--actor-delay": delay } as SceneStyle}
+      aria-hidden="true"
+    >
+      <span className={`cutaway-motion-glyph ${visualClassName}`}>{children}</span>
     </span>
   );
 }
 
-function Person({ role, delay }: { role: "caregiver" | "patient" | "valet"; delay: string }) {
+function Person({
+  role,
+  route,
+  delay,
+}: {
+  role: "caregiver" | "patient" | "valet";
+  route: string;
+  delay: string;
+}) {
   return (
-    <MotionActor className={`cutaway-person cutaway-person-${role}`} delay={delay}>
+    <MotionActor
+      visualClassName={`cutaway-person cutaway-person-${role}`}
+      routeClassName={`cutaway-route-${route}`}
+      delay={delay}
+    >
       <i className="cutaway-person-head" />
       <i className="cutaway-person-body" />
     </MotionActor>
   );
 }
 
-function Vehicle({ kind, delay }: { kind: "car" | "ambulance"; delay: string }) {
+function Vehicle({
+  kind,
+  route,
+  delay,
+}: {
+  kind: "car" | "ambulance";
+  route: string;
+  delay: string;
+}) {
   return (
-    <MotionActor className={`cutaway-vehicle cutaway-${kind}`} delay={delay}>
+    <MotionActor
+      visualClassName={`cutaway-vehicle cutaway-${kind}`}
+      routeClassName={`cutaway-route-${route}`}
+      delay={delay}
+    >
       <i className="cutaway-vehicle-cabin" />
       <i className="cutaway-wheel cutaway-wheel-front" />
       <i className="cutaway-wheel cutaway-wheel-back" />
@@ -189,6 +227,24 @@ export function HospitalCutaway({
   const constraint = simulation.stageResults[simulation.constraint];
   const constraintAnchor = STAGE_ANCHORS[simulation.constraint].anchor;
   const throughputDelta = baseline ? simulation.completed - baseline.completed : undefined;
+  const resolvedPainPoint = presentedPainPoints.find(
+    (painPoint) => painPoint.resolvedBy && activeSet.has(painPoint.resolvedBy),
+  );
+  const averagePainPointX = presentedPainPoints.length
+    ? presentedPainPoints.reduce((sum, painPoint) => sum + painPoint.anchor.x, 0) / presentedPainPoints.length
+    : constraintAnchor.x;
+  const mobileFocusX = resolvedPainPoint
+    ? constraintAnchor.x * 0.64 + resolvedPainPoint.anchor.x * 0.36
+    : constraintAnchor.x * 0.72 + averagePainPointX * 0.28;
+  const mobileVisibleWorld = (1.15 / (16 / 9)) * 100;
+  const mobileCameraShift = Math.max(
+    0,
+    Math.min(100 - mobileVisibleWorld, mobileFocusX - mobileVisibleWorld / 2),
+  );
+  const mobilePainPoints = [...presentedPainPoints].sort((left, right) => {
+    const severityRank = { critical: 0, pressure: 1, watch: 2 } as const;
+    return severityRank[left.severity ?? "pressure"] - severityRank[right.severity ?? "pressure"];
+  });
 
   return (
     <section
@@ -197,6 +253,7 @@ export function HospitalCutaway({
       data-robotics={activeSet.has("robotics") ? "true" : "false"}
       data-diagnosis={activeSet.has("diagnosis") ? "true" : "false"}
       data-longitudinal={activeSet.has("longitudinal") ? "true" : "false"}
+      data-focus={simulation.constraint}
       aria-labelledby={`${descriptionId}-title`}
     >
       {showHeader ? <header className="cutaway-header">
@@ -219,94 +276,101 @@ export function HospitalCutaway({
           "--queue-intensity": Math.min(1, constraint.peakQueue / 40).toFixed(2),
           "--constraint-x": `${constraintAnchor.x}%`,
           "--constraint-y": `${constraintAnchor.y}%`,
+          "--mobile-camera-shift": `-${mobileCameraShift.toFixed(2)}%`,
         } as SceneStyle}
       >
-        <div className="cutaway-raster" aria-hidden="true" />
-        <div className="cutaway-depth-light" aria-hidden="true" />
-        <div className="cutaway-constraint-zone" aria-hidden="true"><i /></div>
+        <div className="cutaway-world">
+          <div className="cutaway-raster" aria-hidden="true" />
+          <div className="cutaway-depth-light" aria-hidden="true" />
+          <div className="cutaway-constraint-zone" aria-hidden="true"><i /></div>
 
-        <div className="cutaway-network" aria-hidden="true">
-          {Array.from({ length: 6 }, (_, index) => <span key={index} />)}
-        </div>
+          <div className="cutaway-network" aria-hidden="true">
+            {Array.from({ length: 6 }, (_, index) => <span key={index} />)}
+          </div>
 
-        <div className="cutaway-zone-labels" aria-hidden="true">
-          {ZONE_LABELS.map((zone) => (
-            <span key={zone.label} style={{ "--x": `${zone.x}%`, "--y": `${zone.y}%` } as SceneStyle}>
-              {zone.label}
-            </span>
-          ))}
-        </div>
-
-        <div className="cutaway-motion-layer" aria-hidden="true">
-          <Vehicle kind="car" delay="-1.1s" />
-          <Vehicle kind="car" delay="-6.6s" />
-          <Vehicle kind="car" delay="-11.8s" />
-          <Vehicle kind="ambulance" delay="-3.8s" />
-          <Person role="valet" delay="-1.4s" />
-          <Person role="valet" delay="-7.1s" />
-          <Person role="patient" delay="-2.3s" />
-          <Person role="patient" delay="-9.7s" />
-          <Person role="caregiver" delay="-0.8s" />
-          <Person role="caregiver" delay="-4.2s" />
-          <Person role="caregiver" delay="-8.9s" />
-          <Person role="caregiver" delay="-12.6s" />
-          <span className="cutaway-gurney cutaway-gurney-one"><i /><b /></span>
-          <span className="cutaway-gurney cutaway-gurney-two"><i /><b /></span>
-          <span className={`cutaway-or-status cutaway-or-one ${activeSet.has("robotics") ? "is-live" : ""}`}><i />OR 01</span>
-          <span className={`cutaway-or-status cutaway-or-two ${activeSet.has("robotics") ? "is-live" : ""}`}><i />OR 02</span>
-          <span className={`cutaway-imaging-scan ${activeSet.has("diagnosis") ? "is-live" : ""}`}><i /></span>
-          <span className={`cutaway-bed cutaway-bed-one ${activeSet.has("longitudinal") ? "is-clearing" : ""}`}><i /></span>
-          <span className="cutaway-bed cutaway-bed-two"><i /></span>
-          <span className="cutaway-bed cutaway-bed-three"><i /></span>
-        </div>
-
-        <div className="cutaway-lever-layer" aria-label="AI lever locations">
-          {LEVER_SEQUENCE.map((lever) => {
-            const beacon = LEVER_BEACONS[lever];
-            const active = activeSet.has(lever);
-            return (
+          <div className="cutaway-zone-labels" aria-hidden="true">
+            {ZONE_LABELS.map((zone) => (
               <span
-                key={lever}
-                className={`cutaway-lever-beacon ${active ? "is-live" : ""}`}
-                style={{
-                  "--x": `${beacon.x}%`,
-                  "--y": `${beacon.y}%`,
-                  "--lever-color": LEVER_META[lever].color,
-                } as SceneStyle}
-                aria-label={`${LEVER_META[lever].name}: ${active ? "active" : "waiting"}`}
+                key={zone.label}
+                className={`cutaway-zone-${zone.id}`}
+                style={{ "--x": `${zone.x}%`, "--y": `${zone.y}%` } as SceneStyle}
               >
-                <i aria-hidden="true" />
-                <b>{LEVER_META[lever].monogram}</b>
+                {zone.label}
               </span>
-            );
-          })}
-        </div>
+            ))}
+          </div>
 
-        <div className="cutaway-callout-layer">
-          {presentedPainPoints.map((painPoint) => {
-            const card = painPoint.callout ?? defaultCallout(painPoint.anchor);
-            const resolved = Boolean(painPoint.resolvedBy && activeSet.has(painPoint.resolvedBy));
-            return (
-              <div
-                key={painPoint.id}
-                className="cutaway-callout"
-                style={{
-                  "--anchor-x": `${painPoint.anchor.x}%`,
-                  "--anchor-y": `${painPoint.anchor.y}%`,
-                  "--card-x": `${card.x}%`,
-                  "--card-y": `${card.y}%`,
-                } as SceneStyle}
-              >
-                <span className={`cutaway-anchor ${resolved ? "is-resolved" : ""}`} aria-hidden="true"><i /></span>
-                <PainPointCard
-                  painPoint={painPoint}
-                  active={painPoint.id === activePainPointId}
-                  resolved={resolved}
-                  onSelect={onPainPointSelect}
-                />
-              </div>
-            );
-          })}
+          <div className="cutaway-motion-layer" aria-hidden="true">
+            <Vehicle kind="car" route="car-arrival" delay="-1.1s" />
+            <Vehicle kind="car" route="car-departure" delay="-6.6s" />
+            <Vehicle kind="car" route="car-parking" delay="-11.8s" />
+            <Vehicle kind="ambulance" route="ambulance" delay="-3.8s" />
+            <Person role="valet" route="valet-curb" delay="-1.4s" />
+            <Person role="valet" route="valet-entry" delay="-7.1s" />
+            <Person role="patient" route="patient-arrival" delay="-2.3s" />
+            <Person role="patient" route="patient-ward" delay="-9.7s" />
+            <Person role="caregiver" route="caregiver-prep" delay="-0.8s" />
+            <Person role="caregiver" route="caregiver-or" delay="-4.2s" />
+            <Person role="caregiver" route="caregiver-recovery" delay="-8.9s" />
+            <Person role="caregiver" route="caregiver-ward" delay="-12.6s" />
+            <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-prep" delay="-1.8s"><i /><b /></MotionActor>
+            <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-recovery" delay="-6.1s"><i /><b /></MotionActor>
+            <span className={`cutaway-or-status cutaway-or-one ${activeSet.has("robotics") ? "is-live" : ""}`}><i />OR 01</span>
+            <span className={`cutaway-or-status cutaway-or-two ${activeSet.has("robotics") ? "is-live" : ""}`}><i />OR 02</span>
+            <span className={`cutaway-imaging-scan ${activeSet.has("diagnosis") ? "is-live" : ""}`}><i /></span>
+            <span className={`cutaway-bed cutaway-bed-one ${activeSet.has("longitudinal") ? "is-clearing" : ""}`}><i /></span>
+            <span className="cutaway-bed cutaway-bed-two"><i /></span>
+            <span className="cutaway-bed cutaway-bed-three"><i /></span>
+          </div>
+
+          <div className="cutaway-lever-layer" aria-label="AI lever locations">
+            {LEVER_SEQUENCE.map((lever) => {
+              const beacon = LEVER_BEACONS[lever];
+              const active = activeSet.has(lever);
+              return (
+                <span
+                  key={lever}
+                  className={`cutaway-lever-beacon cutaway-lever-${lever} ${active ? "is-live" : ""}`}
+                  style={{
+                    "--x": `${beacon.x}%`,
+                    "--y": `${beacon.y}%`,
+                    "--lever-color": LEVER_META[lever].color,
+                  } as SceneStyle}
+                  aria-label={`${LEVER_META[lever].name}: ${active ? "active" : "waiting"}`}
+                >
+                  <i aria-hidden="true" />
+                  <b>{LEVER_META[lever].monogram}</b>
+                </span>
+              );
+            })}
+          </div>
+
+          <div className="cutaway-callout-layer">
+            {presentedPainPoints.map((painPoint) => {
+              const card = painPoint.callout ?? defaultCallout(painPoint.anchor);
+              const resolved = Boolean(painPoint.resolvedBy && activeSet.has(painPoint.resolvedBy));
+              return (
+                <div
+                  key={painPoint.id}
+                  className="cutaway-callout"
+                  style={{
+                    "--anchor-x": `${painPoint.anchor.x}%`,
+                    "--anchor-y": `${painPoint.anchor.y}%`,
+                    "--card-x": `${card.x}%`,
+                    "--card-y": `${card.y}%`,
+                  } as SceneStyle}
+                >
+                  <span className={`cutaway-anchor ${resolved ? "is-resolved" : ""}`} aria-hidden="true"><i /></span>
+                  <PainPointCard
+                    painPoint={painPoint}
+                    active={painPoint.id === activePainPointId}
+                    resolved={resolved}
+                    onSelect={onPainPointSelect}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="cutaway-metric-strip" aria-hidden="true">
@@ -315,10 +379,18 @@ export function HospitalCutaway({
           <span><small>Admin touches</small><strong>{simulation.administrativeTouches}</strong></span>
           <span className="cutaway-constraint-metric"><small>Constraint now</small><strong>{constraint.shortName}</strong></span>
         </div>
+        <div className="cutaway-mobile-focus" aria-hidden="true"><span>Constraint</span><strong>{constraint.shortName}</strong></div>
+      </div>
+
+      <div className="cutaway-mobile-metrics" aria-hidden="true">
+        <span><small>Completed</small><strong>{simulation.completed}</strong>{throughputDelta !== undefined ? <b>{throughputDelta >= 0 ? "+" : ""}{throughputDelta}</b> : null}</span>
+        <span><small>Median journey</small><strong>{simulation.medianJourneyDays}d</strong></span>
+        <span><small>Admin touches</small><strong>{simulation.administrativeTouches}</strong></span>
+        <span className="cutaway-constraint-metric"><small>Constraint now</small><strong>{constraint.shortName}</strong></span>
       </div>
 
       <div className="cutaway-mobile-callouts" aria-label="Current hospital pain points">
-        {presentedPainPoints.map((painPoint) => (
+        {mobilePainPoints.map((painPoint) => (
           <PainPointCard
             key={painPoint.id}
             painPoint={painPoint}
