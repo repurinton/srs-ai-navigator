@@ -117,6 +117,24 @@
   border-radius: inherit;
 }
 
+.hospital-cutaway[data-focus-kind="pain"] .cutaway-constraint-zone {
+  border-color: rgba(255, 180, 84, 0.72);
+  background: radial-gradient(circle, rgba(255, 180, 84, calc(0.07 + var(--queue-intensity) * 0.11)), transparent 64%);
+  box-shadow: 0 0 32px rgba(255, 180, 84, 0.16);
+}
+
+.hospital-cutaway[data-focus-kind="pain"] .cutaway-constraint-zone i { border-color: rgba(255, 180, 84, 0.74); }
+
+.hospital-cutaway[data-focus-kind="solution"] .cutaway-constraint-zone {
+  border-color: color-mix(in srgb, var(--story-color) 74%, #fff);
+  background: radial-gradient(circle, color-mix(in srgb, var(--story-color) 18%, transparent), transparent 64%);
+  box-shadow: 0 0 38px color-mix(in srgb, var(--story-color) 24%, transparent);
+}
+
+.hospital-cutaway[data-focus-kind="solution"] .cutaway-constraint-zone i {
+  border-color: color-mix(in srgb, var(--story-color) 72%, #fff);
+}
+
 .cutaway-network {
   position: absolute;
   inset: 0;
@@ -409,6 +427,19 @@
 
 .cutaway-lever-beacon.is-live i { border-color: var(--lever-color); animation: cutaway-beacon 2.5s ease-out infinite; }
 
+.cutaway-lever-beacon.is-materializing {
+  border-color: var(--lever-color);
+  background: color-mix(in srgb, var(--lever-color) 14%, rgba(6, 19, 28, 0.9));
+  color: #fff;
+  box-shadow: 0 0 30px color-mix(in srgb, var(--lever-color) 50%, transparent);
+  animation: cutaway-materialize-beacon 1.25s ease-in-out infinite;
+}
+
+.cutaway-lever-beacon.is-materializing i {
+  border-color: var(--lever-color);
+  animation: cutaway-beacon 1.25s ease-out infinite;
+}
+
 .cutaway-callout-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
 .cutaway-callout { position: absolute; inset: 0; }
 
@@ -438,6 +469,12 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
 .cutaway-callout-card.is-active:not(.is-resolved) {
   box-shadow: 0 14px 34px rgba(255, 113, 109, 0.2);
 }
+.cutaway-callout-card.is-materializing {
+  border-color: color-mix(in srgb, var(--story-color) 78%, #fff);
+  background: color-mix(in srgb, var(--story-color) 11%, rgba(6, 19, 28, 0.94));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--story-color) 26%, transparent), 0 14px 38px color-mix(in srgb, var(--story-color) 22%, transparent);
+  animation: cutaway-solution-breathe 1.8s ease-in-out infinite;
+}
 .cutaway-callout-card.is-resolved {
   opacity: 0.74;
   border-color: rgba(91, 240, 195, 0.32);
@@ -450,6 +487,8 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
 .cutaway-severity-watch:not(.is-resolved) { border-color: rgba(94, 143, 255, 0.48); }
 .cutaway-severity-watch:not(.is-resolved) .cutaway-callout-kicker,
 .cutaway-severity-watch:not(.is-resolved) b { color: #8db0ff; }
+.cutaway-callout-card.is-materializing .cutaway-callout-kicker,
+.cutaway-callout-card.is-materializing b { color: color-mix(in srgb, var(--story-color) 82%, #fff); }
 
 .cutaway-callout-kicker { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.25rem; color: #ffb454; font-size: clamp(0.42rem, 0.52vw, 0.56rem); font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
 .cutaway-callout-kicker i { width: 0.38rem; height: 0.38rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 rgba(255, 180, 84, 0.5); animation: cutaway-alert 2s ease-out infinite; }
@@ -475,6 +514,28 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
 .cutaway-callout-card.is-resolved .cutaway-callout-detail { display: none; }
 .cutaway-callout-card b { display: block; margin-top: 0.35rem; color: #ffb454; font-size: clamp(0.55rem, 0.65vw, 0.7rem); }
 .cutaway-callout-card.is-resolved b { color: var(--cutaway-mint); }
+
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout-card.is-resolved {
+  pointer-events: none;
+  animation: cutaway-resolution-fade 2.55s ease both;
+}
+
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout:not(.is-active-callout) .cutaway-anchor.is-resolved {
+  animation: cutaway-resolution-anchor-fade 2.55s ease both;
+}
+
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout.is-active-callout .cutaway-callout-card:not(.is-resolved) {
+  animation-delay: 2.05s;
+}
+
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-mobile-callouts .cutaway-callout-card.is-active:not(.is-resolved) {
+  animation-delay: 2.05s;
+}
+
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout.is-active-callout .cutaway-anchor:not(.is-resolved) {
+  opacity: 0;
+  animation: cutaway-anchor-arrive 420ms 2.05s ease both;
+}
 
 .cutaway-anchor {
   position: absolute;
@@ -705,10 +766,27 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
 @keyframes cutaway-scan { 50% { transform: scale(0.32); opacity: 0.35; } }
 @keyframes cutaway-status-pulse { 70%, 100% { box-shadow: 0 0 0 8px rgba(91, 240, 195, 0); } }
 @keyframes cutaway-beacon { 70%, 100% { inset: -13px; opacity: 0; } }
+@keyframes cutaway-materialize-beacon { 50% { transform: translate(-50%, -50%) scale(1.1); } }
 @keyframes cutaway-alert { 70%, 100% { box-shadow: 0 0 0 7px rgba(255, 180, 84, 0); } }
 @keyframes cutaway-constraint-breathe { 50% { transform: translate(-50%, -50%) scale(1.08); opacity: 0.78; } }
 @keyframes cutaway-bed-clear { 0%, 55% { opacity: 1; transform: translateX(0); } 75%, 100% { opacity: 0.25; transform: translateX(140%); } }
 @keyframes cutaway-callout-arrive { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+@keyframes cutaway-solution-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); box-shadow: 0 0 0 1px color-mix(in srgb, var(--story-color) 36%, transparent), 0 16px 42px color-mix(in srgb, var(--story-color) 32%, transparent); }
+}
+@keyframes cutaway-resolution-fade {
+  0%, 28% { opacity: 0.78; transform: translateY(0) scale(1); }
+  100% { opacity: 0.16; transform: translateY(-5px) scale(0.97); }
+}
+@keyframes cutaway-resolution-anchor-fade {
+  0%, 28% { opacity: 1; }
+  100% { opacity: 0.12; }
+}
+@keyframes cutaway-anchor-arrive {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.72); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
 
 .hospital-cutaway.is-paused .cutaway-motion-layer * { animation-play-state: paused; }
 
@@ -808,6 +886,8 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   }
 
   .cutaway-world { transition: none !important; }
+  .cutaway-callout-card,
+  .cutaway-anchor { animation-delay: 0ms !important; }
   .cutaway-motion-track { animation: none !important; opacity: 1 !important; }
   .cutaway-route-car-arrival { transform: translate3d(41%, 71%, 0); }
   .cutaway-route-car-departure { transform: translate3d(58%, 74%, 0); }

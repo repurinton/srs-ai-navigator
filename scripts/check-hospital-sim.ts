@@ -5,6 +5,13 @@ import {
   simulateHospital,
   type LeverId,
 } from "../src/lib/hospital-sim.ts";
+import {
+  INITIAL_HOSPITAL_STORY,
+  advanceHospitalStory,
+  isHospitalStoryComplete,
+  nextHospitalStoryLever,
+  type HospitalStoryState,
+} from "../src/lib/hospital-story.ts";
 
 const active: LeverId[] = [];
 const snapshots = [];
@@ -38,5 +45,38 @@ assert.ok(connected.completed > baseline.completed, "The connected system should
 assert.ok(connected.journeyDays < baseline.journeyDays, "The connected system should shorten the journey");
 assert.ok(connected.touches < baseline.touches, "The connected system should reduce administrative touches");
 
-console.table(snapshots);
+const storyStates: HospitalStoryState[] = [];
+let story: HospitalStoryState = { ...INITIAL_HOSPITAL_STORY, activeLevers: [] };
 
+while (!isHospitalStoryComplete(story)) {
+  storyStates.push(story);
+  const next = advanceHospitalStory(story);
+
+  if (story.beat === "surface") {
+    assert.equal(next.beat, "materialize", "A surfaced pressure should advance to AI materialization");
+    assert.equal(next.activeLevers.length, story.activeLevers.length, "Surfacing does not change the simulation");
+  } else if (story.beat === "materialize") {
+    assert.equal(next.beat, "reveal", "Materialization should advance to operating impact");
+    assert.equal(next.activeLevers.length, story.activeLevers.length + 1, "A lever commits only on reveal");
+  } else {
+    assert.equal(next.beat, "surface", "An impact reveal should surface the next pressure");
+    assert.equal(next.activeLevers.length, story.activeLevers.length, "The reveal dwell preserves the simulation");
+  }
+
+  assert.deepEqual(
+    next.activeLevers,
+    LEVER_SEQUENCE.slice(0, next.activeLevers.length),
+    "Guided story levers must remain an ordered prefix",
+  );
+  story = next;
+}
+
+storyStates.push(story);
+assert.equal(storyStates.length, 18, "The guided story should expose three deliberate beats for each lever");
+assert.equal(storyStates.filter((state) => state.beat === "surface").length, 6);
+assert.equal(storyStates.filter((state) => state.beat === "materialize").length, 6);
+assert.equal(storyStates.filter((state) => state.beat === "reveal").length, 6);
+assert.equal(nextHospitalStoryLever(story), undefined);
+assert.deepEqual(story.activeLevers, LEVER_SEQUENCE);
+
+console.table(snapshots);

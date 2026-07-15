@@ -7,6 +7,7 @@ import {
   type SimulationResult,
   type StageId,
 } from "@/lib/hospital-sim";
+import type { HospitalStoryBeat } from "@/lib/hospital-story";
 import "./HospitalCutaway.css";
 
 export type CutawayAnchor = {
@@ -48,6 +49,8 @@ export type HospitalCutawayProps = {
   title?: string;
   showHeader?: boolean;
   constraintLabel?: string;
+  materializingLever?: LeverId;
+  storyBeat?: HospitalStoryBeat;
 };
 
 type SceneStyle = CSSProperties & Record<`--${string}`, string | number>;
@@ -213,11 +216,13 @@ function PainPointCard({
   painPoint,
   active,
   resolved,
+  materializing,
   onSelect,
 }: {
   painPoint: HospitalPainPoint;
   active: boolean;
   resolved: boolean;
+  materializing: boolean;
   onSelect?: (painPoint: HospitalPainPoint) => void;
 }) {
   const content = (
@@ -234,7 +239,7 @@ function PainPointCard({
     </>
   );
 
-  const className = `cutaway-callout-card cutaway-severity-${painPoint.severity ?? "pressure"}${active ? " is-active" : ""}${resolved ? " is-resolved" : ""}`;
+  const className = `cutaway-callout-card cutaway-severity-${painPoint.severity ?? "pressure"}${active ? " is-active" : ""}${resolved ? " is-resolved" : ""}${materializing ? " is-materializing" : ""}`;
   return onSelect ? (
     <button type="button" className={className} onClick={() => onSelect(painPoint)} aria-pressed={active}>
       {content}
@@ -256,16 +261,27 @@ export function HospitalCutaway({
   title = "Hospital operating twin",
   showHeader = true,
   constraintLabel = "Current constraint",
+  materializingLever,
+  storyBeat = "reveal",
 }: HospitalCutawayProps) {
   const descriptionId = useId();
   const activeSet = useMemo(() => new Set(activeLevers), [activeLevers]);
+  const visualSet = useMemo(() => {
+    const next = new Set(activeLevers);
+    if (materializingLever) next.add(materializingLever);
+    return next;
+  }, [activeLevers, materializingLever]);
   const presentedPainPoints = useMemo(
     () => (painPoints ?? buildAutomaticPainPoints(simulation)).filter((painPoint) => painPoint.visible !== false).slice(0, 2),
     [painPoints, simulation],
   );
   const activeNames = activeLevers.map((lever) => LEVER_META[lever].name);
   const constraint = simulation.stageResults[simulation.constraint];
-  const constraintAnchor = STAGE_ANCHORS[simulation.constraint].anchor;
+  const systemConstraintAnchor = STAGE_ANCHORS[simulation.constraint].anchor;
+  const activePainPoint = presentedPainPoints.find((painPoint) => painPoint.id === activePainPointId);
+  const storyFocus = storyBeat === "reveal" ? undefined : activePainPoint;
+  const constraintAnchor = storyFocus?.anchor ?? systemConstraintAnchor;
+  const focusStage = storyFocus?.stage ?? simulation.constraint;
   const throughputDelta = baseline ? simulation.completed - baseline.completed : undefined;
   const flowYield = Math.round((simulation.completed / simulation.episodes) * 1_000) / 10;
   const baselineFlowYield = baseline ? Math.round((baseline.completed / baseline.episodes) * 1_000) / 10 : undefined;
@@ -294,11 +310,17 @@ export function HospitalCutaway({
   return (
     <section
       className={`hospital-cutaway ${isPlaying ? "is-playing" : "is-paused"} ${className}`.trim()}
-      data-connected={activeSet.has("automation") ? "true" : "false"}
-      data-robotics={activeSet.has("robotics") ? "true" : "false"}
-      data-diagnosis={activeSet.has("diagnosis") ? "true" : "false"}
-      data-longitudinal={activeSet.has("longitudinal") ? "true" : "false"}
-      data-focus={simulation.constraint}
+      data-connected={visualSet.has("automation") ? "true" : "false"}
+      data-robotics={visualSet.has("robotics") ? "true" : "false"}
+      data-diagnosis={visualSet.has("diagnosis") ? "true" : "false"}
+      data-longitudinal={visualSet.has("longitudinal") ? "true" : "false"}
+      data-focus={focusStage}
+      data-focus-kind={storyBeat === "materialize" ? "solution" : storyFocus?.stage === simulation.constraint ? "constraint" : storyFocus ? "pain" : "constraint"}
+      data-story-beat={storyBeat}
+      data-materializing-lever={materializingLever ?? "none"}
+      style={{
+        "--story-color": materializingLever ? LEVER_META[materializingLever].color : "#5bf0c3",
+      } as SceneStyle}
       aria-labelledby={`${descriptionId}-title`}
     >
       {showHeader ? <header className="cutaway-header">
@@ -374,10 +396,10 @@ export function HospitalCutaway({
             <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-prep" delay="-12.8s" secondary><i /><b /></MotionActor>
             <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-recovery" delay="-6.1s"><i /><b /></MotionActor>
             <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-recovery" delay="-18.1s" secondary><i /><b /></MotionActor>
-            <span className={`cutaway-or-status cutaway-or-one ${activeSet.has("robotics") ? "is-live" : ""}`}><i />OR 01</span>
-            <span className={`cutaway-or-status cutaway-or-two ${activeSet.has("robotics") ? "is-live" : ""}`}><i />OR 02</span>
-            <span className={`cutaway-imaging-scan ${activeSet.has("diagnosis") ? "is-live" : ""}`}><i /></span>
-            <span className={`cutaway-bed cutaway-bed-one ${activeSet.has("longitudinal") ? "is-clearing" : ""}`}><i /></span>
+            <span className={`cutaway-or-status cutaway-or-one ${visualSet.has("robotics") ? "is-live" : ""}`}><i />OR 01</span>
+            <span className={`cutaway-or-status cutaway-or-two ${visualSet.has("robotics") ? "is-live" : ""}`}><i />OR 02</span>
+            <span className={`cutaway-imaging-scan ${visualSet.has("diagnosis") ? "is-live" : ""}`}><i /></span>
+            <span className={`cutaway-bed cutaway-bed-one ${visualSet.has("longitudinal") ? "is-clearing" : ""}`}><i /></span>
             <span className="cutaway-bed cutaway-bed-two"><i /></span>
             <span className="cutaway-bed cutaway-bed-three"><i /></span>
           </div>
@@ -386,16 +408,17 @@ export function HospitalCutaway({
             {LEVER_SEQUENCE.map((lever) => {
               const beacon = LEVER_BEACONS[lever];
               const active = activeSet.has(lever);
+              const materializing = materializingLever === lever;
               return (
                 <span
                   key={lever}
-                  className={`cutaway-lever-beacon cutaway-lever-${lever} ${active ? "is-live" : ""}`}
+                  className={`cutaway-lever-beacon cutaway-lever-${lever} ${active ? "is-live" : ""}${materializing ? " is-materializing" : ""}`}
                   style={{
                     "--x": `${beacon.x}%`,
                     "--y": `${beacon.y}%`,
                     "--lever-color": LEVER_META[lever].color,
                   } as SceneStyle}
-                  aria-label={`${LEVER_META[lever].name}: ${active ? "active" : "waiting"}`}
+                  aria-label={`${LEVER_META[lever].name}: ${active ? "active" : materializing ? "materializing" : "waiting"}`}
                 >
                   <i aria-hidden="true" />
                   <b>{LEVER_META[lever].monogram}</b>
@@ -408,15 +431,17 @@ export function HospitalCutaway({
             {presentedPainPoints.map((painPoint) => {
               const card = painPoint.callout ?? defaultCallout(painPoint.anchor);
               const resolved = Boolean(painPoint.resolvedBy && activeSet.has(painPoint.resolvedBy));
+              const materializing = painPoint.resolvedBy === materializingLever;
               return (
                 <div
                   key={painPoint.id}
-                  className="cutaway-callout"
+                  className={`cutaway-callout${painPoint.id === activePainPointId ? " is-active-callout" : ""}`}
                   style={{
                     "--anchor-x": `${painPoint.anchor.x}%`,
                     "--anchor-y": `${painPoint.anchor.y}%`,
                     "--card-x": `${card.x}%`,
                     "--card-y": `${card.y}%`,
+                    "--story-color": painPoint.resolvedBy ? LEVER_META[painPoint.resolvedBy].color : "#ff716d",
                   } as SceneStyle}
                 >
                   <span className={`cutaway-anchor ${resolved ? "is-resolved" : ""}`} aria-hidden="true"><i /></span>
@@ -424,6 +449,7 @@ export function HospitalCutaway({
                     painPoint={painPoint}
                     active={painPoint.id === activePainPointId}
                     resolved={resolved}
+                    materializing={materializing}
                     onSelect={onPainPointSelect}
                   />
                 </div>
@@ -494,6 +520,7 @@ export function HospitalCutaway({
             painPoint={painPoint}
             active={painPoint.id === activePainPointId}
             resolved={Boolean(painPoint.resolvedBy && activeSet.has(painPoint.resolvedBy))}
+            materializing={painPoint.resolvedBy === materializingLever}
             onSelect={onPainPointSelect}
           />
         ))}

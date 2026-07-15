@@ -895,6 +895,19 @@ select:focus-visible {
   font-weight: 600;
 }
 
+.twin-step-count em {
+  align-self: center;
+  border-left: 1px solid rgba(255,255,255,0.14);
+  margin-left: 0.15rem;
+  padding-left: 0.6rem;
+  color: rgba(255,255,255,0.68);
+  font-size: 0.5rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
 .twin-lever-rail {
   display: grid;
   overflow: hidden;
@@ -923,6 +936,17 @@ select:focus-visible {
 .twin-lever-active {
   background: color-mix(in srgb, var(--lever-color) 9%, var(--color-deep));
   box-shadow: inset 0 -3px 0 var(--lever-color);
+}
+
+.twin-lever-materializing {
+  background: color-mix(in srgb, var(--lever-color) 13%, var(--color-deep));
+  box-shadow: inset 0 -3px 0 var(--lever-color), 0 0 26px color-mix(in srgb, var(--lever-color) 18%, transparent);
+  animation: twin-lever-materialize 1.8s ease-in-out infinite;
+}
+
+.twin-lever-materializing .twin-lever-monogram {
+  background: color-mix(in srgb, var(--lever-color) 14%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--lever-color) 28%, transparent);
 }
 
 .twin-lever-monogram {
@@ -961,6 +985,7 @@ select:focus-visible {
 }
 
 .twin-lever-active > b { color: var(--lever-color); }
+.twin-lever-materializing > b { color: var(--lever-color); letter-spacing: 0.08em; }
 
 .twin-metrics {
   display: grid;
@@ -1374,6 +1399,7 @@ select:focus-visible {
   color: rgba(255,255,255,0.56);
 }
 
+@keyframes twin-lever-materialize { 50% { filter: brightness(1.16); } }
 @keyframes tele-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes tele-ring { 0% { transform: scale(0.4); opacity: 0.9; } 70% { opacity: 0; } 100% { transform: scale(2.6); opacity: 0; } }
 @keyframes tele-node-in { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -1453,7 +1479,8 @@ select:focus-visible {
   .button-small-ghost,
   .button-ghost,
   .twin-assumptions summary { min-height: 44px; }
-  .twin-step-count { width: 100%; justify-content: flex-end; }
+  .twin-step-count { flex-wrap: wrap; width: 100%; justify-content: flex-end; }
+  .twin-step-count em { width: 100%; border-left: 0; margin-left: 0; padding-left: 0; text-align: right; }
   .twin-stage-caption { border-radius: 0 0 14px 14px; }
   .twin-stage-caption > div { padding: 0.85rem; }
   .twin-lever-rail-immersive .twin-lever { min-height: 58px; }
