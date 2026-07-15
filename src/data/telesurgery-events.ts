@@ -1,8 +1,16 @@
 /**
- * Real, sourced telesurgery milestones — the data behind the "Collapse of
- * Distance" time-lapse map. Each event is a console-site → patient-site link
- * with a date, distance, and citation. Distances are approximate great-circle
- * (straight-line) km; notable network-path figures are called out in `note`.
+ * Real, sourced milestones behind "The Rise of Robotic Surgery" time-lapse map.
+ *
+ * Two kinds of event, on one shared timeline:
+ *  - "platform"    a robotic-surgery system reaches a new country/market —
+ *                   rendered as a single glowing site marker (a capability
+ *                   "lighting up").
+ *  - "telesurgery"  a console-site → patient-site remote procedure —
+ *                   rendered as a bowed arc between the two points.
+ *
+ * All dates are the earliest public date confirmed by a citation; where only
+ * a month/year is documented, the day is set to the 1st rather than implying
+ * false precision.
  */
 export interface GeoPoint {
   city: string;
@@ -10,16 +18,20 @@ export interface GeoPoint {
   lat: number;
   lng: number;
 }
+
+export type EventKind = "platform" | "telesurgery";
+
 export interface TeleEvent {
   id: string;
+  kind: EventKind;
   date: string; // ISO
   t: number; // decimal year (for the timeline)
   title: string;
-  from: GeoPoint; // surgeon / console
-  to: GeoPoint; // patient
-  distanceKm: number;
+  from: GeoPoint; // surgeon / console / launch site
+  to?: GeoPoint; // patient site (telesurgery only)
+  distanceKm?: number; // telesurgery only
   platform: string;
-  procedure: string;
+  procedure?: string;
   note: string;
   source: string;
   fromVenue?: string; // originating institution (console site)
@@ -40,10 +52,25 @@ const ORLANDO: GeoPoint = { city: "Orlando", country: "USA", lat: 28.54, lng: -8
 const PEACHTREE: GeoPoint = { city: "Peachtree Corners, GA", country: "USA", lat: 33.97, lng: -84.22 };
 const LUANDA: GeoPoint = { city: "Luanda", country: "Angola", lat: -8.84, lng: 13.23 };
 const SAO_PAULO: GeoPoint = { city: "São Paulo", country: "Brazil", lat: -23.55, lng: -46.63 };
+const SUNNYVALE: GeoPoint = { city: "Sunnyvale, CA", country: "USA", lat: 37.37, lng: -122.04 };
+const CAMBRIDGE_UK: GeoPoint = { city: "Cambridge", country: "UK", lat: 52.2, lng: 0.13 };
+const DUBLIN: GeoPoint = { city: "Dublin", country: "Ireland", lat: 53.35, lng: -6.26 };
 
-export const teleEvents: TeleEvent[] = [
+const rawEvents: TeleEvent[] = [
+  {
+    id: "davinci-fda-2000",
+    kind: "platform",
+    date: "2000-07-01",
+    t: 2000.52,
+    title: "da Vinci cleared for surgery — the modern era begins",
+    from: SUNNYVALE,
+    platform: "Intuitive da Vinci",
+    note: "The FDA cleared da Vinci for general laparoscopic surgery in July 2000 — the device that would define robotic surgery for the next two decades.",
+    source: "FDA clearance record, 2000",
+  },
   {
     id: "lindbergh-2001",
+    kind: "telesurgery",
     date: "2001-09-07",
     t: 2001.7,
     title: "Operation Lindbergh — the first transatlantic surgery",
@@ -57,6 +84,7 @@ export const teleEvents: TeleEvent[] = [
   },
   {
     id: "anvari-2003",
+    kind: "telesurgery",
     date: "2003-03-01",
     t: 2003.2,
     title: "First regular remote-surgery service",
@@ -70,6 +98,7 @@ export const teleEvents: TeleEvent[] = [
   },
   {
     id: "china-5g-2019",
+    kind: "telesurgery",
     date: "2019-03-16",
     t: 2019.2,
     title: "First 5G remote surgery",
@@ -82,7 +111,52 @@ export const teleEvents: TeleEvent[] = [
     source: "China Daily / CGTN 2019",
   },
   {
+    id: "versius-ce-2019",
+    kind: "platform",
+    date: "2019-03-01",
+    t: 2019.3,
+    title: "Versius reaches the market — the first serious challenger",
+    from: CAMBRIDGE_UK,
+    platform: "CMR Surgical Versius",
+    note: "CMR Surgical secured CE Mark for Versius in March 2019, launching the first credible modular challenger to da Vinci's two-decade lead.",
+    source: "MassDevice, 2019",
+  },
+  {
+    id: "hugo-ce-2021",
+    kind: "platform",
+    date: "2021-10-11",
+    t: 2021.78,
+    title: "Hugo RAS reaches Europe",
+    from: DUBLIN,
+    platform: "Medtronic Hugo RAS",
+    note: "Medtronic announced CE Mark approval for the Hugo robotic-assisted surgery system on October 11, 2021, bringing a second global medtech giant into the market.",
+    source: "Medtronic press release, Oct 11, 2021",
+  },
+  {
+    id: "toumai-nmpa-2022",
+    kind: "platform",
+    date: "2022-01-01",
+    t: 2022.02,
+    title: "Toumai reaches China — the first homegrown Chinese platform",
+    from: SHANGHAI,
+    platform: "MicroPort Toumai",
+    note: "China's NMPA approved the Toumai laparoscopic surgical robot in January 2022 — the first commercialized four-arm platform developed in China.",
+    source: "MicroPort MedBot, 2022",
+  },
+  {
+    id: "mantra-india-2022",
+    kind: "platform",
+    date: "2022-07-01",
+    t: 2022.5,
+    title: "SSi Mantra reaches India",
+    from: NEW_DELHI,
+    platform: "SS Innovations SSi Mantra",
+    note: "The first SSi Mantra system was installed at the Rajiv Gandhi Cancer Institute in July 2022 — India's first homegrown surgical robot.",
+    source: "SS Innovations, 2022",
+  },
+  {
     id: "toumai-casablanca-2024",
+    kind: "telesurgery",
     date: "2024-11-16",
     t: 2024.88,
     title: "Longest intercontinental telesurgery",
@@ -96,6 +170,7 @@ export const teleEvents: TeleEvent[] = [
   },
   {
     id: "ssi-cardiac-2025",
+    kind: "telesurgery",
     date: "2025-01-15",
     t: 2025.04,
     title: "First robotic cardiac telesurgery",
@@ -109,6 +184,7 @@ export const teleEvents: TeleEvent[] = [
   },
   {
     id: "americas-saopaulo-2025",
+    kind: "telesurgery",
     date: "2025-02-20",
     t: 2025.14,
     title: "Telesurgery across the Americas",
@@ -123,6 +199,7 @@ export const teleEvents: TeleEvent[] = [
   },
   {
     id: "orlando-angola-2025",
+    kind: "telesurgery",
     date: "2025-06-14",
     t: 2025.45,
     title: "First FDA-cleared telesurgery on a human",
@@ -138,6 +215,7 @@ export const teleEvents: TeleEvent[] = [
   },
   {
     id: "intuitive-davinci5-2025",
+    kind: "telesurgery",
     date: "2025-07-15",
     t: 2025.54,
     title: "da Vinci 5 telesurgery — the dominant platform arrives",
@@ -151,5 +229,7 @@ export const teleEvents: TeleEvent[] = [
   },
 ];
 
-export const TELE_MIN_T = 2000.8;
+export const teleEvents: TeleEvent[] = [...rawEvents].sort((a, b) => a.t - b.t);
+
+export const TELE_MIN_T = 2000.3;
 export const TELE_MAX_T = 2025.9;

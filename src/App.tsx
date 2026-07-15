@@ -21,7 +21,7 @@ const VIEW_LABELS: Record<View, string> = {
   home: "Overview",
   explorer: "Use Case Explorer",
   radar: "Radar View",
-  telesurgery: "Telesurgery Map",
+  telesurgery: "Global Timeline",
 };
 
 const AUTONOMY_BUCKETS = ["Decision Support", "Augmentation", "Autonomous"] as const;

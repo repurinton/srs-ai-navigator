@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { teleEvents, TELE_MIN_T, TELE_MAX_T } from "@/data/telesurgery-events";
+import type { TeleEvent } from "@/data/telesurgery-events";
 import { project, arcPath, buildLandPath, MAP_W, MAP_H } from "@/lib/geo";
 
 const SPEED = 1.45; // decimal-years per second
+const PLATFORM_COLOR = "#f2a33c";
 
 // Deterministic starfield so positions are stable across renders.
 const STARS = (() => {
@@ -57,9 +59,12 @@ export function TelesurgeryMap() {
   const active = revealed[revealed.length - 1];
   const ended = clock >= TELE_MAX_T;
 
-  const cumDist = revealed.reduce((s, e) => s + e.distanceKm, 0);
-  const farthest = revealed.reduce((m, e) => Math.max(m, e.distanceKm), 0);
-  const countries = new Set(revealed.flatMap((e) => [e.from.country, e.to.country])).size;
+  const teleOnly = revealed.filter((e) => e.kind === "telesurgery");
+  const platformsOnly = revealed.filter((e) => e.kind === "platform");
+  const cumDist = teleOnly.reduce((s, e) => s + (e.distanceKm ?? 0), 0);
+  const farthest = teleOnly.reduce((m, e) => Math.max(m, e.distanceKm ?? 0), 0);
+  const countries = new Set(revealed.flatMap((e) => [e.from.country, e.to?.country].filter(Boolean))).size;
+  const platformsLive = new Set(platformsOnly.map((e) => e.platform)).size;
   const year = Math.min(2025, Math.floor(clock));
 
   function replay() {
@@ -74,7 +79,7 @@ export function TelesurgeryMap() {
   return (
     <div className="-mx-5 overflow-hidden rounded-none bg-[#06101f] sm:mx-0 sm:rounded-[var(--radius-card)]">
       <div className="relative">
-        <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="block w-full" role="img" aria-label="Telesurgery time-lapse world map">
+        <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="block w-full" role="img" aria-label="The Rise of Robotic Surgery — world time-lapse map">
           <defs>
             <radialGradient id="tele-bg" cx="50%" cy="38%" r="75%">
               <stop offset="0%" stopColor="#0d2444" />
@@ -118,10 +123,16 @@ export function TelesurgeryMap() {
           {/* land */}
           <path d={land} fill="#11283f" stroke="#244a6e" strokeWidth={0.4} fillRule="evenodd" />
 
-          {/* arcs */}
-          {revealed.map((e) => {
+          {/* persistent platform "capability" halos — accumulate, never fade */}
+          {platformsOnly.map((e) => {
+            const [x, y] = project(e.from.lng, e.from.lat);
+            return <circle key={`halo-${e.id}`} cx={x} cy={y} r={11} fill={PLATFORM_COLOR} opacity={0.12} />;
+          })}
+
+          {/* telesurgery arcs */}
+          {teleOnly.map((e) => {
             const a = project(e.from.lng, e.from.lat);
-            const b = project(e.to.lng, e.to.lat);
+            const b = project(e.to!.lng, e.to!.lat);
             const d = arcPath(a, b);
             const isActive = e === active;
             const dur = isActive ? "1.7s" : "2.7s";
@@ -148,10 +159,10 @@ export function TelesurgeryMap() {
             );
           })}
 
-          {/* nodes */}
-          {revealed.map((e) => {
+          {/* telesurgery nodes */}
+          {teleOnly.map((e) => {
             const a = project(e.from.lng, e.from.lat);
-            const b = project(e.to.lng, e.to.lat);
+            const b = project(e.to!.lng, e.to!.lat);
             const isActive = e === active;
             const dotColor = e.hero ? "#ffd36e" : "#e8568a";
             return (
@@ -165,7 +176,26 @@ export function TelesurgeryMap() {
                     <text x={a[0]} y={a[1] - 9} textAnchor="middle" fontSize={9} fontWeight={700} fill={e.fromVenue ? "#ffe6a8" : "#bde7ff"}>
                       {e.fromVenue ? "AdventHealth · Orlando" : e.from.city}
                     </text>
-                    <text x={b[0]} y={b[1] + 16} textAnchor="middle" fontSize={9} fontWeight={700} fill={e.hero ? "#ffe6a8" : "#ffc2d6"}>{e.to.city}</text>
+                    <text x={b[0]} y={b[1] + 16} textAnchor="middle" fontSize={9} fontWeight={700} fill={e.hero ? "#ffe6a8" : "#ffc2d6"}>{e.to!.city}</text>
+                  </>
+                )}
+              </g>
+            );
+          })}
+
+          {/* platform markers */}
+          {platformsOnly.map((e) => {
+            const [x, y] = project(e.from.lng, e.from.lat);
+            const isActive = e === active;
+            return (
+              <g key={`p-${e.id}`}>
+                <circle className="tele-node" cx={x} cy={y} r={isActive ? 3.4 : 2.4} fill={PLATFORM_COLOR} filter="url(#tele-glow-strong)" />
+                {isActive && (
+                  <>
+                    <circle className="tele-ring" cx={x} cy={y} r={7} fill="none" stroke={PLATFORM_COLOR} strokeWidth={1.3} />
+                    <text x={x} y={y - 10} textAnchor="middle" fontSize={9} fontWeight={700} fill="#ffd8a3">
+                      {e.from.city}
+                    </text>
                   </>
                 )}
               </g>
@@ -176,10 +206,10 @@ export function TelesurgeryMap() {
         {/* ── HUD overlays ────────────────────────────────────────── */}
         <div className="pointer-events-none absolute left-4 top-4 max-w-[60%]">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--color-accent)] sm:text-xs">
-            The Collapse of Distance
+            The Rise of Robotic Surgery
           </p>
           <p className="mt-0.5 text-[11px] text-white/55 sm:text-sm">
-            Telesurgery milestones · 2001–2025
+            Platform launches &amp; telesurgery milestones · 2000–2025
           </p>
         </div>
 
@@ -188,7 +218,8 @@ export function TelesurgeryMap() {
         </div>
 
         {/* legend */}
-        <div className="pointer-events-none absolute left-4 bottom-3 flex items-center gap-3 text-[10px] text-white/55">
+        <div className="pointer-events-none absolute left-4 bottom-3 flex flex-wrap items-center gap-3 text-[10px] text-white/55">
+          <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: PLATFORM_COLOR }} /> Platform launch</span>
           <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-[#4ECDC4]" /> Console</span>
           <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-[#e8568a]" /> Patient</span>
         </div>
@@ -197,42 +228,20 @@ export function TelesurgeryMap() {
       {/* ── HUD strip: caption (left) + counters (right) ─────────── */}
       <div className="flex flex-col gap-3 border-t border-white/10 px-4 py-3 lg:flex-row lg:items-stretch">
         <div className="min-h-[84px] flex-1">
-          {active ? (
-            <div className="flex items-start gap-2">
-              <div className="flex flex-col items-start gap-1">
-                <span className="font-mono text-[11px] text-[var(--color-accent)]">
-                  {new Date(active.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })}
-                </span>
-                {active.hero && (
-                  <span className="rounded-full bg-[#ffd36e] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#3a2a00]">
-                    ★ First FDA-cleared
-                  </span>
-                )}
-              </div>
-              <div className="border-l border-white/10 pl-3">
-                <h3 className="text-sm font-bold text-white">{active.title}</h3>
-                <p className="mt-0.5 text-[12px] font-semibold text-white/80">
-                  {active.from.city} → {active.to.city} · {fmt(active.distanceKm)} km · {active.platform}
-                </p>
-                {active.fromVenue && (
-                  <p className="mt-1 text-[11px] font-semibold text-[#ffd36e]">📍 {active.fromVenue}</p>
-                )}
-                <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-white/60">{active.note}</p>
-                <p className="mt-1 text-[10px] italic text-white/40">Source: {active.source}</p>
-              </div>
-            </div>
-          ) : (
+          {active ? <EventCaption e={active} /> : (
             <p className="text-[13px] text-white/60">
-              Press play to watch surgery cross the planet — from one transatlantic first in 2001 to a worldwide network by 2025.
+              Press play to watch robotic surgery spread across the globe — from the first cleared robot in 2000 to a
+              borderless telesurgery network by 2025.
             </p>
           )}
         </div>
 
-        <div className="grid shrink-0 grid-cols-4 gap-2 lg:w-[440px]">
-          <Counter label="procedures" value={fmt(revealed.length)} />
+        <div className="grid shrink-0 grid-cols-3 gap-2 sm:grid-cols-5 lg:w-[540px]">
+          <Counter label="platforms live" value={fmt(platformsLive)} />
+          <Counter label="countries" value={fmt(countries)} />
+          <Counter label="telesurgery cases" value={fmt(teleOnly.length)} />
           <Counter label="km remote" value={fmt(cumDist)} />
           <Counter label="farthest km" value={fmt(farthest)} />
-          <Counter label="countries" value={fmt(countries)} />
         </div>
       </div>
 
@@ -262,19 +271,60 @@ export function TelesurgeryMap() {
           />
           {/* event ticks */}
           <div className="pointer-events-none absolute inset-x-0 top-1/2 -z-0 flex">
-            {teleEvents.map((e) => (
-              <span
-                key={e.id}
-                className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                style={{
-                  left: `${((e.t - TELE_MIN_T) / (TELE_MAX_T - TELE_MIN_T)) * 100}%`,
-                  background: e.t <= clock ? (e.hero ? "#ffd36e" : "var(--color-teal)") : "#33597f",
-                }}
-              />
-            ))}
+            {teleEvents.map((e) => {
+              const revealedTick = e.t <= clock;
+              const color = e.kind === "platform" ? PLATFORM_COLOR : e.hero ? "#ffd36e" : "var(--color-teal)";
+              return (
+                <span
+                  key={e.id}
+                  className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                  style={{
+                    left: `${((e.t - TELE_MIN_T) / (TELE_MAX_T - TELE_MIN_T)) * 100}%`,
+                    background: revealedTick ? color : "#33597f",
+                  }}
+                />
+              );
+            })}
           </div>
         </div>
         <span className="shrink-0 font-mono text-xs text-white/55 tabular-nums">{year}</span>
+      </div>
+    </div>
+  );
+}
+
+function EventCaption({ e }: { e: TeleEvent }) {
+  const isPlatform = e.kind === "platform";
+  return (
+    <div className="flex items-start gap-2">
+      <div className="flex flex-col items-start gap-1">
+        <span className="font-mono text-[11px] text-[var(--color-accent)]">
+          {new Date(e.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })}
+        </span>
+        {e.hero && (
+          <span className="rounded-full bg-[#ffd36e] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#3a2a00]">
+            ★ First FDA-cleared
+          </span>
+        )}
+        {isPlatform && (
+          <span
+            className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#3a2400]"
+            style={{ background: PLATFORM_COLOR }}
+          >
+            Platform launch
+          </span>
+        )}
+      </div>
+      <div className="border-l border-white/10 pl-3">
+        <h3 className="text-sm font-bold text-white">{e.title}</h3>
+        <p className="mt-0.5 text-[12px] font-semibold text-white/80">
+          {isPlatform
+            ? `${e.from.city}, ${e.from.country} · ${e.platform}`
+            : `${e.from.city} → ${e.to!.city} · ${fmt(e.distanceKm ?? 0)} km · ${e.platform}`}
+        </p>
+        {e.fromVenue && <p className="mt-1 text-[11px] font-semibold text-[#ffd36e]">📍 {e.fromVenue}</p>}
+        <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-white/60">{e.note}</p>
+        <p className="mt-1 text-[10px] italic text-white/40">Source: {e.source}</p>
       </div>
     </div>
   );
