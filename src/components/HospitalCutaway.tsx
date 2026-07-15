@@ -78,6 +78,30 @@ function clampPosition(value: number) {
   return Math.max(3, Math.min(89, value));
 }
 
+function deltaClass(delta: number | undefined, positiveIsBetter: boolean) {
+  if (delta === undefined || delta === 0) return "is-neutral";
+  const improving = positiveIsBetter ? delta > 0 : delta < 0;
+  return improving ? "is-improving" : "is-worsening";
+}
+
+function describeYieldDelta(delta: number | undefined) {
+  if (delta === undefined) return "Current horizon";
+  if (delta === 0) return "Baseline";
+  return `${delta > 0 ? "+" : ""}${delta} pts vs baseline`;
+}
+
+function describeJourneyDelta(delta: number | undefined) {
+  if (delta === undefined) return "Arrival to completion";
+  if (delta === 0) return "At baseline";
+  return delta < 0 ? `${Math.abs(delta)}d faster` : `${delta}d slower`;
+}
+
+function describeTouchesDelta(delta: number | undefined) {
+  if (delta === undefined) return "Per episode";
+  if (delta === 0) return "At baseline";
+  return delta < 0 ? `${Math.abs(delta)} fewer vs baseline` : `${delta} more vs baseline`;
+}
+
 function defaultCallout(anchor: CutawayAnchor): CutawayAnchor {
   return {
     x: clampPosition(anchor.x + (anchor.x > 58 ? -22 : 7)),
@@ -111,11 +135,13 @@ function MotionActor({
   routeClassName,
   children,
   delay,
+  secondary = false,
 }: {
   visualClassName: string;
   routeClassName: string;
   children?: ReactNode;
   delay: string;
+  secondary?: boolean;
 }) {
   return (
     <span
@@ -123,7 +149,7 @@ function MotionActor({
       style={{ "--actor-delay": delay } as SceneStyle}
       aria-hidden="true"
     >
-      <span className={`cutaway-motion-glyph ${visualClassName}`}>{children}</span>
+      <span className={`cutaway-motion-glyph ${visualClassName}${secondary ? " cutaway-actor-secondary" : ""}`}>{children}</span>
     </span>
   );
 }
@@ -132,16 +158,19 @@ function Person({
   role,
   route,
   delay,
+  secondary = false,
 }: {
   role: "caregiver" | "patient" | "valet";
   route: string;
   delay: string;
+  secondary?: boolean;
 }) {
   return (
     <MotionActor
       visualClassName={`cutaway-person cutaway-person-${role}`}
       routeClassName={`cutaway-route-${route}`}
       delay={delay}
+      secondary={secondary}
     >
       <i className="cutaway-person-head" />
       <i className="cutaway-person-body" />
@@ -153,16 +182,19 @@ function Vehicle({
   kind,
   route,
   delay,
+  secondary = false,
 }: {
   kind: "car" | "ambulance";
   route: string;
   delay: string;
+  secondary?: boolean;
 }) {
   return (
     <MotionActor
       visualClassName={`cutaway-vehicle cutaway-${kind}`}
       routeClassName={`cutaway-route-${route}`}
       delay={delay}
+      secondary={secondary}
     >
       <i className="cutaway-vehicle-cabin" />
       <i className="cutaway-wheel cutaway-wheel-front" />
@@ -227,6 +259,11 @@ export function HospitalCutaway({
   const constraint = simulation.stageResults[simulation.constraint];
   const constraintAnchor = STAGE_ANCHORS[simulation.constraint].anchor;
   const throughputDelta = baseline ? simulation.completed - baseline.completed : undefined;
+  const flowYield = Math.round((simulation.completed / simulation.episodes) * 1_000) / 10;
+  const baselineFlowYield = baseline ? Math.round((baseline.completed / baseline.episodes) * 1_000) / 10 : undefined;
+  const flowYieldDelta = baselineFlowYield === undefined ? undefined : Math.round((flowYield - baselineFlowYield) * 10) / 10;
+  const journeyDelta = baseline ? simulation.medianJourneyDays - baseline.medianJourneyDays : undefined;
+  const touchesDelta = baseline ? simulation.administrativeTouches - baseline.administrativeTouches : undefined;
   const resolvedPainPoint = presentedPainPoints.find(
     (painPoint) => painPoint.resolvedBy && activeSet.has(painPoint.resolvedBy),
   );
@@ -302,19 +339,33 @@ export function HospitalCutaway({
 
           <div className="cutaway-motion-layer" aria-hidden="true">
             <Vehicle kind="car" route="car-arrival" delay="-1.1s" />
+            <Vehicle kind="car" route="car-arrival" delay="-9.6s" secondary />
             <Vehicle kind="car" route="car-departure" delay="-6.6s" />
+            <Vehicle kind="car" route="car-departure" delay="-16.1s" secondary />
             <Vehicle kind="car" route="car-parking" delay="-11.8s" />
+            <Vehicle kind="car" route="car-parking" delay="-1.3s" secondary />
             <Vehicle kind="ambulance" route="ambulance" delay="-3.8s" />
+            <Vehicle kind="ambulance" route="ambulance" delay="-10.8s" secondary />
             <Person role="valet" route="valet-curb" delay="-1.4s" />
+            <Person role="valet" route="valet-curb" delay="-4.65s" secondary />
             <Person role="valet" route="valet-entry" delay="-7.1s" />
+            <Person role="valet" route="valet-entry" delay="-15.1s" secondary />
             <Person role="patient" route="patient-arrival" delay="-2.3s" />
+            <Person role="patient" route="patient-arrival" delay="-8.8s" secondary />
             <Person role="patient" route="patient-ward" delay="-9.7s" />
+            <Person role="patient" route="patient-ward" delay="-21.7s" secondary />
             <Person role="caregiver" route="caregiver-prep" delay="-0.8s" />
+            <Person role="caregiver" route="caregiver-prep" delay="-9.8s" secondary />
             <Person role="caregiver" route="caregiver-or" delay="-4.2s" />
+            <Person role="caregiver" route="caregiver-or" delay="-14.2s" secondary />
             <Person role="caregiver" route="caregiver-recovery" delay="-8.9s" />
+            <Person role="caregiver" route="caregiver-recovery" delay="-19.9s" secondary />
             <Person role="caregiver" route="caregiver-ward" delay="-12.6s" />
+            <Person role="caregiver" route="caregiver-ward" delay="-24.6s" secondary />
             <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-prep" delay="-1.8s"><i /><b /></MotionActor>
+            <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-prep" delay="-12.8s" secondary><i /><b /></MotionActor>
             <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-recovery" delay="-6.1s"><i /><b /></MotionActor>
+            <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-recovery" delay="-18.1s" secondary><i /><b /></MotionActor>
             <span className={`cutaway-or-status cutaway-or-one ${activeSet.has("robotics") ? "is-live" : ""}`}><i />OR 01</span>
             <span className={`cutaway-or-status cutaway-or-two ${activeSet.has("robotics") ? "is-live" : ""}`}><i />OR 02</span>
             <span className={`cutaway-imaging-scan ${activeSet.has("diagnosis") ? "is-live" : ""}`}><i /></span>
@@ -373,21 +424,60 @@ export function HospitalCutaway({
           </div>
         </div>
 
-        <div className="cutaway-metric-strip" aria-hidden="true">
-          <span><small>Completed</small><strong>{simulation.completed}</strong>{throughputDelta !== undefined ? <b>{throughputDelta >= 0 ? "+" : ""}{throughputDelta}</b> : null}</span>
-          <span><small>Median journey</small><strong>{simulation.medianJourneyDays}d</strong></span>
-          <span><small>Admin touches</small><strong>{simulation.administrativeTouches}</strong></span>
-          <span className="cutaway-constraint-metric"><small>Constraint now</small><strong>{constraint.shortName}</strong></span>
-        </div>
         <div className="cutaway-mobile-focus" aria-hidden="true"><span>Constraint</span><strong>{constraint.shortName}</strong></div>
       </div>
 
-      <div className="cutaway-mobile-metrics" aria-hidden="true">
-        <span><small>Completed</small><strong>{simulation.completed}</strong>{throughputDelta !== undefined ? <b>{throughputDelta >= 0 ? "+" : ""}{throughputDelta}</b> : null}</span>
-        <span><small>Median journey</small><strong>{simulation.medianJourneyDays}d</strong></span>
-        <span><small>Admin touches</small><strong>{simulation.administrativeTouches}</strong></span>
-        <span className="cutaway-constraint-metric"><small>Constraint now</small><strong>{constraint.shortName}</strong></span>
-      </div>
+      <section className="cutaway-flow-dashboard" aria-label="Patient flow dashboard">
+        <header className="cutaway-flow-dashboard-header">
+          <div>
+            <span className="cutaway-flow-kicker"><i aria-hidden="true" /> Patient flow</span>
+            <strong>{simulation.completed} of {simulation.episodes} episodes completed</strong>
+            {throughputDelta !== undefined ? (
+              <small className={deltaClass(throughputDelta, true)}>
+                {throughputDelta === 0 ? "Baseline" : `${throughputDelta > 0 ? "+" : ""}${throughputDelta} vs baseline`}
+              </small>
+            ) : null}
+          </div>
+          <div className="cutaway-flow-constraint">
+            <span>Current constraint</span>
+            <strong>{constraint.shortName}</strong>
+          </div>
+        </header>
+
+        <div
+          className="cutaway-flow-progress"
+          role="progressbar"
+          aria-label="Episodes completed during the simulation horizon"
+          aria-valuemin={0}
+          aria-valuemax={simulation.episodes}
+          aria-valuenow={simulation.completed}
+        >
+          <i style={{ "--flow-progress": `${flowYield}%` } as SceneStyle} />
+        </div>
+
+        <dl className="cutaway-flow-metrics">
+          <div>
+            <dt>Flow yield</dt>
+            <dd>{flowYield}%</dd>
+            <small className={deltaClass(flowYieldDelta, true)}>{describeYieldDelta(flowYieldDelta)}</small>
+          </div>
+          <div>
+            <dt>Median journey</dt>
+            <dd>{simulation.medianJourneyDays}d</dd>
+            <small className={deltaClass(journeyDelta, false)}>{describeJourneyDelta(journeyDelta)}</small>
+          </div>
+          <div>
+            <dt>Peak queue</dt>
+            <dd>{constraint.peakQueue}</dd>
+            <small>{constraint.shortName} stage</small>
+          </div>
+          <div>
+            <dt>Admin touches</dt>
+            <dd>{simulation.administrativeTouches}</dd>
+            <small className={deltaClass(touchesDelta, false)}>{describeTouchesDelta(touchesDelta)}</small>
+          </div>
+        </dl>
+      </section>
 
       <div className="cutaway-mobile-callouts" aria-label="Current hospital pain points">
         {mobilePainPoints.map((painPoint) => (

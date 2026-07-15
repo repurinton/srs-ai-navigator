@@ -26,7 +26,7 @@ export function Header({ view, onNavigate }: { view: View; onNavigate: (view: Vi
           </span>
         </button>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Presentation chapters">
+        <nav className="hidden items-center gap-1 xl:flex" aria-label="Presentation chapters">
           {NAV.map((item, index) => (
             <button
               key={item.key}
@@ -47,13 +47,13 @@ export function Header({ view, onNavigate }: { view: View; onNavigate: (view: Vi
         <button
           type="button"
           onClick={() => onNavigate("case")}
-          className="shrink-0 rounded-full border border-[var(--color-mint)]/50 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[var(--color-mint)] transition-colors hover:bg-[var(--color-mint)] hover:text-[var(--color-night)]"
+          className="hidden shrink-0 rounded-full border border-[var(--color-mint)]/50 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[var(--color-mint)] transition-colors hover:bg-[var(--color-mint)] hover:text-[var(--color-night)] sm:block"
         >
           Run simulation
         </button>
       </div>
 
-      <div className="overflow-x-auto border-t border-white/5 lg:hidden">
+      <div className="overflow-x-auto border-t border-white/5 xl:hidden">
         <nav className="mx-auto flex min-w-max items-center px-4" aria-label="Presentation chapters">
           {NAV.map((item) => (
             <button

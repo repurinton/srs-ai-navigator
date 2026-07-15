@@ -43,6 +43,9 @@ const MOMENTS = [
   },
 ] as const;
 
+const GUIDED_BASELINE_DWELL_MS = 4_800;
+const GUIDED_LEVER_DWELL_MS = 7_050;
+
 function isSequencePrefix(active: LeverId[]) {
   return active.every((lever, index) => LEVER_SEQUENCE[index] === lever);
 }
@@ -215,7 +218,7 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
 
     const handle = window.setTimeout(
       () => setActiveLevers((levers) => (levers.includes(nextLever) ? levers : [...levers, nextLever])),
-      activeLevers.length === 0 ? 3200 : 4700,
+      activeLevers.length === 0 ? GUIDED_BASELINE_DWELL_MS : GUIDED_LEVER_DWELL_MS,
     );
     return () => window.clearTimeout(handle);
   }, [activeLevers.length, activeSet, isPlaying]);

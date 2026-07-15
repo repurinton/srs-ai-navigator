@@ -197,11 +197,8 @@
 .cutaway-motion-track {
   position: absolute;
   inset: 0;
-  animation-delay: var(--actor-delay);
   pointer-events: none;
 }
-
-.hospital-cutaway.is-playing .cutaway-motion-track { will-change: transform, opacity; }
 
 .cutaway-motion-glyph,
 .cutaway-or-status,
@@ -231,6 +228,11 @@
 .cutaway-route-car-parking { animation: cutaway-car-parking-route 21s linear infinite; }
 .cutaway-route-car-departure .cutaway-vehicle { background: #ffb454; }
 .cutaway-route-car-parking .cutaway-vehicle { background: #5e8fff; }
+.cutaway-car.cutaway-actor-secondary { background: #c7e5dc; }
+.cutaway-route-car-departure .cutaway-car.cutaway-actor-secondary { background: #ffd08b; }
+.cutaway-route-car-parking .cutaway-car.cutaway-actor-secondary { background: #8babff; }
+.cutaway-vehicle.cutaway-actor-secondary { translate: -50% calc(-50% + clamp(2px, 0.35cqi, 5px)); }
+.cutaway-vehicle.cutaway-actor-secondary .cutaway-vehicle-cabin { background: #bad2d5; }
 
 .cutaway-vehicle-cabin {
   position: absolute;
@@ -299,6 +301,11 @@
 
 .cutaway-person-patient .cutaway-person-body { background: #b695ff; }
 .cutaway-person-valet .cutaway-person-body { background: #ffb454; }
+.cutaway-person.cutaway-actor-secondary { translate: -50% calc(-50% + clamp(1.5px, 0.22cqi, 3px)); }
+.cutaway-person.cutaway-actor-secondary .cutaway-person-head { background: #8f6049; }
+.cutaway-person-caregiver.cutaway-actor-secondary .cutaway-person-body { background: #4e9ec6; }
+.cutaway-person-patient.cutaway-actor-secondary .cutaway-person-body { background: #e58ca6; }
+.cutaway-person-valet.cutaway-actor-secondary .cutaway-person-body { background: #f6d06e; }
 
 .cutaway-route-valet-curb { animation: cutaway-valet-curb-route 6.5s ease-in-out infinite; }
 .cutaway-route-valet-entry { animation: cutaway-valet-entry-route 8s ease-in-out infinite alternate; }
@@ -318,8 +325,12 @@
 
 .cutaway-route-gurney-prep { animation: cutaway-gurney-prep-route 11s ease-in-out infinite alternate; }
 .cutaway-route-gurney-recovery { animation: cutaway-gurney-recovery-route 12s ease-in-out infinite alternate; }
+.cutaway-gurney.cutaway-actor-secondary { translate: -50% calc(-50% - clamp(1.5px, 0.28cqi, 4px)); background: #c7dfe4; }
 .cutaway-gurney i { position: absolute; left: 7%; right: 7%; top: -45%; height: 45%; border-radius: 3px 3px 0 0; background: #72a6b2; }
 .cutaway-gurney b { position: absolute; left: 16%; right: 16%; bottom: -45%; height: 35%; border-left: 2px solid #9ab0b6; border-right: 2px solid #9ab0b6; }
+
+/* Route shorthands above reset animation-delay; keep every duplicate independently phased. */
+.cutaway-motion-track { animation-delay: var(--actor-delay); }
 
 .cutaway-or-status {
   left: 41.6%;
@@ -469,53 +480,82 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
 
 .cutaway-anchor.is-resolved { border-color: var(--cutaway-mint); box-shadow: 0 0 0 5px rgba(91, 240, 195, 0.13); }
 
-.cutaway-metric-strip {
-  position: absolute;
-  right: 1.15rem;
-  bottom: 1.05rem;
-  z-index: 8;
-  display: grid;
-  grid-template-columns: repeat(4, auto);
-  gap: 0.25rem;
-  padding: 0.32rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 13px;
-  background: rgba(6, 19, 28, 0.88);
-  backdrop-filter: blur(12px);
-}
-
-.cutaway-metric-strip > span { min-width: clamp(78px, 9vw, 126px); padding: 0.42rem 0.6rem; border-right: 1px solid rgba(255, 255, 255, 0.1); }
-.cutaway-metric-strip > span:last-child { border-right: 0; }
-.cutaway-metric-strip small { display: block; color: rgba(255, 255, 255, 0.45); font-size: clamp(0.42rem, 0.52vw, 0.55rem); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.cutaway-metric-strip strong { font-size: clamp(0.74rem, 1vw, 1.05rem); }
-.cutaway-metric-strip b { margin-left: 0.25rem; color: var(--cutaway-mint); font-size: clamp(0.48rem, 0.6vw, 0.64rem); }
-.cutaway-constraint-metric strong { color: #ffb454; }
-
 .cutaway-mobile-callouts,
-.cutaway-mobile-metrics,
 .cutaway-mobile-focus { display: none; }
 
-.cutaway-mobile-metrics {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.cutaway-flow-dashboard {
+  position: relative;
+  display: grid;
+  width: min(100%, 940px);
   overflow: hidden;
-  margin-top: 0.62rem;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 14px;
-  background: rgba(6, 19, 28, 0.9);
+  grid-template-columns: minmax(230px, 0.95fr) minmax(0, 2fr);
+  grid-template-rows: auto 4px;
+  grid-template-areas:
+    "header metrics"
+    "progress metrics";
+  margin: 0.65rem 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  background: linear-gradient(110deg, rgba(8, 28, 37, 0.98), rgba(5, 18, 27, 0.96));
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.2);
 }
 
-.cutaway-mobile-metrics > span {
+.cutaway-flow-dashboard-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
   min-width: 0;
-  padding: 0.7rem 0.78rem;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.72rem 0.8rem 0.68rem;
 }
 
-.cutaway-mobile-metrics > span:nth-child(2n) { border-right: 0; }
-.cutaway-mobile-metrics > span:nth-last-child(-n + 2) { border-bottom: 0; }
-.cutaway-mobile-metrics small { display: block; color: rgba(255, 255, 255, 0.52); font-size: 0.58rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.cutaway-mobile-metrics strong { font-size: 0.95rem; }
-.cutaway-mobile-metrics b { margin-left: 0.3rem; color: var(--cutaway-mint); font-size: 0.68rem; }
+.cutaway-flow-dashboard-header > div:first-child { min-width: 0; }
+.cutaway-flow-dashboard-header > div:first-child > strong { display: block; margin-top: 0.14rem; font-size: clamp(0.7rem, 0.82cqi, 0.84rem); line-height: 1.12; white-space: nowrap; }
+.cutaway-flow-dashboard-header > div:first-child > small { display: block; margin-top: 0.14rem; font-size: clamp(0.48rem, 0.55cqi, 0.58rem); }
+
+.cutaway-flow-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.32rem;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: clamp(0.48rem, 0.54cqi, 0.57rem);
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cutaway-flow-kicker i { width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--cutaway-mint); box-shadow: 0 0 10px rgba(91, 240, 195, 0.55); }
+
+.cutaway-flow-constraint {
+  flex: 0 0 auto;
+  padding-left: 0.72rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: right;
+}
+
+.cutaway-flow-constraint span { display: block; color: #ff9894; font-size: clamp(0.43rem, 0.5cqi, 0.53rem); font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
+.cutaway-flow-constraint strong { display: block; margin-top: 0.08rem; font-size: clamp(0.7rem, 0.82cqi, 0.85rem); }
+
+.cutaway-flow-progress { grid-area: progress; overflow: hidden; background: rgba(255, 255, 255, 0.07); }
+.cutaway-flow-progress i { display: block; width: var(--flow-progress); height: 100%; border-radius: 0 999px 999px 0; background: linear-gradient(90deg, #4caee6, var(--cutaway-mint)); transition: width 620ms cubic-bezier(0.2, 0.75, 0.2, 1); }
+
+.cutaway-flow-metrics {
+  grid-area: metrics;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.cutaway-flow-metrics > div { min-width: 0; padding: 0.66rem 0.72rem; border-left: 1px solid rgba(255, 255, 255, 0.08); }
+.cutaway-flow-metrics > div:first-child { border-left: 0; }
+.cutaway-flow-metrics dt { overflow: hidden; color: rgba(255, 255, 255, 0.48); font-size: clamp(0.45rem, 0.51cqi, 0.54rem); font-weight: 850; letter-spacing: 0.08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.cutaway-flow-metrics dd { margin: 0.1rem 0 0; color: #fff; font-size: clamp(0.9rem, 1.15cqi, 1.15rem); font-weight: 720; letter-spacing: -0.03em; }
+.cutaway-flow-metrics small { display: block; overflow: hidden; margin-top: 0.04rem; color: rgba(255, 255, 255, 0.4); font-size: clamp(0.43rem, 0.49cqi, 0.52rem); text-overflow: ellipsis; white-space: nowrap; }
+.cutaway-flow-dashboard .is-improving { color: var(--cutaway-mint); }
+.cutaway-flow-dashboard .is-worsening { color: #ff9894; }
+.cutaway-flow-dashboard .is-neutral { color: rgba(255, 255, 255, 0.4); }
 
 .cutaway-mobile-focus {
   position: absolute;
@@ -660,8 +700,16 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   .cutaway-callout-layer { display: none; }
   .cutaway-mobile-callouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; margin-top: 0.65rem; }
   .cutaway-mobile-callouts .cutaway-callout-card { position: static; width: auto; }
-  .cutaway-metric-strip { left: 0.65rem; right: 0.65rem; bottom: 0.65rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .cutaway-metric-strip > span { min-width: 0; }
+  .cutaway-flow-dashboard {
+    width: 100%;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 4px auto;
+    grid-template-areas:
+      "header"
+      "progress"
+      "metrics";
+  }
+  .cutaway-flow-metrics { border-top: 1px solid rgba(255, 255, 255, 0.09); border-left: 0; }
 }
 
 @container (max-width: 560px) {
@@ -698,9 +746,22 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   .cutaway-or-status i { width: 0.46rem; height: 0.46rem; }
   .hospital-cutaway[data-focus="care"] .cutaway-lever-diagnosis,
   .hospital-cutaway[data-focus="longitudinal"] .cutaway-lever-diagnosis { opacity: 0; }
-  .cutaway-metric-strip { display: none; }
   .cutaway-mobile-focus { display: flex; }
-  .cutaway-mobile-metrics { display: grid; }
+  .cutaway-flow-dashboard { margin-top: 0.58rem; border-radius: 14px; }
+  .cutaway-flow-dashboard-header { gap: 0.55rem; padding: 0.68rem 0.72rem 0.64rem; }
+  .cutaway-flow-dashboard-header > div:first-child > strong { font-size: 0.76rem; white-space: normal; }
+  .cutaway-flow-dashboard-header > div:first-child > small { font-size: 0.54rem; }
+  .cutaway-flow-kicker { font-size: 0.52rem; }
+  .cutaway-flow-constraint { padding-left: 0.55rem; }
+  .cutaway-flow-constraint span { font-size: 0.45rem; }
+  .cutaway-flow-constraint strong { font-size: 0.74rem; }
+  .cutaway-flow-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cutaway-flow-metrics > div { padding: 0.66rem 0.72rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+  .cutaway-flow-metrics > div:nth-child(odd) { border-left: 0; }
+  .cutaway-flow-metrics > div:nth-last-child(-n + 2) { border-bottom: 0; }
+  .cutaway-flow-metrics dt { font-size: 0.5rem; }
+  .cutaway-flow-metrics dd { font-size: 1rem; }
+  .cutaway-flow-metrics small { font-size: 0.5rem; }
   .cutaway-mobile-callouts { grid-template-columns: 1fr; }
   .cutaway-mobile-callouts .cutaway-callout-card { min-height: 44px; padding: 0.78rem 0.82rem; backdrop-filter: none; box-shadow: 0 9px 22px rgba(0, 0, 0, 0.2); }
   .cutaway-mobile-callouts .cutaway-callout-card strong { font-size: 0.85rem; line-height: 1.2; }
