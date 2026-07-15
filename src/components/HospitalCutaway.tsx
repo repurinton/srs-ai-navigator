@@ -20,6 +20,10 @@ export type HospitalPainPoint = {
   id: string;
   title: string;
   detail: string;
+  /** Optional state label shown above the card title. */
+  kicker?: string;
+  /** Optional state label used once the relieving lever is active. */
+  resolvedLabel?: string;
   stage?: StageId;
   value?: string;
   severity?: "watch" | "pressure" | "critical";
@@ -43,6 +47,7 @@ export type HospitalCutawayProps = {
   className?: string;
   title?: string;
   showHeader?: boolean;
+  constraintLabel?: string;
 };
 
 type SceneStyle = CSSProperties & Record<`--${string}`, string | number>;
@@ -219,7 +224,9 @@ function PainPointCard({
     <>
       <span className="cutaway-callout-kicker">
         <i aria-hidden="true" />
-        {resolved ? "Pressure relieved" : painPoint.severity === "critical" ? "Constraint" : "Pain point"}
+        {resolved
+          ? painPoint.resolvedLabel ?? "Pressure relieved"
+          : painPoint.kicker ?? (painPoint.severity === "critical" ? "Constraint" : "Pain point")}
       </span>
       <strong>{painPoint.title}</strong>
       <span className="cutaway-callout-detail">{painPoint.detail}</span>
@@ -248,6 +255,7 @@ export function HospitalCutaway({
   className = "",
   title = "Hospital operating twin",
   showHeader = true,
+  constraintLabel = "Current constraint",
 }: HospitalCutawayProps) {
   const descriptionId = useId();
   const activeSet = useMemo(() => new Set(activeLevers), [activeLevers]);
@@ -424,7 +432,7 @@ export function HospitalCutaway({
           </div>
         </div>
 
-        <div className="cutaway-mobile-focus" aria-hidden="true"><span>Constraint</span><strong>{constraint.shortName}</strong></div>
+        <div className="cutaway-mobile-focus" aria-hidden="true"><span>{constraintLabel}</span><strong>{constraint.shortName}</strong></div>
       </div>
 
       <section className="cutaway-flow-dashboard" aria-label="Patient flow dashboard">
@@ -439,7 +447,7 @@ export function HospitalCutaway({
             ) : null}
           </div>
           <div className="cutaway-flow-constraint">
-            <span>Current constraint</span>
+            <span>{constraintLabel}</span>
             <strong>{constraint.shortName}</strong>
           </div>
         </header>

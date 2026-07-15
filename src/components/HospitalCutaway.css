@@ -435,9 +435,14 @@
 button.cutaway-callout-card { cursor: pointer; }
 button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: rgba(255, 180, 84, 0.78); }
 .cutaway-callout-card.is-active { outline: 2px solid #fff; outline-offset: 2px; }
+.cutaway-callout-card.is-active:not(.is-resolved) {
+  box-shadow: 0 14px 34px rgba(255, 113, 109, 0.2);
+}
 .cutaway-callout-card.is-resolved {
-  border-color: rgba(91, 240, 195, 0.52);
-  background: rgba(6, 31, 32, 0.92);
+  opacity: 0.74;
+  border-color: rgba(91, 240, 195, 0.32);
+  background: rgba(6, 31, 32, 0.78);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
 }
 .cutaway-severity-critical:not(.is-resolved) { border-color: rgba(255, 113, 109, 0.74); }
 .cutaway-severity-critical:not(.is-resolved) .cutaway-callout-kicker,
@@ -449,8 +454,25 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
 .cutaway-callout-kicker { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.25rem; color: #ffb454; font-size: clamp(0.42rem, 0.52vw, 0.56rem); font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
 .cutaway-callout-kicker i { width: 0.38rem; height: 0.38rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 rgba(255, 180, 84, 0.5); animation: cutaway-alert 2s ease-out infinite; }
 .cutaway-callout-card.is-resolved .cutaway-callout-kicker { color: var(--cutaway-mint); }
+.cutaway-callout-card.is-resolved .cutaway-callout-kicker i {
+  display: grid;
+  width: 0.72rem;
+  height: 0.72rem;
+  place-items: center;
+  background: var(--cutaway-mint);
+  box-shadow: none;
+  color: var(--cutaway-night);
+  animation: none;
+}
+.cutaway-callout-card.is-resolved .cutaway-callout-kicker i::after {
+  content: "✓";
+  font-size: 0.5rem;
+  font-weight: 950;
+  line-height: 1;
+}
 .cutaway-callout-card strong { display: block; font-size: clamp(0.67rem, 0.82vw, 0.9rem); line-height: 1.16; }
 .cutaway-callout-detail { display: block; margin-top: 0.26rem; color: rgba(255, 255, 255, 0.58); font-size: clamp(0.55rem, 0.65vw, 0.7rem); line-height: 1.32; }
+.cutaway-callout-card.is-resolved .cutaway-callout-detail { display: none; }
 .cutaway-callout-card b { display: block; margin-top: 0.35rem; color: #ffb454; font-size: clamp(0.55rem, 0.65vw, 0.7rem); }
 .cutaway-callout-card.is-resolved b { color: var(--cutaway-mint); }
 

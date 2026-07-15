@@ -74,6 +74,7 @@ const LEVER_RESOLUTIONS: Record<LeverId, Omit<HospitalPainPoint, "id" | "value">
   "front-door": {
     title: "Context arrives before the patient",
     detail: "Identity, intent, and prerequisites move with the arrival instead of being entered again.",
+    resolvedLabel: "Access friction cleared",
     stage: "access",
     severity: "pressure",
     anchor: SCENE_ANCHORS.access,
@@ -83,6 +84,7 @@ const LEVER_RESOLUTIONS: Record<LeverId, Omit<HospitalPainPoint, "id" | "value">
   diagnosis: {
     title: "Right pathway, first time",
     detail: "Clinical pathway intelligence removes avoidable routing resets around imaging and work-up.",
+    resolvedLabel: "Diagnosis cleared",
     stage: "diagnosis",
     severity: "pressure",
     anchor: SCENE_ANCHORS.diagnosis,
@@ -92,6 +94,7 @@ const LEVER_RESOLUTIONS: Record<LeverId, Omit<HospitalPainPoint, "id" | "value">
   precision: {
     title: "Target earlier. Revise less.",
     detail: "Eligible patients spend more time planning upstream so fewer treatment plans are rebuilt later.",
+    resolvedLabel: "Planning stabilized",
     stage: "precision",
     severity: "watch",
     anchor: SCENE_ANCHORS.precision,
@@ -101,6 +104,7 @@ const LEVER_RESOLUTIONS: Record<LeverId, Omit<HospitalPainPoint, "id" | "value">
   robotics: {
     title: "Local OR capacity released",
     detail: "Turnover and readiness improve, but the gain transfers pressure into recovery and beds.",
+    resolvedLabel: "OR capacity released",
     stage: "robotics",
     severity: "watch",
     anchor: SCENE_ANCHORS.robotics,
@@ -110,6 +114,7 @@ const LEVER_RESOLUTIONS: Record<LeverId, Omit<HospitalPainPoint, "id" | "value">
   longitudinal: {
     title: "The next care step is already owned",
     detail: "Discharge and follow-up begin before the bed decision instead of after the patient leaves.",
+    resolvedLabel: "Discharge path cleared",
     stage: "longitudinal",
     severity: "pressure",
     anchor: SCENE_ANCHORS.longitudinal,
@@ -119,6 +124,7 @@ const LEVER_RESOLUTIONS: Record<LeverId, Omit<HospitalPainPoint, "id" | "value">
   automation: {
     title: "Agents execute. Humans govern.",
     detail: "Routine handoffs move across the campus while consequential decisions stop at named approvals.",
+    resolvedLabel: "Handoffs cleared",
     severity: "watch",
     anchor: { x: 77, y: 18 },
     callout: { x: 62, y: 3 },
@@ -136,18 +142,36 @@ const CONSTRAINT_TITLES: Record<StageId, string> = {
   longitudinal: "A discharge is nobody's workflow",
 };
 
+function describeConstraintTransition(
+  activeLevers: LeverId[],
+  current: SimulationResult,
+  previous?: SimulationResult,
+) {
+  if (activeLevers.length === 0 || !previous) return "Starting constraint";
+  if (previous.constraint !== current.constraint) return "New constraint";
+
+  const previousPeak = previous.stageResults[previous.constraint].peakQueue;
+  const currentPeak = current.stageResults[current.constraint].peakQueue;
+  return currentPeak > previousPeak ? "Constraint intensifies" : "Constraint persists";
+}
+
 function buildScenePainPoints(
   activeLevers: LeverId[],
   current: SimulationResult,
+  constraintLabel: string,
 ): HospitalPainPoint[] {
   const constraint = current.stageResults[current.constraint];
+  const diagnosisIntensified = current.constraint === "diagnosis" && constraintLabel === "Constraint intensifies";
   const currentConstraint: HospitalPainPoint = {
     id: `constraint-${activeLevers.length}-${current.constraint}`,
-    title: CONSTRAINT_TITLES[current.constraint],
+    title: diagnosisIntensified ? "Diagnosis absorbs the released demand" : CONSTRAINT_TITLES[current.constraint],
     detail:
-      current.constraint === "care"
+      diagnosisIntensified
+        ? "The digital front door clears access, releasing more eligible demand into diagnosis. The bottleneck is now explicit—and larger."
+        : current.constraint === "care"
         ? "Coordination is no longer limiting flow. Staffed recovery capacity is now the investment decision."
         : `${constraint.name} now absorbs the demand released upstream. The constraint moved; it did not disappear.`,
+    kicker: constraintLabel,
     stage: current.constraint,
     value: `${constraint.peakQueue} peak queue · ${Math.round(constraint.averageWaitHours)}h average wait`,
     severity: "critical",
@@ -183,7 +207,12 @@ function buildScenePainPoints(
     {
       ...resolution,
       id: `resolved-${activeLevers.length}-${latestLever}`,
-      value: stage ? `${stage.peakQueue} peak queue now` : `${current.administrativeTouches} touches now`,
+      value:
+        latestLever === "diagnosis"
+          ? "No longer the system constraint"
+          : stage
+            ? `${stage.peakQueue} peak queue now`
+            : `${current.administrativeTouches} touches now`,
     },
     currentConstraint,
   ];
@@ -194,7 +223,15 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const baseline = useMemo(() => simulateHospital([]), []);
   const current = useMemo(() => simulateHospital(activeLevers), [activeLevers]);
+  const previous = useMemo(
+    () => (activeLevers.length ? simulateHospital(activeLevers.slice(0, -1)) : undefined),
+    [activeLevers],
+  );
   const activeSet = useMemo(() => new Set(activeLevers), [activeLevers]);
+  const constraintLabel = useMemo(
+    () => describeConstraintTransition(activeLevers, current, previous),
+    [activeLevers, current, previous],
+  );
   const guidedState = isSequencePrefix(activeLevers);
   const moment = guidedState
     ? MOMENTS[activeLevers.length] ?? MOMENTS[0]
@@ -203,8 +240,8 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
         copy: "Manual combinations use the same deterministic demand trace. Reset or run the guided sequence to see the intended transformation story.",
       };
   const scenePainPoints = useMemo(
-    () => buildScenePainPoints(activeLevers, current),
-    [activeLevers, current],
+    () => buildScenePainPoints(activeLevers, current, constraintLabel),
+    [activeLevers, constraintLabel, current],
   );
   const activePainPointId = scenePainPoints.find((painPoint) => !painPoint.resolvedBy)?.id;
 
@@ -303,6 +340,7 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
           isPlaying={isPlaying}
           painPoints={scenePainPoints}
           activePainPointId={activePainPointId}
+          constraintLabel={constraintLabel}
           className="cutaway-embedded mt-2"
           title="Animated hospital and medical-center cutaway"
           showHeader={false}
