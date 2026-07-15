@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ExecutiveStory } from "@/components/ExecutiveStory";
 import { SixLevers } from "@/components/SixLevers";
-import { LiveCase } from "@/components/LiveCase";
+import { HospitalLab } from "@/components/HospitalLab";
 import { OperatingModel } from "@/components/OperatingModel";
 import { Header } from "@/components/Header";
 
@@ -91,7 +91,7 @@ export default function App() {
       <main ref={mainRef} tabIndex={-1} className="focus:outline-none">
         {view === "thesis" && <ExecutiveStory onNavigate={navigate} />}
         {view === "levers" && <SixLevers onNavigate={navigate} />}
-        {view === "case" && <LiveCase onNavigate={navigate} />}
+        {view === "case" && <HospitalLab onNavigate={navigate} />}
         {view === "model" && <OperatingModel onNavigate={navigate} />}
         {view === "portfolio" && (
           <Suspense fallback={<ChapterLoading label="Loading the evidence library" />}>

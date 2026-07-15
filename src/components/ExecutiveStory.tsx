@@ -64,7 +64,7 @@ export function ExecutiveStory({ onNavigate }: { onNavigate: (view: View) => voi
             </p>
             <div className="mt-10 flex flex-wrap gap-3">
               <button type="button" onClick={() => onNavigate("case")} className="button-primary">
-                Run the case <span aria-hidden="true">→</span>
+                Run the hospital twin <span aria-hidden="true">→</span>
               </button>
               <button type="button" onClick={() => onNavigate("levers")} className="button-ghost">
                 Explore the six levers
@@ -228,7 +228,7 @@ export function ExecutiveStory({ onNavigate }: { onNavigate: (view: View) => voi
             </p>
           </div>
           <button type="button" onClick={() => onNavigate("case")} className="button-dark">
-            See the governed loop →
+            Enter the hospital lab →
           </button>
         </div>
       </section>

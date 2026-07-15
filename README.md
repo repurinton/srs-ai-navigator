@@ -25,12 +25,12 @@ The web app is organized as six chapters with direct links and arrow-key navigat
 
 - `#thesis` — the coordination gap and executive case for change
 - `#levers` — the six-lever transformation architecture
-- `#case` — a synthetic robotic case with parallel agent work and two named approvals
+- `#case` — the Hospital Lab: a deterministic operating twin plus the Case 7B approval drill-down
 - `#model` — governed autonomy and the 90-day operating model
 - `#portfolio` — the 272-case evidence library
 - `#timeline` — the telesurgery and robotic-platform arc
 
-The case demonstration is intentionally deterministic for stage reliability. It contains no patient data, makes no clinical decision, distinguishes reversible work from consequential approvals, and labels all outcomes as modeled.
+The Hospital Lab replays the same 600 synthetic episodes across a fixed 30-day demand trace. Each lever changes disclosed operating parameters while clinical priority, demand, and physical assets remain fixed. Case 7B then drills from the system view into parallel agent work and two named approvals. Neither mode contains patient data or makes a clinical decision.
 
 ## Presentation artifact
 
@@ -46,6 +46,7 @@ The deck mirrors the web narrative and includes speaker notes, evidence grades, 
 npm install
 npm run dev
 npm run typecheck
+npm run check:simulation
 npm run build
 npm run preview
 ```
@@ -59,6 +60,7 @@ The production build is static and deployable without a backend. The evidence-he
 - Zod validation for the use-case corpus
 - 272 total use cases: 248 service-line cases and 24 robotics-native cases
 - Hash-addressable presentation chapters
+- Deterministic hospital operating twin with a stable episode trace, queue migration, and disclosed coefficients
 - Deterministic live-case state machine with audit, assumptions, and approval gates
 - Lazy-loaded evidence library and telesurgery map
 

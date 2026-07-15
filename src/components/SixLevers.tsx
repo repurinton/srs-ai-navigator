@@ -202,16 +202,16 @@ export function SixLevers({ onNavigate }: { onNavigate: (view: View) => void }) 
       <section className="bg-[var(--color-mint)]">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-7 px-5 py-14 sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-12">
           <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-night)]/50">The live proof</p>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--color-night)]/50">The operating twin</p>
             <h2 className="mt-3 max-w-4xl text-4xl font-semibold tracking-[-0.045em] text-[var(--color-night)]">
-              Watch four operational workstreams connect the levers around one robotic case.
+              Hold demand constant. Materialize each lever. Watch the constraint move.
             </h2>
             <p className="mt-4 max-w-4xl text-sm font-semibold leading-relaxed text-[var(--color-night)]/65">
-              Access → Digital Front Door · Readiness → Clinical Diagnosis · Capacity → Robotics · Flow →
-              Longitudinal Care · Task Automation coordinates all four.
+              The synthetic hospital makes one idea visible: local gains compound only when context, action rights,
+              and handoffs connect across the full episode.
             </p>
           </div>
-          <button type="button" onClick={() => onNavigate("case")} className="button-dark whitespace-nowrap">Run the case →</button>
+          <button type="button" onClick={() => onNavigate("case")} className="button-dark whitespace-nowrap">Run the hospital twin →</button>
         </div>
       </section>
     </>

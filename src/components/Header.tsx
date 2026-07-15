@@ -3,7 +3,7 @@ import type { View } from "@/App";
 const NAV: { key: View; label: string }[] = [
   { key: "thesis", label: "The thesis" },
   { key: "levers", label: "Six levers" },
-  { key: "case", label: "Live case" },
+  { key: "case", label: "Hospital lab" },
   { key: "model", label: "Operating model" },
   { key: "portfolio", label: "Portfolio" },
   { key: "timeline", label: "Timeline" },
@@ -49,7 +49,7 @@ export function Header({ view, onNavigate }: { view: View; onNavigate: (view: Vi
           onClick={() => onNavigate("case")}
           className="shrink-0 rounded-full border border-[var(--color-mint)]/50 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[var(--color-mint)] transition-colors hover:bg-[var(--color-mint)] hover:text-[var(--color-night)]"
         >
-          Run the case
+          Run simulation
         </button>
       </div>
 

@@ -33,11 +33,12 @@ The decision is not whether to fund more AI pilots. It is whether to prove one c
 4. **Technology shift** — record → see → predict → coordinate.
 5. **Architecture** — six levers, one operating system.
 6. **Mechanism** — sense → decide → act → learn.
-7. **Proof by demonstration** — one synthetic robotic case, four operational workstreams, two named approvals.
-8. **Outcome** — same robot, more care; modeled and assumption-bounded.
-9. **Evidence and warning** — workflow-embedded intelligence can move outcomes; visibility alone does not.
-10. **Control** — autonomy is a consequence-weighted risk budget.
-11. **Decision** — prove one flow in 90 days, then scale the operating pattern.
+7. **System proof** — replay one synthetic hospital and watch each lever move the constraint.
+8. **Decision drill-down** — one robotic case, four operational workstreams, two named approvals.
+9. **Outcome** — same robot, more care; modeled and assumption-bounded.
+10. **Evidence and warning** — workflow-embedded intelligence can move outcomes; visibility alone does not.
+11. **Control** — autonomy is a consequence-weighted risk budget.
+12. **Decision** — prove one flow in 90 days, then scale the operating pattern.
 
 ## What belongs on screen versus in the speaker track
 
@@ -46,6 +47,7 @@ On screen:
 - Assertion headlines
 - One visual relationship at a time
 - The six lever shifts
+- The hospital operating twin, moving queues, and current constraint
 - The robotic-case clock, risks, actions, approvals, and modeled delta
 - Evidence magnitude and evidence grade
 - The autonomy ladder and 90-day decision
@@ -71,16 +73,27 @@ Say aloud:
 
 ## Live-demo runbook
 
-1. Open `#case` and state that the case and metrics are synthetic.
-2. Name the four operational workstreams and their parent lever mappings.
-3. Select **Coordinate this case**.
-4. Let the parallel workstreams complete; do not narrate every animation.
-5. Explain why the evidence retrieval and temporary lab hold are reversible.
-6. Approve the schedule swap as the OR director.
-7. Approve the payer submission as the Access lead.
-8. Open the audit strip briefly.
-9. Land on **Same robot. More care.** and immediately restate the modeling assumptions.
-10. Move to the operating model and the 90-day decision.
+1. Open `#case` and state: “Same 600 synthetic episodes. Same 30-day demand trace. Different operating rules.”
+2. Select **Run guided demo** and let the six levers materialize without narrating every number.
+3. Call out two credibility moments: Precision Medicine adds selective upstream work, and Robotics releases local capacity without immediately moving enterprise throughput.
+4. Land on the final constraint: coordination is no longer limiting; staffed recovery capacity is.
+5. Select **Inspect Case 7B** to move from the system view to one governed decision.
+6. Name the four operational workstreams and their parent lever mappings.
+7. Select **Coordinate this case** and let the parallel workstreams complete.
+8. Explain why evidence retrieval and the temporary lab hold are reversible.
+9. Approve the schedule swap as the OR director, then the payer submission as the Access lead.
+10. Open the audit strip briefly.
+11. Land on **Same robot. More care.** and immediately restate the modeling assumptions.
+12. Move to the operating model and the 90-day decision.
+
+## Hospital operating twin model discipline
+
+- Replay an identical seeded population for every comparison; do not substitute a different demand trace.
+- Keep clinical priority fixed and keep consequential approvals human-owned.
+- Show queue migration, not a composite “AI score.”
+- Keep token animation speed constant; better performance appears as more completed flow, shorter journeys, and smaller queues.
+- Let Precision Medicine create an upstream tradeoff and let Robotics expose the next downstream constraint.
+- Treat all coefficients as transparent demonstration assumptions, not observed AdventHealth performance or a financial forecast.
 
 ## Evidence discipline
 

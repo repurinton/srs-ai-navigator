@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build && node scripts/prepare-sites-build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
+    "check:simulation": "node scripts/check-hospital-sim.ts",
     "migrate": "node scripts/migrate-original.mjs"
   },
   "dependencies": {
