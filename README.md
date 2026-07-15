@@ -30,7 +30,7 @@ The web app is organized as six chapters with direct links and arrow-key navigat
 - `#portfolio` — the 272-case evidence library
 - `#timeline` — the telesurgery and robotic-platform arc
 
-The Hospital Lab replays the same 600 synthetic episodes across a fixed 30-day demand trace. Each lever changes disclosed operating parameters while clinical priority, demand, and physical assets remain fixed. Case 7B then drills from the system view into parallel agent work and two named approvals. Neither mode contains patient data or makes a clinical decision.
+The Hospital Lab replays the same 600 synthetic episodes across a fixed 30-day demand trace inside an animated 2.5D medical-center cutaway. Cars, valet, EMS, patients, caregivers, imaging, robotic ORs, recovery beds, and discharge flow remain in motion while live callouts expose each pain point and the next constraint. Each lever changes disclosed operating parameters while clinical priority, demand, and physical assets remain fixed. Case 7B then drills from the system view into parallel agent work and two named approvals. Neither mode contains patient data or makes a clinical decision.
 
 ## Presentation artifact
 
@@ -60,7 +60,7 @@ The production build is static and deployable without a backend. The evidence-he
 - Zod validation for the use-case corpus
 - 272 total use cases: 248 service-line cases and 24 robotics-native cases
 - Hash-addressable presentation chapters
-- Deterministic hospital operating twin with a stable episode trace, queue migration, and disclosed coefficients
+- Deterministic hospital operating twin with an animated cutaway campus, stable episode trace, queue migration, and disclosed coefficients
 - Deterministic live-case state machine with audit, assumptions, and approval gates
 - Lazy-loaded evidence library and telesurgery map
 

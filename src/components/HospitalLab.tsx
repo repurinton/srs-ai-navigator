@@ -16,7 +16,7 @@ export function HospitalLab({ onNavigate }: { onNavigate: (view: View) => void }
   return (
     <>
       <section className="lab-mode-bar bg-[var(--color-night)] text-white">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-1 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
           <div>
             <span>Hospital flow lab</span>
             <strong>{mode === "twin" ? "System view" : "Decision drill-down"}</strong>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import { HospitalCutaway, type HospitalPainPoint } from "@/components/HospitalCutaway";
 import {
   LEVER_META,
   LEVER_SEQUENCE,
@@ -10,16 +11,6 @@ import {
   type SimulationResult,
   type StageId,
 } from "@/lib/hospital-sim";
-
-const NODES: Array<{ id: StageId; area: string; monogram: string }> = [
-  { id: "access", area: "access", monogram: "FD" },
-  { id: "diagnosis", area: "diagnosis", monogram: "DX" },
-  { id: "precision", area: "precision", monogram: "PM" },
-  { id: "readiness", area: "readiness", monogram: "RD" },
-  { id: "robotics", area: "robotics", monogram: "RX" },
-  { id: "care", area: "care", monogram: "IP" },
-  { id: "longitudinal", area: "longitudinal", monogram: "LC" },
-];
 
 const MOMENTS = [
   {
@@ -56,6 +47,145 @@ function isSequencePrefix(active: LeverId[]) {
   return active.every((lever, index) => LEVER_SEQUENCE[index] === lever);
 }
 
+const SCENE_ANCHORS: Record<StageId, HospitalPainPoint["anchor"]> = {
+  access: { x: 42, y: 65 },
+  diagnosis: { x: 36, y: 20 },
+  precision: { x: 56, y: 22 },
+  readiness: { x: 32, y: 40 },
+  robotics: { x: 55, y: 41 },
+  care: { x: 75, y: 43 },
+  longitudinal: { x: 88, y: 70 },
+};
+
+const SCENE_CALLOUTS: Record<StageId, HospitalPainPoint["anchor"]> = {
+  access: { x: 5, y: 69 },
+  diagnosis: { x: 4, y: 5 },
+  precision: { x: 62, y: 4 },
+  readiness: { x: 3, y: 30 },
+  robotics: { x: 58, y: 47 },
+  care: { x: 76, y: 26 },
+  longitudinal: { x: 70, y: 69 },
+};
+
+const LEVER_RESOLUTIONS: Record<LeverId, Omit<HospitalPainPoint, "id" | "value">> = {
+  "front-door": {
+    title: "Context arrives before the patient",
+    detail: "Identity, intent, and prerequisites move with the arrival instead of being entered again.",
+    stage: "access",
+    severity: "pressure",
+    anchor: SCENE_ANCHORS.access,
+    callout: SCENE_CALLOUTS.access,
+    resolvedBy: "front-door",
+  },
+  diagnosis: {
+    title: "Right pathway, first time",
+    detail: "Clinical pathway intelligence removes avoidable routing resets around imaging and work-up.",
+    stage: "diagnosis",
+    severity: "pressure",
+    anchor: SCENE_ANCHORS.diagnosis,
+    callout: SCENE_CALLOUTS.diagnosis,
+    resolvedBy: "diagnosis",
+  },
+  precision: {
+    title: "Target earlier. Revise less.",
+    detail: "Eligible patients spend more time planning upstream so fewer treatment plans are rebuilt later.",
+    stage: "precision",
+    severity: "watch",
+    anchor: SCENE_ANCHORS.precision,
+    callout: SCENE_CALLOUTS.precision,
+    resolvedBy: "precision",
+  },
+  robotics: {
+    title: "Local OR capacity released",
+    detail: "Turnover and readiness improve, but the gain transfers pressure into recovery and beds.",
+    stage: "robotics",
+    severity: "watch",
+    anchor: SCENE_ANCHORS.robotics,
+    callout: SCENE_CALLOUTS.robotics,
+    resolvedBy: "robotics",
+  },
+  longitudinal: {
+    title: "The next care step is already owned",
+    detail: "Discharge and follow-up begin before the bed decision instead of after the patient leaves.",
+    stage: "longitudinal",
+    severity: "pressure",
+    anchor: SCENE_ANCHORS.longitudinal,
+    callout: SCENE_CALLOUTS.longitudinal,
+    resolvedBy: "longitudinal",
+  },
+  automation: {
+    title: "Agents execute. Humans govern.",
+    detail: "Routine handoffs move across the campus while consequential decisions stop at named approvals.",
+    severity: "watch",
+    anchor: { x: 77, y: 18 },
+    callout: { x: 62, y: 3 },
+    resolvedBy: "automation",
+  },
+};
+
+const CONSTRAINT_TITLES: Record<StageId, string> = {
+  access: "Arrival repeats itself",
+  diagnosis: "The scanner is not the bottleneck",
+  precision: "The plan changes late",
+  readiness: "Readiness is the invisible queue",
+  robotics: "The robot waits for the hospital",
+  care: "Recovery has become the limiting capacity",
+  longitudinal: "A discharge is nobody's workflow",
+};
+
+function buildScenePainPoints(
+  activeLevers: LeverId[],
+  current: SimulationResult,
+): HospitalPainPoint[] {
+  const constraint = current.stageResults[current.constraint];
+  const currentConstraint: HospitalPainPoint = {
+    id: `constraint-${activeLevers.length}-${current.constraint}`,
+    title: CONSTRAINT_TITLES[current.constraint],
+    detail:
+      current.constraint === "care"
+        ? "Coordination is no longer limiting flow. Staffed recovery capacity is now the investment decision."
+        : `${constraint.name} now absorbs the demand released upstream. The constraint moved; it did not disappear.`,
+    stage: current.constraint,
+    value: `${constraint.peakQueue} peak queue · ${Math.round(constraint.averageWaitHours)}h average wait`,
+    severity: "critical",
+    anchor: SCENE_ANCHORS[current.constraint],
+    callout: SCENE_CALLOUTS[current.constraint],
+  };
+
+  const latestLever = activeLevers.at(-1);
+  if (!latestLever) {
+    const baselineConstraint = {
+      ...currentConstraint,
+      detail: "Misrouting, incomplete readiness, and repeated coordination make imaging look constrained even when the equipment is not the limiting asset.",
+    };
+    return [
+      {
+        id: "baseline-arrival-friction",
+        title: "Arrival repeats itself",
+        detail: "Parking, valet, registration, and clinical intake each ask for context the system already has.",
+        stage: "access",
+        value: `${current.stageResults.access.peakQueue} peak queue`,
+        severity: "pressure",
+        anchor: SCENE_ANCHORS.access,
+        callout: SCENE_CALLOUTS.access,
+        resolvedBy: "front-door",
+      },
+      baselineConstraint,
+    ];
+  }
+
+  const resolution = LEVER_RESOLUTIONS[latestLever];
+  const stage = resolution.stage ? current.stageResults[resolution.stage] : undefined;
+  return [
+    {
+      ...resolution,
+      id: `resolved-${activeLevers.length}-${latestLever}`,
+      value: stage ? `${stage.peakQueue} peak queue now` : `${current.administrativeTouches} touches now`,
+    },
+    currentConstraint,
+  ];
+}
+
 export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
   const [activeLevers, setActiveLevers] = useState<LeverId[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -69,6 +199,11 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
         title: `${activeLevers.length} levers are active. The constraint is ${current.stageResults[current.constraint].name.toLowerCase()}.`,
         copy: "Manual combinations use the same deterministic demand trace. Reset or run the guided sequence to see the intended transformation story.",
       };
+  const scenePainPoints = useMemo(
+    () => buildScenePainPoints(activeLevers, current),
+    [activeLevers, current],
+  );
+  const activePainPointId = scenePainPoints.find((painPoint) => !painPoint.resolvedBy)?.id;
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -80,7 +215,7 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
 
     const handle = window.setTimeout(
       () => setActiveLevers((levers) => (levers.includes(nextLever) ? levers : [...levers, nextLever])),
-      activeLevers.length === 0 ? 700 : 1550,
+      activeLevers.length === 0 ? 3200 : 4700,
     );
     return () => window.clearTimeout(handle);
   }, [activeLevers.length, activeSet, isPlaying]);
@@ -117,56 +252,72 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
 
   return (
     <section className="twin-shell bg-[var(--color-night)] text-white">
-      <div className="mx-auto max-w-[1440px] px-5 pb-20 pt-12 sm:px-8 lg:px-12 lg:pb-28 lg:pt-20">
-        <div className="grid gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
-          <div>
+      <div className="mx-auto max-w-[1440px] px-5 pb-20 pt-2 sm:px-8 lg:px-12 lg:pb-24 lg:pt-2">
+        <div className="twin-command-deck mx-auto max-w-[1240px]">
+          <div className="twin-command-heading">
             <div className="flex flex-wrap items-center gap-3">
               <p className="eyebrow text-[var(--color-mint)]">Hospital operating twin</p>
-              <span className="twin-disclosure">Synthetic · deterministic · not a forecast</span>
+              <span className="twin-disclosure">Illustrative · no patient data</span>
             </div>
-            <h1 className="display-title mt-4 text-white">Watch the constraint move.</h1>
+            <h1 className="mt-2 text-[clamp(1.8rem,3vw,3rem)] font-semibold leading-none tracking-[-0.05em] text-white">
+              Watch the constraint move.
+            </h1>
           </div>
-          <div className="max-w-2xl lg:justify-self-end">
-            <p className="text-lg leading-relaxed text-white/60">
-              Same 600 episodes. Same 30-day demand trace. Same clinical priority. Activate each lever and watch
-              queues, journey time, and administrative work respond.
-            </p>
-            <p className="mt-4 text-sm font-bold text-[var(--color-mint)]">
-              Buying six technologies creates local gains. Connecting them creates an operating system.
-            </p>
-          </div>
-        </div>
-
-        <div className="twin-control-bar mt-10">
-          <div className="flex flex-wrap items-center gap-2" aria-label="Simulation controls">
-            <button type="button" className="button-primary" onClick={toggleGuidedRun}>
-              {isPlaying
-                ? "Pause guided demo"
-                : activeLevers.length === LEVER_SEQUENCE.length
-                  ? "Replay guided demo"
-                  : guidedState && activeLevers.length > 0
-                    ? "Continue guided demo"
-                    : "Run guided demo"}
-            </button>
-            <button
-              type="button"
-              className="button-small-ghost"
-              onClick={stepForward}
-              disabled={activeLevers.length === LEVER_SEQUENCE.length}
-            >
-              Materialize next →
-            </button>
-            <button type="button" className="button-small-ghost" onClick={reset} disabled={activeLevers.length === 0}>
-              Reset baseline
-            </button>
-          </div>
-          <div className="twin-step-count" aria-label={`${activeLevers.length} of 6 levers active`}>
-            <strong>{String(activeLevers.length).padStart(2, "0")}</strong>
-            <span>/ 06 levers live</span>
+          <div className="twin-command-actions">
+            <div className="flex flex-wrap items-center gap-2" aria-label="Simulation controls">
+              <button type="button" className="button-primary" onClick={toggleGuidedRun}>
+                {isPlaying
+                  ? "Pause guided demo"
+                  : activeLevers.length === LEVER_SEQUENCE.length
+                    ? "Replay guided demo"
+                    : guidedState && activeLevers.length > 0
+                      ? "Continue guided demo"
+                      : "Run guided demo"}
+              </button>
+              <button
+                type="button"
+                className="button-small-ghost"
+                onClick={stepForward}
+                disabled={activeLevers.length === LEVER_SEQUENCE.length}
+              >
+                Materialize next →
+              </button>
+              <button type="button" className="button-small-ghost" onClick={reset} disabled={activeLevers.length === 0}>
+                Reset baseline
+              </button>
+            </div>
+            <div className="twin-step-count" aria-label={`${activeLevers.length} of 6 levers active`}>
+              <strong>{String(activeLevers.length).padStart(2, "0")}</strong>
+              <span>/ 06 levers live</span>
+            </div>
           </div>
         </div>
 
-        <div className="twin-lever-rail mt-4" aria-label="Transformation levers">
+        <HospitalCutaway
+          simulation={current}
+          baseline={baseline}
+          activeLevers={activeLevers}
+          isPlaying={isPlaying}
+          painPoints={scenePainPoints}
+          activePainPointId={activePainPointId}
+          className="cutaway-embedded mt-2"
+          title="Animated hospital and medical-center cutaway"
+          showHeader={false}
+        />
+
+        <div className="twin-stage-caption mx-auto max-w-[1240px]">
+          <div>
+            <span>What the campus is showing</span>
+            <strong>{moment.title}</strong>
+            <p>{moment.copy}</p>
+          </div>
+          <div className="twin-trust-line">
+            <span className="status-dot status-dot-ready" aria-hidden="true" />
+            Clinical priority fixed · consequential actions remain human-approved
+          </div>
+        </div>
+
+        <div className="twin-lever-rail twin-lever-rail-immersive mx-auto mt-4 max-w-[1240px]" aria-label="Transformation levers">
           {LEVER_SEQUENCE.map((lever) => {
             const item = LEVER_META[lever];
             const active = activeSet.has(lever);
@@ -190,92 +341,7 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
           })}
         </div>
 
-        <div className="twin-metrics mt-4" aria-label="Current simulation results">
-          <TwinMetric
-            label="Episodes completed / 30 days"
-            value={String(current.completed)}
-            baseline={String(baseline.completed)}
-            delta={`${current.completed - baseline.completed >= 0 ? "+" : ""}${current.completed - baseline.completed}`}
-            improved={current.completed > baseline.completed}
-          />
-          <TwinMetric
-            label="Median end-to-end time"
-            value={`${current.medianJourneyDays} d`}
-            baseline={`${baseline.medianJourneyDays} d`}
-            delta={`${Math.round((current.medianJourneyDays - baseline.medianJourneyDays) * 2) / 2} d`}
-            improved={current.medianJourneyDays < baseline.medianJourneyDays}
-          />
-          <TwinMetric
-            label="Administrative touches / episode"
-            value={String(current.administrativeTouches)}
-            baseline={String(baseline.administrativeTouches)}
-            delta={`${current.administrativeTouches - baseline.administrativeTouches}`}
-            improved={current.administrativeTouches < baseline.administrativeTouches}
-          />
-        </div>
-
-        <div className="twin-canvas mt-4">
-          <div className="twin-canvas-header">
-            <div>
-              <span>Regional complex-care flow</span>
-              <strong>{moment.title}</strong>
-            </div>
-            <div className="twin-constraint">
-              <span>Current constraint</span>
-              <strong>{current.stageResults[current.constraint].name}</strong>
-            </div>
-          </div>
-
-          <div
-            className={`twin-campus ${activeSet.has("automation") ? "twin-campus-connected" : ""}`}
-            role="group"
-            aria-label="Synthetic hospital flow from access through longitudinal care"
-          >
-            <div className="twin-route-line twin-route-line-top" aria-hidden="true" />
-            <div className="twin-route-line twin-route-line-turn" aria-hidden="true" />
-            <div className="twin-route-line twin-route-line-bottom" aria-hidden="true" />
-            {Array.from({ length: 7 }, (_, index) => (
-              <span
-                key={index}
-                className="twin-case-token"
-                style={{ "--token-delay": `${index * -1.25}s` } as CSSProperties}
-                aria-hidden="true"
-              />
-            ))}
-
-            {NODES.map((node) => (
-              <TwinNode
-                key={node.id}
-                node={node}
-                current={current}
-                baseline={baseline}
-                activeLevers={activeSet}
-              />
-            ))}
-
-            <div className={`twin-command-layer ${activeSet.has("automation") ? "twin-command-layer-live" : ""}`}>
-              <span className="twin-command-monogram">TA</span>
-              <div>
-                <strong>Coordination layer</strong>
-                <p>{activeSet.has("automation") ? "Context shared · reversible work executed · exceptions escalated" : "Six departments · separate queues · manual verification"}</p>
-              </div>
-              <b>{activeSet.has("automation") ? "Connected" : "Fragmented"}</b>
-            </div>
-          </div>
-
-          <div className="twin-narrative">
-            <div>
-              <span>What changed</span>
-              <p>{moment.copy}</p>
-            </div>
-            <div className="twin-trust-line">
-              <span className="status-dot status-dot-ready" aria-hidden="true" />
-              Clinical priority fixed · consequential actions remain human-approved
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 flex flex-col gap-4 border-t border-white/10 pt-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mx-auto mt-5 flex max-w-[1240px] flex-col gap-4 border-t border-white/10 pt-5 lg:flex-row lg:items-center lg:justify-between">
           <details className="twin-assumptions">
             <summary>Model basis and assumptions</summary>
             <div>
@@ -302,82 +368,5 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
         </p>
       </div>
     </section>
-  );
-}
-
-function TwinMetric({
-  label,
-  value,
-  baseline,
-  delta,
-  improved,
-}: {
-  label: string;
-  value: string;
-  baseline: string;
-  delta: string;
-  improved: boolean;
-}) {
-  const neutral = delta === "0" || delta === "0%" || delta === "0 d";
-  return (
-    <div className="twin-metric">
-      <span>{label}</span>
-      <div>
-        <strong>{value}</strong>
-        <b className={neutral || !improved ? "" : "twin-delta-good"}>{delta}</b>
-      </div>
-      <small>Baseline {baseline}</small>
-    </div>
-  );
-}
-
-function TwinNode({
-  node,
-  current,
-  baseline,
-  activeLevers,
-}: {
-  node: (typeof NODES)[number];
-  current: SimulationResult;
-  baseline: SimulationResult;
-  activeLevers: Set<LeverId>;
-}) {
-  const result = current.stageResults[node.id];
-  const base = baseline.stageResults[node.id];
-  const lever = result.leverId;
-  const active = lever ? activeLevers.has(lever) : activeLevers.has("precision") || activeLevers.has("automation");
-  const bottleneck = current.constraint === node.id;
-  const color = lever ? LEVER_META[lever].color : activeLevers.has("automation") ? LEVER_META.automation.color : "#5bf0c3";
-  const maxQueue = Math.max(base.peakQueue, result.peakQueue, 1);
-  const queueRatio = Math.max(3, Math.round((result.peakQueue / maxQueue) * 100));
-  const baselineRatio = Math.round((base.peakQueue / maxQueue) * 100);
-
-  return (
-    <article
-      className={`twin-facility ${active ? "twin-facility-live" : ""} ${bottleneck ? "twin-facility-constraint" : ""}`}
-      style={
-        {
-          gridArea: node.area,
-          "--node-color": color,
-          "--queue-ratio": `${queueRatio}%`,
-          "--baseline-ratio": `${baselineRatio}%`,
-        } as CSSProperties
-      }
-    >
-      <div className="twin-facility-topline">
-        <span className="twin-facility-monogram">{node.monogram}</span>
-        <span>{bottleneck ? "Constraint" : active ? "Lever live" : "Baseline"}</span>
-      </div>
-      <h3>{result.name}</h3>
-      <div className="twin-queue-label">
-        <span>Peak queue</span>
-        <strong>{result.peakQueue}</strong>
-      </div>
-      <div className="twin-queue-track" aria-label={`Peak queue ${result.peakQueue}; baseline ${base.peakQueue}`}>
-        <span className="twin-queue-fill" />
-        <i aria-hidden="true" />
-      </div>
-      <p>Baseline {base.peakQueue} · avg wait {Math.round(result.averageWaitHours)}h</p>
-    </article>
   );
 }

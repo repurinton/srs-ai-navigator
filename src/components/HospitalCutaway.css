@@ -1,0 +1,557 @@
+.hospital-cutaway {
+  --cutaway-night: #06131c;
+  --cutaway-panel: rgba(6, 19, 28, 0.92);
+  --cutaway-mint: #5bf0c3;
+  color: #fff;
+  container-type: inline-size;
+}
+
+.hospital-cutaway.cutaway-embedded {
+  width: min(100%, 1240px, 125vh);
+  margin-inline: auto;
+}
+
+.cutaway-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.cutaway-eyebrow {
+  color: var(--cutaway-mint);
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.cutaway-header h2 {
+  margin: 0.18rem 0 0;
+  font-size: clamp(1.3rem, 2.25vw, 2.25rem);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+
+.cutaway-status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(6, 19, 28, 0.7);
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cutaway-status strong { color: #fff; font-size: 0.78rem; }
+
+.cutaway-status-pulse {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--cutaway-mint);
+  box-shadow: 0 0 0 0 rgba(91, 240, 195, 0.55);
+  animation: cutaway-status-pulse 2.4s ease-out infinite;
+}
+
+.cutaway-scene {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  background: #0b2028;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.32);
+  isolation: isolate;
+}
+
+.cutaway-raster {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  background-color: #102e38;
+  background-image:
+    linear-gradient(180deg, rgba(6, 19, 28, 0.06), rgba(6, 19, 28, 0.34)),
+    image-set(
+      url("/hospital-cutaway-v1-1280.webp") 1x,
+      url("/hospital-cutaway-v1.webp") 2x
+    );
+  background-position: center;
+  background-size: cover;
+}
+
+.cutaway-constraint-zone {
+  position: absolute;
+  left: var(--constraint-x);
+  top: var(--constraint-y);
+  z-index: 1;
+  width: clamp(58px, 8vw, 116px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 113, 109, 0.65);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 113, 109, calc(0.08 + var(--queue-intensity) * 0.13)), transparent 64%);
+  box-shadow: 0 0 36px rgba(255, 113, 109, 0.18);
+  pointer-events: none;
+  animation: cutaway-constraint-breathe 2.8s ease-in-out infinite;
+}
+
+.cutaway-constraint-zone i {
+  position: absolute;
+  inset: 14%;
+  border: 1px dashed rgba(255, 113, 109, 0.7);
+  border-radius: inherit;
+}
+
+.cutaway-network {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 500ms ease;
+}
+
+.hospital-cutaway[data-connected="true"] .cutaway-network { opacity: 1; }
+
+.cutaway-network span {
+  position: absolute;
+  left: 41%;
+  top: 64%;
+  width: 31%;
+  border-top: 1px solid rgba(91, 240, 195, 0.75);
+  transform-origin: left center;
+  filter: drop-shadow(0 0 5px rgba(91, 240, 195, 0.72));
+}
+
+.cutaway-network span::after {
+  position: absolute;
+  right: 0;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cutaway-mint);
+  box-shadow: 0 0 12px var(--cutaway-mint);
+  content: "";
+}
+
+.cutaway-network span:nth-child(1) { width: 28%; transform: rotate(-112deg); }
+.cutaway-network span:nth-child(2) { width: 24%; transform: rotate(-62deg); }
+.cutaway-network span:nth-child(3) { width: 18%; transform: rotate(-30deg); }
+.cutaway-network span:nth-child(4) { width: 38%; transform: rotate(8deg); }
+.cutaway-network span:nth-child(5) { width: 43%; transform: rotate(-18deg); }
+.cutaway-network span:nth-child(6) { width: 49%; transform: rotate(18deg); }
+
+.cutaway-depth-light {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 62% 42%, rgba(91, 240, 195, 0.11), transparent 21%),
+    linear-gradient(90deg, rgba(6, 19, 28, 0.42), transparent 22%, transparent 76%, rgba(6, 19, 28, 0.28));
+  mix-blend-mode: screen;
+}
+
+.cutaway-zone-labels span {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  padding: 0.28rem 0.48rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(6, 19, 28, 0.76);
+  color: rgba(255, 255, 255, 0.77);
+  font-size: clamp(0.44rem, 0.58vw, 0.62rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+
+.cutaway-actor,
+.cutaway-gurney,
+.cutaway-or-status,
+.cutaway-imaging-scan,
+.cutaway-bed {
+  position: absolute;
+  z-index: 3;
+  display: block;
+}
+
+.cutaway-vehicle {
+  bottom: 7%;
+  left: -9%;
+  width: clamp(25px, 3.4vw, 48px);
+  height: clamp(10px, 1.35vw, 18px);
+  border-radius: 4px 6px 3px 3px;
+  background: #e8f1f3;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.34);
+  animation: cutaway-car-route 17s linear infinite;
+  animation-delay: var(--actor-delay);
+}
+
+.cutaway-vehicle:nth-of-type(2) { background: #ffb454; animation-duration: 19s; }
+.cutaway-vehicle:nth-of-type(3) { background: #5e8fff; animation-duration: 21s; }
+
+.cutaway-vehicle-cabin {
+  position: absolute;
+  left: 25%;
+  top: -38%;
+  width: 48%;
+  height: 58%;
+  border-radius: 4px 4px 1px 1px;
+  background: #9cc0c8;
+}
+
+.cutaway-wheel {
+  position: absolute;
+  bottom: -24%;
+  width: 20%;
+  aspect-ratio: 1;
+  border: 2px solid #52646b;
+  border-radius: 50%;
+  background: #07151f;
+}
+
+.cutaway-wheel-back { left: 13%; }
+.cutaway-wheel-front { right: 13%; }
+
+.cutaway-ambulance {
+  bottom: 44%;
+  width: clamp(33px, 4.2vw, 58px);
+  height: clamp(14px, 1.75vw, 24px);
+  border-bottom: 3px solid #ff716d;
+  background: #f8fbfa;
+  animation-name: cutaway-ambulance-route;
+  animation-duration: 14s;
+}
+
+.cutaway-ambulance-mark {
+  position: absolute;
+  right: 11%;
+  top: 8%;
+  color: #d84141;
+  font-size: clamp(8px, 1vw, 14px);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.cutaway-person {
+  width: clamp(7px, 0.8vw, 11px);
+  height: clamp(14px, 1.55vw, 22px);
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.3));
+}
+
+.cutaway-person-head {
+  position: absolute;
+  left: 22%;
+  top: 0;
+  width: 58%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #b98262;
+}
+
+.cutaway-person-body {
+  position: absolute;
+  inset: 28% 8% 0;
+  border-radius: 50% 50% 24% 24%;
+  background: #59c6b0;
+}
+
+.cutaway-person-caregiver {
+  left: 40%;
+  top: 52%;
+  animation: cutaway-caregiver-route 9s ease-in-out infinite alternate;
+  animation-delay: var(--actor-delay);
+}
+
+.cutaway-person-caregiver:nth-of-type(10) { left: 65%; top: 37%; }
+.cutaway-person-caregiver:nth-of-type(11) { left: 76%; top: 31%; }
+.cutaway-person-caregiver:nth-of-type(12) { left: 84%; top: 50%; }
+
+.cutaway-person-patient {
+  left: 40%;
+  bottom: 27%;
+  animation: cutaway-patient-route 13s linear infinite;
+  animation-delay: var(--actor-delay);
+}
+
+.cutaway-person-patient .cutaway-person-body { background: #b695ff; }
+
+.cutaway-person-valet {
+  left: 39%;
+  bottom: 25%;
+  animation: cutaway-valet-route 5.5s ease-in-out infinite alternate;
+  animation-delay: var(--actor-delay);
+}
+
+.cutaway-person-valet .cutaway-person-body { background: #ffb454; }
+
+.cutaway-gurney {
+  left: 28%;
+  top: 43%;
+  width: clamp(19px, 2.2vw, 31px);
+  height: clamp(7px, 0.8vw, 11px);
+  border-radius: 2px;
+  background: #dcecef;
+  animation: cutaway-gurney-route 11s ease-in-out infinite alternate;
+}
+
+.cutaway-gurney-two { left: 71%; top: 43%; animation-delay: -5.3s; }
+.cutaway-gurney i { position: absolute; left: 7%; right: 7%; top: -45%; height: 45%; border-radius: 3px 3px 0 0; background: #72a6b2; }
+.cutaway-gurney b { position: absolute; left: 16%; right: 16%; bottom: -45%; height: 35%; border-left: 2px solid #9ab0b6; border-right: 2px solid #9ab0b6; }
+
+.cutaway-or-status {
+  left: 49%;
+  top: 35%;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: clamp(0.4rem, 0.52vw, 0.56rem);
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.cutaway-or-two { left: 57%; top: 39%; }
+.cutaway-or-status i { width: 0.38rem; height: 0.38rem; border-radius: 50%; background: rgba(255, 255, 255, 0.42); }
+.cutaway-or-status.is-live { color: #fff; }
+.cutaway-or-status.is-live i { background: var(--cutaway-mint); animation: cutaway-room-pulse 1.9s ease-in-out infinite; }
+
+.cutaway-imaging-scan {
+  left: 35.5%;
+  top: 18.5%;
+  width: clamp(17px, 2vw, 28px);
+  aspect-ratio: 1;
+  border: 3px solid rgba(94, 143, 255, 0.55);
+  border-radius: 50%;
+}
+
+.cutaway-imaging-scan i { position: absolute; inset: 22%; border-radius: 50%; background: rgba(94, 143, 255, 0.3); }
+.cutaway-imaging-scan.is-live i { animation: cutaway-scan 2.5s ease-in-out infinite; }
+
+.cutaway-bed {
+  left: 68%;
+  top: 58%;
+  width: clamp(17px, 1.8vw, 26px);
+  height: clamp(7px, 0.7vw, 10px);
+  border-radius: 2px;
+  border-left: 3px solid #e7f1ef;
+  background: #7aa2aa;
+}
+
+.cutaway-bed-two { left: 74%; top: 57%; }
+.cutaway-bed-three { left: 80%; top: 47%; }
+.cutaway-bed i { position: absolute; right: 11%; top: -25%; width: 28%; aspect-ratio: 1; border-radius: 50%; background: #c59572; }
+.cutaway-bed.is-clearing { animation: cutaway-bed-clear 5.8s ease-in-out infinite; }
+
+.cutaway-lever-beacon {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  z-index: 5;
+  display: grid;
+  width: clamp(24px, 2.5vw, 35px);
+  aspect-ratio: 1;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  background: rgba(6, 19, 28, 0.83);
+  color: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(7px);
+  transition: border-color 250ms ease, color 250ms ease, background 250ms ease, box-shadow 250ms ease;
+}
+
+.cutaway-lever-beacon b { position: relative; z-index: 1; font-size: clamp(0.42rem, 0.58vw, 0.62rem); letter-spacing: 0.03em; }
+.cutaway-lever-beacon i { position: absolute; inset: -4px; border: 1px solid transparent; border-radius: 50%; }
+
+.cutaway-lever-beacon.is-live {
+  border-color: var(--lever-color);
+  background: color-mix(in srgb, var(--lever-color) 18%, rgba(6, 19, 28, 0.88));
+  color: #fff;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--lever-color) 40%, transparent);
+}
+
+.cutaway-lever-beacon.is-live i { border-color: var(--lever-color); animation: cutaway-beacon 2.5s ease-out infinite; }
+
+.cutaway-callout-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+.cutaway-callout { position: absolute; inset: 0; }
+
+.cutaway-callout-card {
+  position: absolute;
+  left: var(--card-x);
+  top: var(--card-y);
+  width: clamp(145px, 16vw, 225px);
+  margin: 0;
+  padding: clamp(0.55rem, 0.85vw, 0.85rem);
+  border: 1px solid rgba(255, 180, 84, 0.4);
+  border-radius: 11px;
+  background: var(--cutaway-panel);
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+  transition: opacity 250ms ease, transform 250ms ease, border-color 250ms ease;
+  animation: cutaway-callout-arrive 420ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+button.cutaway-callout-card { cursor: pointer; }
+button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: rgba(255, 180, 84, 0.78); }
+.cutaway-callout-card.is-active { outline: 2px solid #fff; outline-offset: 2px; }
+.cutaway-callout-card.is-resolved { border-color: rgba(91, 240, 195, 0.52); opacity: 0.72; }
+.cutaway-severity-critical:not(.is-resolved) { border-color: rgba(255, 113, 109, 0.74); }
+.cutaway-severity-critical:not(.is-resolved) .cutaway-callout-kicker,
+.cutaway-severity-critical:not(.is-resolved) b { color: #ff716d; }
+.cutaway-severity-watch:not(.is-resolved) { border-color: rgba(94, 143, 255, 0.48); }
+.cutaway-severity-watch:not(.is-resolved) .cutaway-callout-kicker,
+.cutaway-severity-watch:not(.is-resolved) b { color: #8db0ff; }
+
+.cutaway-callout-kicker { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.25rem; color: #ffb454; font-size: clamp(0.42rem, 0.52vw, 0.56rem); font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+.cutaway-callout-kicker i { width: 0.38rem; height: 0.38rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 rgba(255, 180, 84, 0.5); animation: cutaway-alert 2s ease-out infinite; }
+.cutaway-callout-card.is-resolved .cutaway-callout-kicker { color: var(--cutaway-mint); }
+.cutaway-callout-card strong { display: block; font-size: clamp(0.67rem, 0.82vw, 0.9rem); line-height: 1.16; }
+.cutaway-callout-detail { display: block; margin-top: 0.26rem; color: rgba(255, 255, 255, 0.58); font-size: clamp(0.55rem, 0.65vw, 0.7rem); line-height: 1.32; }
+.cutaway-callout-card b { display: block; margin-top: 0.35rem; color: #ffb454; font-size: clamp(0.55rem, 0.65vw, 0.7rem); }
+.cutaway-callout-card.is-resolved b { color: var(--cutaway-mint); }
+
+.cutaway-anchor {
+  position: absolute;
+  left: var(--anchor-x);
+  top: var(--anchor-y);
+  width: 0.72rem;
+  height: 0.72rem;
+  transform: translate(-50%, -50%);
+  border: 2px solid #ffb454;
+  border-radius: 50%;
+  background: rgba(6, 19, 28, 0.8);
+  box-shadow: 0 0 0 5px rgba(255, 180, 84, 0.14);
+}
+
+.cutaway-anchor::after {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(24px, 4vw, 58px);
+  border-top: 1px dashed rgba(255, 180, 84, 0.58);
+  transform: rotate(-28deg);
+  transform-origin: 0 0;
+  content: "";
+}
+
+.cutaway-anchor.is-resolved { border-color: var(--cutaway-mint); box-shadow: 0 0 0 5px rgba(91, 240, 195, 0.13); }
+
+.cutaway-metric-strip {
+  position: absolute;
+  right: 1.15rem;
+  bottom: 1.05rem;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 0.25rem;
+  padding: 0.32rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 13px;
+  background: rgba(6, 19, 28, 0.88);
+  backdrop-filter: blur(12px);
+}
+
+.cutaway-metric-strip > span { min-width: clamp(78px, 9vw, 126px); padding: 0.42rem 0.6rem; border-right: 1px solid rgba(255, 255, 255, 0.1); }
+.cutaway-metric-strip > span:last-child { border-right: 0; }
+.cutaway-metric-strip small { display: block; color: rgba(255, 255, 255, 0.45); font-size: clamp(0.42rem, 0.52vw, 0.55rem); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.cutaway-metric-strip strong { font-size: clamp(0.74rem, 1vw, 1.05rem); }
+.cutaway-metric-strip b { margin-left: 0.25rem; color: var(--cutaway-mint); font-size: clamp(0.48rem, 0.6vw, 0.64rem); }
+.cutaway-constraint-metric strong { color: #ffb454; }
+
+.cutaway-mobile-callouts { display: none; }
+.cutaway-sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
+
+@keyframes cutaway-car-route {
+  0% { left: -8%; bottom: 7%; transform: scale(0.78); }
+  56% { left: 30%; bottom: 10%; transform: scale(0.92); }
+  76% { left: 40%; bottom: 16%; transform: scale(0.88); }
+  100% { left: 58%; bottom: 18%; transform: scale(0.76); }
+}
+
+@keyframes cutaway-ambulance-route {
+  0% { left: -10%; bottom: 44%; opacity: 0; }
+  12% { opacity: 1; }
+  58%, 78% { left: 10%; bottom: 48%; opacity: 1; }
+  100% { left: 17%; bottom: 50%; opacity: 0; }
+}
+
+@keyframes cutaway-valet-route { to { transform: translate3d(170%, -45%, 0); } }
+@keyframes cutaway-patient-route { 0% { transform: translate3d(-160%, 90%, 0); opacity: 0; } 12% { opacity: 1; } 72% { opacity: 1; } 100% { transform: translate3d(220%, -170%, 0); opacity: 0; } }
+@keyframes cutaway-caregiver-route { to { transform: translate3d(220%, 40%, 0); } }
+@keyframes cutaway-gurney-route { to { transform: translate3d(180%, -70%, 0); } }
+@keyframes cutaway-room-pulse { 50% { opacity: 0.35; box-shadow: 0 0 12px var(--cutaway-mint); } }
+@keyframes cutaway-scan { 50% { transform: scale(0.32); opacity: 0.35; } }
+@keyframes cutaway-status-pulse { 70%, 100% { box-shadow: 0 0 0 8px rgba(91, 240, 195, 0); } }
+@keyframes cutaway-beacon { 70%, 100% { inset: -13px; opacity: 0; } }
+@keyframes cutaway-alert { 70%, 100% { box-shadow: 0 0 0 7px rgba(255, 180, 84, 0); } }
+@keyframes cutaway-constraint-breathe { 50% { transform: translate(-50%, -50%) scale(1.08); opacity: 0.78; } }
+@keyframes cutaway-bed-clear { 0%, 55% { opacity: 1; transform: translateX(0); } 75%, 100% { opacity: 0.25; transform: translateX(140%); } }
+@keyframes cutaway-callout-arrive { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+
+.hospital-cutaway.is-paused .cutaway-motion-layer * { animation-play-state: paused; }
+
+@container (max-width: 720px) {
+  .cutaway-scene { aspect-ratio: 16 / 9; }
+  .cutaway-raster { background-position: center; }
+  .cutaway-callout-layer { display: none; }
+  .cutaway-zone-labels span:nth-child(4),
+  .cutaway-zone-labels span:nth-child(5) { display: none; }
+  .cutaway-mobile-callouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; margin-top: 0.65rem; }
+  .cutaway-mobile-callouts .cutaway-callout-card { position: static; width: auto; }
+  .cutaway-metric-strip { left: 0.65rem; right: 0.65rem; bottom: 0.65rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cutaway-metric-strip > span { min-width: 0; }
+}
+
+@container (max-width: 560px) {
+  .cutaway-header { align-items: flex-start; }
+  .cutaway-status span:last-child { display: none; }
+  .cutaway-scene { border-radius: 17px; aspect-ratio: 16 / 9; }
+  .cutaway-raster { background-position: center; background-size: cover; }
+  .cutaway-depth-light { background: linear-gradient(180deg, rgba(6, 19, 28, 0.08), rgba(6, 19, 28, 0.35)); }
+  .cutaway-zone-labels { display: none; }
+  .cutaway-lever-beacon { width: 25px; }
+  .cutaway-lever-beacon:nth-child(1) { left: 12%; }
+  .cutaway-lever-beacon:nth-child(6) { top: 18%; }
+  .cutaway-metric-strip { display: none; }
+  .cutaway-mobile-callouts { grid-template-columns: 1fr; }
+  .cutaway-person-caregiver:nth-of-type(11),
+  .cutaway-person-caregiver:nth-of-type(12),
+  .cutaway-bed-three,
+  .cutaway-vehicle:nth-of-type(3) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hospital-cutaway *,
+  .hospital-cutaway *::before,
+  .hospital-cutaway *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .cutaway-vehicle { left: 14%; }
+  .cutaway-ambulance { left: 24%; }
+  .cutaway-person-patient { left: 24%; }
+}

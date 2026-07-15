@@ -74,17 +74,18 @@ Say aloud:
 ## Live-demo runbook
 
 1. Open `#case` and state: “Same 600 synthetic episodes. Same 30-day demand trace. Different operating rules.”
-2. Select **Run guided demo** and let the six levers materialize without narrating every number.
-3. Call out two credibility moments: Precision Medicine adds selective upstream work, and Robotics releases local capacity without immediately moving enterprise throughput.
-4. Land on the final constraint: coordination is no longer limiting; staffed recovery capacity is.
-5. Select **Inspect Case 7B** to move from the system view to one governed decision.
-6. Name the four operational workstreams and their parent lever mappings.
-7. Select **Coordinate this case** and let the parallel workstreams complete.
-8. Explain why evidence retrieval and the temporary lab hold are reversible.
-9. Approve the schedule swap as the OR director, then the payer submission as the Access lead.
-10. Open the audit strip briefly.
-11. Land on **Same robot. More care.** and immediately restate the modeling assumptions.
-12. Move to the operating model and the 90-day decision.
+2. Select **Run guided demo**. Let the campus move while each coral pain-point callout resolves and the next constraint appears.
+3. Point once to the constant-speed cars, EMS, patients, and caregivers: better performance is represented by queue and completion changes, not people moving faster.
+4. Call out two credibility moments: Precision Medicine adds selective upstream work, and Robotics releases local capacity without immediately moving enterprise throughput.
+5. Land on the final constraint: coordination is no longer limiting; staffed recovery capacity is.
+6. Select **Inspect Case 7B** to move from the system view to one governed decision.
+7. Name the four operational workstreams and their parent lever mappings.
+8. Select **Coordinate this case** and let the parallel workstreams complete.
+9. Explain why evidence retrieval and the temporary lab hold are reversible.
+10. Approve the schedule swap as the OR director, then the payer submission as the Access lead.
+11. Open the audit strip briefly.
+12. Land on **Same robot. More care.** and immediately restate the modeling assumptions.
+13. Move to the operating model and the 90-day decision.
 
 ## Hospital operating twin model discipline
 
