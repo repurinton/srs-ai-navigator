@@ -1,4 +1,5 @@
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
 const worker = `export default {
   async fetch(request, env) {
@@ -18,6 +19,11 @@ await rm("dist/client", { recursive: true, force: true });
 await mkdir("dist/client", { recursive: true });
 await cp("dist/index.html", "dist/client/index.html");
 await cp("dist/assets", "dist/client/assets", { recursive: true });
+for (const entry of await readdir("public", { withFileTypes: true })) {
+  await cp(join("public", entry.name), join("dist/client", entry.name), {
+    recursive: entry.isDirectory(),
+  });
+}
 
 await mkdir("dist/server", { recursive: true });
 await writeFile("dist/server/index.js", worker);
