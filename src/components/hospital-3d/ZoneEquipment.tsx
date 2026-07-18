@@ -86,11 +86,20 @@ function XRayMachine({ position }: { position: [number, number, number] }) {
   );
 }
 
-/** All OR bays merged into two draw calls: structure + emissive lights. */
+/** All OR bays merged into three draw calls: structure, dividers, lights. */
 function ORRow({ positions }: { positions: [number, number, number][] }) {
-  const { structure, lights } = useMemo(() => {
+  const { structure, dividers, lights } = useMemo(() => {
     const structureParts = [];
+    const dividerParts = [];
     const lightParts = [];
+    // Partition walls between adjacent bays so each OR reads as its own room.
+    for (let i = 0; i < positions.length - 1; i += 1) {
+      const [ax, ay, az] = positions[i];
+      const [bx] = positions[i + 1];
+      const wall = new BoxGeometry(0.25, 3.4, 5.4);
+      wall.translate((ax + bx) / 2, ay + 1.7, az + 0.6);
+      dividerParts.push(wall);
+    }
     for (const [x, y, z] of positions) {
       const pedestal = new BoxGeometry(0.55, 0.9, 0.5);
       pedestal.translate(x, y + 0.45, z);
@@ -111,13 +120,20 @@ function ORRow({ positions }: { positions: [number, number, number][] }) {
       light.translate(x - 0.7, y + 2.3, z + 0.35);
       lightParts.push(light);
     }
-    return { structure: mergeGeometries(structureParts), lights: mergeGeometries(lightParts) };
+    return {
+      structure: mergeGeometries(structureParts),
+      dividers: mergeGeometries(dividerParts),
+      lights: mergeGeometries(lightParts),
+    };
   }, [positions]);
 
   return (
     <group>
       <mesh geometry={structure}>
         <meshLambertMaterial color="#dbe2e7" />
+      </mesh>
+      <mesh geometry={dividers}>
+        <meshLambertMaterial color="#aab4bb" />
       </mesh>
       <mesh geometry={lights}>
         <meshLambertMaterial color="#f2f6f8" emissive="#8fb9c9" emissiveIntensity={0.35} />
@@ -410,19 +426,19 @@ function MedicalQuadcopter() {
     } else if (t >= 33 && t < 37) {
       const p = ease((t - 33) / 4);
       x = px;
-      y = 10 - 9.5 * p;
+      y = 10 - 9.72 * p;
       z = pz;
       visible = true;
     } else if (t >= 37 && t < 45) {
       x = px;
-      y = 0.5;
+      y = 0.28;
       z = pz;
       visible = true;
       rotorSpeed = 8;
     } else if (t >= 45 && t < 49) {
       const p = ease((t - 45) / 4);
       x = px;
-      y = 0.5 + 12 * p;
+      y = 0.28 + 12 * p;
       z = pz;
       visible = true;
     } else if (t >= 49 && t < 55) {
@@ -452,6 +468,7 @@ function MedicalQuadcopter() {
 
   return (
     <group ref={groupRef} visible={false}>
+    <group scale={2}>
       {/* Body with red cross */}
       <mesh position={[0, 0.72, 0]}>
         <boxGeometry args={[1.5, 0.55, 1.5]} />
@@ -486,11 +503,17 @@ function MedicalQuadcopter() {
           <meshLambertMaterial color="#5b6d74" />
         </mesh>
       ))}
-      {/* Motors + spinning rotors */}
+      {/* Motors + spinning rotors inside white prop-guard rings */}
       {rotorPositions.map(([ax, az], index) => (
         <mesh key={`motor-${index}`} position={[ax, 0.95, az]}>
           <cylinderGeometry args={[0.12, 0.14, 0.22, 8]} />
           <meshLambertMaterial color="#22343d" />
+        </mesh>
+      ))}
+      {rotorPositions.map(([ax, az], index) => (
+        <mesh key={`guard-${index}`} position={[ax, 1.1, az]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.88, 0.055, 8, 24]} />
+          <meshLambertMaterial color="#f2f6f8" />
         </mesh>
       ))}
       <group ref={rotorsRef}>
@@ -507,6 +530,7 @@ function MedicalQuadcopter() {
           </group>
         ))}
       </group>
+    </group>
     </group>
   );
 }

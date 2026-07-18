@@ -305,11 +305,13 @@ export function PatientFlow({
       const queuedHere = patient.mode === "queued" || patient.mode === "releasing";
       if (queuedHere) {
         if (patient.station) {
-          // Park the stretcher just south of the berth.
+          // Park the stretcher alongside the berth: offset perpendicular to
+          // the berth's long axis so the two lie parallel before transfer.
+          const berthYaw = patient.station[3];
           target.set(
-            patient.station[0],
+            patient.station[0] + Math.sin(berthYaw) * STATION_PARK_OFFSET,
             patient.station[1] - BODY_SURFACE_OFFSET,
-            patient.station[2] + STATION_PARK_OFFSET,
+            patient.station[2] + Math.cos(berthYaw) * STATION_PARK_OFFSET,
           );
         } else {
           slotPosition(patient.queueStage ?? gateStage ?? "access", patient.slot, target);
@@ -373,27 +375,31 @@ export function PatientFlow({
       } else {
         const rollYaw = patient.heading - Math.PI / 2;
         const ease = smoothstep(patient.transfer);
+        // Once close to the berth, the stretcher (and its rider) swing
+        // parallel to it; the patient only floats across after docking.
+        const docked = patient.station !== undefined && queuedHere && distance < 1.6;
+        const stretcherYaw = docked ? patient.station![3] : rollYaw;
 
         // Stretcher stays parked and fades out as the transfer completes.
         dummy.position.copy(patient.position);
-        dummy.rotation.set(0, rollYaw, 0);
+        dummy.rotation.set(0, stretcherYaw, 0);
         dummy.scale.setScalar(Math.max(0.0001, 1 - ease));
         dummy.updateMatrix();
         stretcher.setMatrixAt(i, dummy.matrix);
 
-        // Body floats in an arc from the stretcher onto the berth.
+        // Body floats in a lateral arc from the docked stretcher onto the
+        // berth, staying parallel the whole way.
         if (patient.station && ease > 0) {
           const baseY = patient.station[1] - BODY_SURFACE_OFFSET;
           dummy.position.set(
             patient.position.x + (patient.station[0] - patient.position.x) * ease,
             baseY + Math.sin(Math.PI * ease) * 0.7,
-            patient.position.z + (patient.station[2] - patient.position.z - STATION_PARK_OFFSET * 0) * ease,
+            patient.position.z + (patient.station[2] - patient.position.z) * ease,
           );
-          dummy.position.z = patient.position.z + (patient.station[2] - patient.position.z) * ease;
-          dummy.rotation.set(0, ease > 0.5 ? patient.station[3] : rollYaw, 0);
+          dummy.rotation.set(0, patient.station[3], 0);
         } else {
           dummy.position.copy(patient.position);
-          dummy.rotation.set(0, rollYaw, 0);
+          dummy.rotation.set(0, stretcherYaw, 0);
         }
         dummy.scale.setScalar(1);
         dummy.updateMatrix();
