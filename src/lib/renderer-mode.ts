@@ -12,6 +12,7 @@
 export type HospitalRendererMode = "3d" | "3d-low" | "2d";
 
 const FALLBACK_LATCH_KEY = "hospital-renderer-fallback";
+const FALLBACK_REASON_KEY = "hospital-renderer-fallback-reason";
 
 function safeSessionStorage(): Storage | undefined {
   try {
@@ -33,12 +34,20 @@ export function isFallbackLatched(): boolean {
 
 /** Pin the 2D renderer for the rest of the session after any 3D failure. */
 export function latchRendererFallback(reason: string) {
-  safeSessionStorage()?.setItem(FALLBACK_LATCH_KEY, "true");
-  console.warn(`[hospital-renderer] falling back to 2D for this session: ${reason}`);
+  const storage = safeSessionStorage();
+  storage?.setItem(FALLBACK_LATCH_KEY, "true");
+  storage?.setItem(FALLBACK_REASON_KEY, reason.slice(0, 500));
+  console.error(`[hospital-renderer] falling back to 2D for this session: ${reason}`);
+}
+
+export function rendererFallbackReason(): string | undefined {
+  return safeSessionStorage()?.getItem(FALLBACK_REASON_KEY) ?? undefined;
 }
 
 export function clearRendererFallback() {
-  safeSessionStorage()?.removeItem(FALLBACK_LATCH_KEY);
+  const storage = safeSessionStorage();
+  storage?.removeItem(FALLBACK_LATCH_KEY);
+  storage?.removeItem(FALLBACK_REASON_KEY);
 }
 
 function detectWebGL2(): { supported: boolean; reducedTier: boolean } {

@@ -11,6 +11,7 @@ import type { HospitalStoryBeat } from "@/lib/hospital-story";
 import { CutawayScene2D } from "@/components/CutawayScene2D";
 import {
   latchRendererFallback,
+  rendererFallbackReason,
   resolveHospitalRendererMode,
   type HospitalRendererMode,
 } from "@/lib/renderer-mode";
@@ -220,7 +221,8 @@ class SceneErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error) {
-    this.props.onError(error.message || "3d renderer error");
+    const stackHint = (error.stack ?? "").split("\n").slice(0, 3).join(" | ");
+    this.props.onError(`${error.name}: ${error.message || "3d renderer error"} — ${stackHint}`);
   }
 
   render() {
@@ -520,6 +522,16 @@ export function HospitalCutaway({
         </div>
 
         <div className="cutaway-mobile-focus" data-state={focusVisualState} aria-hidden="true"><span>{focusLabel ?? constraintLabel}</span><strong>{constraint.shortName}</strong></div>
+
+        {rendererMode === "2d" && rendererFallbackReason() ? (
+          <div
+            className="cutaway-renderer-notice"
+            data-fallback-reason={rendererFallbackReason()}
+            title={rendererFallbackReason()}
+          >
+            3D view unavailable — showing the 2D cutaway
+          </div>
+        ) : null}
       </div>
 
       <section className="cutaway-flow-dashboard" aria-label="Patient flow dashboard">
