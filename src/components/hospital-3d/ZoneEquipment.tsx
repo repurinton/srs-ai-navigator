@@ -375,10 +375,16 @@ function Helipad() {
   );
 }
 
-function Helicopter() {
+/**
+ * Medical delivery quadcopter: white X-frame drone with a red cross and an
+ * underslung med-payload pod. Recurring cycle — approach, vertical descent,
+ * idle on the pad, climb out, depart. The clock starts mid-cycle so the
+ * first arrival lands shortly after the scene loads.
+ */
+function MedicalQuadcopter() {
   const groupRef = useRef<Group>(null);
-  const rotorRef = useRef<Group>(null);
-  const clock = useRef(0);
+  const rotorsRef = useRef<Group>(null);
+  const clock = useRef(20);
   const PERIOD = 55;
   const [px, , pz] = WORLD_HELIPAD.center;
 
@@ -392,7 +398,7 @@ function Helicopter() {
     let y = 26;
     let z = pz - 22;
     let visible = false;
-    let rotorSpeed = 18;
+    let rotorSpeed = 30;
 
     const ease = (v: number) => v * v * (3 - 2 * v);
     if (t >= 25 && t < 33) {
@@ -404,73 +410,102 @@ function Helicopter() {
     } else if (t >= 33 && t < 37) {
       const p = ease((t - 33) / 4);
       x = px;
-      y = 10 - 9.3 * p;
+      y = 10 - 9.5 * p;
       z = pz;
       visible = true;
     } else if (t >= 37 && t < 45) {
       x = px;
-      y = 0.7;
+      y = 0.5;
       z = pz;
       visible = true;
-      rotorSpeed = 6;
+      rotorSpeed = 8;
     } else if (t >= 45 && t < 49) {
       const p = ease((t - 45) / 4);
       x = px;
-      y = 0.7 + 12 * p;
+      y = 0.5 + 12 * p;
       z = pz;
       visible = true;
     } else if (t >= 49 && t < 55) {
       const p = ease((t - 49) / 6);
       x = px + 40 * p;
-      y = 12.7 + 14 * p;
+      y = 12.5 + 14 * p;
       z = pz - 26 * p;
       visible = true;
     }
 
     group.position.set(x, y, z);
     group.visible = visible;
-    if (rotorRef.current) rotorRef.current.rotation.y += delta * rotorSpeed;
+    if (rotorsRef.current) {
+      rotorsRef.current.children.forEach((rotor, index) => {
+        rotor.rotation.y += delta * rotorSpeed * (index % 2 === 0 ? 1 : -1);
+      });
+    }
   });
+
+  const armLength = 1.55;
+  const rotorPositions: [number, number][] = [
+    [armLength, armLength],
+    [armLength, -armLength],
+    [-armLength, armLength],
+    [-armLength, -armLength],
+  ];
 
   return (
     <group ref={groupRef} visible={false}>
-      {/* Fuselage */}
-      <mesh position={[0, 0.9, 0]}>
-        <boxGeometry args={[2.6, 1.3, 1.4]} />
-        <meshLambertMaterial color="#e04f48" />
-      </mesh>
-      <mesh position={[1.5, 0.85, 0]}>
-        <boxGeometry args={[0.6, 0.9, 1.1]} />
-        <meshLambertMaterial color="#cfe0e8" />
-      </mesh>
-      {/* Tail boom + fin */}
-      <mesh position={[-2.1, 1.05, 0]}>
-        <boxGeometry args={[2.4, 0.3, 0.3]} />
-        <meshLambertMaterial color="#e04f48" />
-      </mesh>
-      <mesh position={[-3.2, 1.5, 0]}>
-        <boxGeometry args={[0.3, 0.9, 0.12]} />
+      {/* Body with red cross */}
+      <mesh position={[0, 0.72, 0]}>
+        <boxGeometry args={[1.5, 0.55, 1.5]} />
         <meshLambertMaterial color="#e8ecef" />
       </mesh>
-      {/* Skids */}
-      <mesh position={[0, 0.15, 0.6]}>
-        <boxGeometry args={[2.6, 0.1, 0.12]} />
+      <mesh position={[0, 1.02, 0]}>
+        <boxGeometry args={[1.0, 0.06, 0.34]} />
+        <meshLambertMaterial color="#e04f48" />
+      </mesh>
+      <mesh position={[0, 1.02, 0]}>
+        <boxGeometry args={[0.34, 0.06, 1.0]} />
+        <meshLambertMaterial color="#e04f48" />
+      </mesh>
+      {/* Underslung medical payload pod */}
+      <mesh position={[0, 0.28, 0]}>
+        <boxGeometry args={[0.9, 0.45, 0.9]} />
+        <meshLambertMaterial color="#e04f48" />
+      </mesh>
+      {/* X-frame arms */}
+      <mesh position={[0, 0.86, 0]} rotation={[0, Math.PI / 4, 0]}>
+        <boxGeometry args={[4.4, 0.1, 0.16]} />
         <meshLambertMaterial color="#5b6d74" />
       </mesh>
-      <mesh position={[0, 0.15, -0.6]}>
-        <boxGeometry args={[2.6, 0.1, 0.12]} />
+      <mesh position={[0, 0.86, 0]} rotation={[0, -Math.PI / 4, 0]}>
+        <boxGeometry args={[4.4, 0.1, 0.16]} />
         <meshLambertMaterial color="#5b6d74" />
       </mesh>
-      {/* Main rotor */}
-      <group ref={rotorRef} position={[0, 1.7, 0]}>
-        <mesh>
-          <boxGeometry args={[5.6, 0.06, 0.3]} />
+      {/* Landing feet */}
+      {rotorPositions.map(([ax, az], index) => (
+        <mesh key={`foot-${index}`} position={[ax * 0.62, 0.18, az * 0.62]}>
+          <boxGeometry args={[0.1, 0.5, 0.1]} />
+          <meshLambertMaterial color="#5b6d74" />
+        </mesh>
+      ))}
+      {/* Motors + spinning rotors */}
+      {rotorPositions.map(([ax, az], index) => (
+        <mesh key={`motor-${index}`} position={[ax, 0.95, az]}>
+          <cylinderGeometry args={[0.12, 0.14, 0.22, 8]} />
           <meshLambertMaterial color="#22343d" />
         </mesh>
-        <mesh rotation={[0, Math.PI / 2, 0]}>
-          <boxGeometry args={[5.6, 0.06, 0.3]} />
-          <meshLambertMaterial color="#22343d" />
-        </mesh>
+      ))}
+      <group ref={rotorsRef}>
+        {rotorPositions.map(([ax, az], index) => (
+          <group key={`rotor-${index}`} position={[ax, 1.1, az]}>
+            <mesh>
+              <boxGeometry args={[1.5, 0.04, 0.16]} />
+              <meshLambertMaterial color="#22343d" />
+            </mesh>
+            <mesh rotation={[0, Math.PI / 2, 0]}>
+              <boxGeometry args={[1.5, 0.04, 0.16]} />
+              <meshLambertMaterial color="#22343d" />
+            </mesh>
+          </group>
+        ))}
       </group>
     </group>
   );
@@ -616,7 +651,7 @@ export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
       <ElevatorCore />
       <ElevatorCab />
       <Helipad />
-      <Helicopter />
+      <MedicalQuadcopter />
       <ParkedCars />
       <RoadMarkings />
       <ZoneOutlines ceilingY={ceilingY} />
