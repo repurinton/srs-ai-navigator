@@ -62,7 +62,9 @@ function Surface({ min, max, color }: { min: Vec3; max: Vec3; color: string }) {
 export function CampusShell({ ceilingY }: { ceilingY: number }) {
   const groundCenter = boxCenter(WORLD_GROUND.min, WORLD_GROUND.max);
   const groundSize = boxSize(WORLD_GROUND.min, WORLD_GROUND.max);
-  const zones = useMemo(() => Object.values(WORLD_ZONES), []);
+  // The home node is an open neighborhood plot, not a walled hospital room.
+  const zones = useMemo(() => Object.values(WORLD_ZONES).filter((zone) => zone.id !== "home"), []);
+  const home = WORLD_ZONES.home;
 
   return (
     <group name="campus">
@@ -76,6 +78,7 @@ export function CampusShell({ ceilingY }: { ceilingY: number }) {
       <Surface min={WORLD_SURFACES.emsSpur.min} max={WORLD_SURFACES.emsSpur.max} color="#233842" />
       <Surface min={WORLD_SURFACES.parking.min} max={WORLD_SURFACES.parking.max} color="#1d323c" />
       <Surface min={WORLD_SURFACES.dischargePlaza.min} max={WORLD_SURFACES.dischargePlaza.max} color="#26404b" />
+      <Surface min={home.min} max={[home.max[0], home.min[1] + 0.1, home.max[2]] as Vec3} color="#1e3226" />
 
       {zones.map((zone) => (
         <FadeGroup key={zone.id} hidden={zone.min[1] >= ceilingY - 0.01}>

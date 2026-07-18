@@ -92,9 +92,20 @@ function PoolMesh({ pool, timeRef, ceilingRef }: { pool: Pool; timeRef: { curren
     const mesh = meshRef.current;
     if (!mesh) return;
     for (let index = 0; index < pool.actors.length; index += 1) {
-      poseOnRoute(pool.actors[index], timeRef.current, pose);
+      const actor = pool.actors[index];
+      poseOnRoute(actor, timeRef.current, pose);
       dummy.position.copy(pose.position);
-      dummy.rotation.set(0, pose.heading, 0);
+      if (pool.kind === "person") {
+        // Walk in offset lanes so crossing staff don't merge into one body.
+        const lane = actor.phase === 0 ? 0.45 : -0.45;
+        dummy.position.x += Math.cos(pose.heading) * lane;
+        dummy.position.z -= Math.sin(pose.heading) * lane;
+        dummy.rotation.set(0, pose.heading, 0);
+      } else {
+        // Vehicle and gurney hulls are modeled along +x; align that axis
+        // with the direction of travel.
+        dummy.rotation.set(0, pose.heading - Math.PI / 2, 0);
+      }
       const hidden = pose.position.y >= ceilingRef.current - 0.01;
       const scale = hidden ? 0.0001 : Math.max(0.0001, pose.presence);
       dummy.scale.set(scale, scale, scale);

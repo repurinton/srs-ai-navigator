@@ -140,8 +140,14 @@ export const WORLD_SURFACES = {
   dischargePlaza: { min: [12, 0, 4] as Vec3, max: [28, 0.1, 12] as Vec3 },
 } as const;
 
-/** The glass elevator core on the tower's open face. */
-export const WORLD_ELEVATOR = { min: [16, 0, -10] as Vec3, max: [20, 27, -6] as Vec3 };
+/** The glass elevator core on the tower's west end, doors facing east. */
+export const WORLD_ELEVATOR = { min: [-28.5, 0, -10] as Vec3, max: [-24.5, 27, -6] as Vec3 };
+
+/** Floor stop heights (walking surface) the elevator cab serves. */
+export const WORLD_ELEVATOR_STOPS = [0.45, 4.95, 9.45, 13.95, 18.45, 22.95] as const;
+
+/** Helipad on the north-east corner of the grounds. */
+export const WORLD_HELIPAD = { center: [44, 0.16, -26] as Vec3, radius: 5 };
 
 /** Semantic world points the DOM overlay projects into screen space. */
 export const WORLD_ANCHORS: Record<WorldAnchorId, Vec3> = {
@@ -224,7 +230,7 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "valet",
     duration: 9,
     closed: true,
-    points: [[0, 0.2, 4], [1.5, 0.2, 7], [4, 0.2, 8], [2.5, 0.2, 5]],
+    points: [[0, 0.45, 4], [1.5, 0.45, 7], [4, 0.45, 8], [2.5, 0.45, 5]],
   },
   {
     id: "valet-entry",
@@ -232,7 +238,7 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "valet",
     duration: 10,
     closed: false,
-    points: [[4, 0.2, 8], [1, 0.2, 3], [0, 0.2, -2]],
+    points: [[4, 0.45, 8], [1, 0.45, 3], [0, 0.45, -2]],
   },
   {
     id: "patient-arrival",
@@ -240,7 +246,7 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "patient",
     duration: 15,
     closed: false,
-    points: [[1, 0.2, 7], [-2, 0.2, 0.5], [-4, 0.2, -6]],
+    points: [[1, 0.45, 7], [-2, 0.45, 0.5], [-4, 0.45, -6]],
   },
   {
     id: "patient-ward",
@@ -248,7 +254,7 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "patient",
     duration: 18,
     closed: false,
-    points: [[18, 0.2, -3], [18, 0.2, 6], [30, 0.2, 9], [43, 0.2, 12]],
+    points: [[18, 0.45, -3], [18, 0.45, 6], [30, 0.45, 9], [43, 0.45, 12]],
   },
   {
     id: "caregiver-prep",
@@ -325,43 +331,69 @@ export const PATIENT_WAIT_RED_SECONDS = 12;
 
 /**
  * Patients walk in from the curb, queue at intake, transfer onto a
- * stretcher, ride the south-east elevator core up through radiology,
+ * stretcher, ride the west-end elevator core up through radiology,
  * pre-op, the ORs, and recovery, then return to ground, come off the
  * stretcher at discharge, and walk out toward home.
+ * Walking surfaces sit 0.45m above each floor's base (clear of the slab).
  */
 export const WORLD_PATIENT_JOURNEY: readonly PatientJourneyWaypoint[] = [
-  { point: [1, 0.2, 9], travel: "walk" },
-  { point: [2, 0.2, -1], queueStage: "access" },
-  { point: [8, 0.2, -5], travel: "stretcher" },
-  { point: [18, 0.2, -8] },
-  { point: [18, 4.9, -8] },
-  { point: [-4, 4.9, -7.5], queueStage: "diagnosis" },
-  { point: [18, 4.9, -8] },
-  { point: [18, 9.4, -8] },
-  { point: [-2, 9.4, -7.5], queueStage: "readiness" },
-  { point: [18, 9.4, -8] },
-  { point: [18, 13.9, -8] },
-  { point: [0, 13.9, -7.5], queueStage: "robotics" },
-  { point: [18, 13.9, -8] },
-  { point: [18, 18.4, -8] },
-  { point: [0, 18.4, -7.5], queueStage: "care" },
-  { point: [18, 18.4, -8] },
-  { point: [18, 0.2, -8] },
-  { point: [17, 0.2, -2], queueStage: "longitudinal", travel: "walk" },
-  { point: [18, 0.2, 8] },
-  { point: [34, 0.2, 10] },
-  { point: [43, 0.2, 12] },
+  { point: [1, 0.45, 9], travel: "walk" },
+  { point: [2, 0.45, -1], queueStage: "access" },
+  { point: [6, 0.45, -5], travel: "stretcher" },
+  { point: [-8, 0.45, -8] },
+  { point: [-26.5, 0.45, -8] },
+  { point: [-26.5, 4.95, -8] },
+  { point: [-4, 4.95, -7.5], queueStage: "diagnosis" },
+  { point: [-26.5, 4.95, -8] },
+  { point: [-26.5, 9.45, -8] },
+  { point: [-2, 9.45, -7.5], queueStage: "readiness" },
+  { point: [-26.5, 9.45, -8] },
+  { point: [-26.5, 13.95, -8] },
+  { point: [0, 13.95, -7.5], queueStage: "robotics" },
+  { point: [-26.5, 13.95, -8] },
+  { point: [-26.5, 18.45, -8] },
+  { point: [0, 18.45, -7.5], queueStage: "care" },
+  { point: [-26.5, 18.45, -8] },
+  { point: [-26.5, 0.45, -8] },
+  { point: [16, 0.45, -2], queueStage: "longitudinal", travel: "walk" },
+  { point: [18, 0.45, 8] },
+  { point: [34, 0.45, 10] },
+  { point: [43, 0.45, 12] },
 ];
 
 /** Queue slot grids per gate stage: slot = origin + right·column + back·row. */
 export const WORLD_PATIENT_QUEUES: Record<StageId, { origin: Vec3; right: Vec3; back: Vec3; perRow: number }> = {
-  access: { origin: [2, 0.2, -1], right: [-1.2, 0, 0], back: [0, 0, 1.2], perRow: 5 },
-  diagnosis: { origin: [-4, 4.9, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
-  precision: { origin: [12, 4.9, -7.5], right: [2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
-  readiness: { origin: [-2, 9.4, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
-  robotics: { origin: [0, 13.9, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
-  care: { origin: [0, 18.4, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
-  longitudinal: { origin: [17, 0.2, -2], right: [1.2, 0, 0], back: [0, 0, 1.2], perRow: 5 },
+  access: { origin: [2, 0.45, -1], right: [-1.2, 0, 0], back: [0, 0, 1.2], perRow: 5 },
+  diagnosis: { origin: [-4, 4.95, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
+  precision: { origin: [12, 4.95, -7.5], right: [2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
+  readiness: { origin: [-2, 9.45, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
+  robotics: { origin: [0, 13.95, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
+  care: { origin: [0, 18.45, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
+  longitudinal: { origin: [16, 0.45, -2], right: [1.2, 0, 0], back: [0, 0, 1.2], perRow: 5 },
+};
+
+/**
+ * Real equipment berths per clinical stage: queued patients float off their
+ * stretcher into these (scanner beds, OR tables, ward beds) in slot order;
+ * overflow waits on stretchers in the queue grid. Entries are
+ * [x, lyingSurfaceY, z, bodyYaw] — yaw aligns the body with the berth.
+ */
+export type PatientStation = readonly [number, number, number, number];
+
+const HALF_PI = Math.PI / 2;
+
+export const WORLD_PATIENT_STATIONS: Partial<Record<StageId, readonly PatientStation[]>> = {
+  diagnosis: [
+    [-22, 5.7, -7.4, HALF_PI],
+    [-17, 5.7, -7.4, HALF_PI],
+    [-11, 5.65, -7.8, HALF_PI],
+    [-6, 5.65, -7.8, HALF_PI],
+    [-1, 5.75, -9, 0],
+    [-19, 5.75, -13, 0],
+  ],
+  readiness: Array.from({ length: 8 }, (_, i) => [-21 + i * 2.4, 10.2, -9.15, HALF_PI] as const),
+  robotics: Array.from({ length: 8 }, (_, i) => [-21 + i * 5.6, 14.88, -9.5, 0] as const),
+  care: Array.from({ length: 8 }, (_, i) => [-21 + i * 2.4, 19.2, -9.15, HALF_PI] as const),
 };
 
 /**

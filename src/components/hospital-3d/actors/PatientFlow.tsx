@@ -20,6 +20,7 @@ import {
   PATIENT_WAIT_RED_SECONDS,
   WORLD_PATIENT_JOURNEY,
   WORLD_PATIENT_QUEUES,
+  WORLD_PATIENT_STATIONS,
   type PatientTravelMode,
 } from "@/lib/hospital-world";
 import { createWalkSpriteTexture, WALK_FRAME_COUNT } from "./walk-sprite";
@@ -30,6 +31,12 @@ const RELEASE_RECOVERY_SECONDS = 5;
 const RELEASE_STAGGER_SECONDS = 0.35;
 const SLOT_APPROACH_SPEED = 2.6;
 const WALK_FRAMES_PER_METER = 5;
+/** The stretcher parks this far south of a berth while the patient floats in. */
+const STATION_PARK_OFFSET = 1.15;
+/** Vertical clearance between a lying surface and the body's local origin. */
+const BODY_SURFACE_OFFSET = 0.93;
+const TRANSFER_SECONDS = 0.9;
+const UNTRANSFER_SECONDS = 0.45;
 
 type PatientMode = "walking" | "queued" | "releasing";
 
@@ -45,13 +52,16 @@ interface PatientState {
   flipped: boolean;
   position: Vector3;
   heading: number;
+  /** 0 = on the stretcher, 1 = fully floated into the berth. */
+  transfer: number;
+  station?: readonly [number, number, number, number];
+  laneOffset: number;
 }
 
 interface JourneyGeometry {
   points: Vector3[];
   cumulative: number[];
   total: number;
-  /** Travel mode of the segment beginning at waypoint i. */
   segmentMode: PatientTravelMode[];
   checkpointS: Partial<Record<StageId, number>>;
   checkpointMode: Partial<Record<StageId, PatientTravelMode>>;
@@ -105,6 +115,10 @@ function slotPosition(stage: StageId, slot: number, out: Vector3): Vector3 {
     queue.origin[1] + queue.right[1] * column + queue.back[1] * row,
     queue.origin[2] + queue.right[2] * column + queue.back[2] * row,
   );
+}
+
+function smoothstep(t: number) {
+  return t * t * (3 - 2 * t);
 }
 
 function spriteWalkerMaterial() {
@@ -161,11 +175,11 @@ const target = new Vector3();
 const color = new Color();
 
 /**
- * The patient population: 16-frame sprite walkers from the curb through
- * intake, then stretcher riders up the elevator core through radiology,
- * pre-op, the ORs, and recovery, then walkers again from discharge to home.
- * The story's active pressure gates its stage: arrivals accumulate in queue
- * grids and redden with wait time; resolve drains the queue forward.
+ * The patient population: sprite walkers through intake, stretcher riders up
+ * the west elevator core, and — when a scanner bed, OR table, or ward bed is
+ * free — a float-off-the-stretcher transfer into the berth while the
+ * stretcher fades beside it. Pressure gates queue and redden patients;
+ * resolve drains them forward.
  */
 export function PatientFlow({
   gateStage,
@@ -213,6 +227,9 @@ export function PatientFlow({
         flipped: false,
         position,
         heading: 0,
+        transfer: 0,
+        station: undefined,
+        laneOffset: ((i * 37) % 9 - 4) * 0.14,
       };
     });
   }
@@ -222,7 +239,12 @@ export function PatientFlow({
     const stretcher = stretcherRef.current;
     const body = bodyRef.current;
     if (!walker || !stretcher || !body) return;
-    const delta = reducedMotion || !playing ? 0 : Math.min(rawDelta, 0.06);
+    // QA affordance: window.__patientFlowFF = <seconds> fast-forwards the
+    // flow once — used by the verification harness in throttled tabs.
+    const ffWindow = window as unknown as { __patientFlowFF?: number };
+    const fastForward = ffWindow.__patientFlowFF ?? 0;
+    if (fastForward) ffWindow.__patientFlowFF = 0;
+    const delta = reducedMotion || !playing ? 0 : Math.min(rawDelta, 0.06) + fastForward;
     elapsed.current += delta;
 
     if (previousGate.current !== gateStage) {
@@ -259,6 +281,8 @@ export function PatientFlow({
           queueLength.current += 1;
           patient.s = gateS;
           patient.wait = 0;
+          const stations = WORLD_PATIENT_STATIONS[gateStage];
+          patient.station = stations && patient.slot < stations.length ? stations[patient.slot] : undefined;
         }
         if (patient.s >= journey.total) {
           patient.s -= journey.total;
@@ -268,17 +292,37 @@ export function PatientFlow({
       } else if (patient.mode === "queued") {
         patient.wait += delta;
         patient.tint = Math.min(1, patient.wait / PATIENT_WAIT_RED_SECONDS);
-      } else if (patient.mode === "releasing" && elapsed.current >= patient.releaseAt) {
-        patient.mode = "walking";
-        patient.queueStage = undefined;
+      } else if (patient.mode === "releasing") {
+        // Float back onto the stretcher before rolling on.
+        patient.transfer = Math.max(0, patient.transfer - delta / UNTRANSFER_SECONDS);
+        if (elapsed.current >= patient.releaseAt && patient.transfer <= 0.001) {
+          patient.mode = "walking";
+          patient.queueStage = undefined;
+          patient.station = undefined;
+        }
       }
 
       const queuedHere = patient.mode === "queued" || patient.mode === "releasing";
       if (queuedHere) {
-        slotPosition(patient.queueStage ?? gateStage ?? "access", patient.slot, target);
+        if (patient.station) {
+          // Park the stretcher just south of the berth.
+          target.set(
+            patient.station[0],
+            patient.station[1] - BODY_SURFACE_OFFSET,
+            patient.station[2] + STATION_PARK_OFFSET,
+          );
+        } else {
+          slotPosition(patient.queueStage ?? gateStage ?? "access", patient.slot, target);
+        }
       } else {
         pointAt(journey, patient.s, target);
+        if (travel === "walk") {
+          // Personal lane offset keeps the walking crowd from merging.
+          target.x += Math.cos(patient.heading) * patient.laneOffset;
+          target.z -= Math.sin(patient.heading) * patient.laneOffset;
+        }
       }
+
       const distance = patient.position.distanceTo(target);
       let moving = false;
       if (distance > 0.001) {
@@ -295,9 +339,11 @@ export function PatientFlow({
         }
       }
 
-      // Presentation mode: sprite while on foot (including the intake and
-      // discharge queues), stretcher for the clinical tower legs. Patients on
-      // floors above the camera's focus hide with those floors.
+      // Once parked at a berth, float the patient in.
+      if (patient.mode === "queued" && patient.station && distance < 0.12) {
+        patient.transfer = Math.min(1, patient.transfer + delta / TRANSFER_SECONDS);
+      }
+
       const queueTravel = patient.queueStage ? journey.checkpointMode[patient.queueStage] : undefined;
       const presentation = queuedHere ? queueTravel ?? "walk" : travel;
       const hiddenAbove = patient.position.y >= ceilingY - 0.01;
@@ -325,13 +371,36 @@ export function PatientFlow({
         stretcher.setMatrixAt(i, dummy.matrix);
         body.setMatrixAt(i, dummy.matrix);
       } else {
+        const rollYaw = patient.heading - Math.PI / 2;
+        const ease = smoothstep(patient.transfer);
+
+        // Stretcher stays parked and fades out as the transfer completes.
         dummy.position.copy(patient.position);
-        dummy.rotation.set(0, patient.heading + Math.PI / 2, 0);
-        dummy.scale.setScalar(1);
+        dummy.rotation.set(0, rollYaw, 0);
+        dummy.scale.setScalar(Math.max(0.0001, 1 - ease));
         dummy.updateMatrix();
         stretcher.setMatrixAt(i, dummy.matrix);
+
+        // Body floats in an arc from the stretcher onto the berth.
+        if (patient.station && ease > 0) {
+          const baseY = patient.station[1] - BODY_SURFACE_OFFSET;
+          dummy.position.set(
+            patient.position.x + (patient.station[0] - patient.position.x) * ease,
+            baseY + Math.sin(Math.PI * ease) * 0.7,
+            patient.position.z + (patient.station[2] - patient.position.z - STATION_PARK_OFFSET * 0) * ease,
+          );
+          dummy.position.z = patient.position.z + (patient.station[2] - patient.position.z) * ease;
+          dummy.rotation.set(0, ease > 0.5 ? patient.station[3] : rollYaw, 0);
+        } else {
+          dummy.position.copy(patient.position);
+          dummy.rotation.set(0, rollYaw, 0);
+        }
+        dummy.scale.setScalar(1);
+        dummy.updateMatrix();
         body.setMatrixAt(i, dummy.matrix);
         body.setColorAt(i, color);
+
+        dummy.position.copy(patient.position);
         dummy.scale.setScalar(0.0001);
         dummy.updateMatrix();
         walker.setMatrixAt(i, dummy.matrix);
@@ -348,8 +417,15 @@ export function PatientFlow({
 
     (window as unknown as { __patientFlowDebug?: object }).__patientFlowDebug = {
       gateStage: gateStage ?? null,
+      gateS: gateS ?? null,
+      total: Math.round(journey.total),
+      nearestBehindGate: gateS === undefined ? null : Math.round(Math.min(
+        ...states.current.filter((p) => p.mode === "walking" && p.s < gateS).map((p) => gateS - p.s),
+        9999,
+      )),
       queued: states.current.filter((p) => p.mode === "queued").length,
       releasing: states.current.filter((p) => p.mode === "releasing").length,
+      transferred: states.current.filter((p) => p.transfer > 0.9).length,
       maxTint: Math.round(Math.max(...states.current.map((p) => p.tint)) * 100) / 100,
     };
   });

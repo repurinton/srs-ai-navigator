@@ -1,7 +1,14 @@
-import { useMemo } from "react";
-import { EdgesGeometry, BoxGeometry } from "three";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { EdgesGeometry, BoxGeometry, type Group, type Mesh } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { WORLD_ELEVATOR, WORLD_SURFACES, WORLD_ZONES } from "@/lib/hospital-world";
+import {
+  WORLD_ELEVATOR,
+  WORLD_ELEVATOR_STOPS,
+  WORLD_HELIPAD,
+  WORLD_SURFACES,
+  WORLD_ZONES,
+} from "@/lib/hospital-world";
 import { FadeGroup } from "./FadeGroup";
 
 function translatedBox(size: [number, number, number], position: [number, number, number]) {
@@ -265,7 +272,211 @@ function ParkedCars() {
   );
 }
 
-/** Glass elevator core riding the tower's open south-east face. */
+/**
+ * The animated elevator cab: rides the shaft stop-to-stop and slides its
+ * doors open at every floor. Deterministic time loop, doors face east so the
+ * camera sees them open and close as patients flow.
+ */
+function ElevatorCab() {
+  const cabRef = useRef<Group>(null);
+  const doorNorthRef = useRef<Mesh>(null);
+  const doorSouthRef = useRef<Mesh>(null);
+  const clock = useRef(0);
+
+  const TRAVEL = 2.2;
+  const DWELL = 3.2;
+  const legs = WORLD_ELEVATOR_STOPS.length * 2 - 2;
+  const period = legs * (TRAVEL + DWELL);
+  const centerX = (WORLD_ELEVATOR.min[0] + WORLD_ELEVATOR.max[0]) / 2;
+  const centerZ = (WORLD_ELEVATOR.min[2] + WORLD_ELEVATOR.max[2]) / 2;
+  const doorX = WORLD_ELEVATOR.max[0] - 0.12;
+
+  useFrame((_, delta) => {
+    clock.current += delta;
+    const t = clock.current % period;
+    const leg = Math.floor(t / (TRAVEL + DWELL));
+    const within = t - leg * (TRAVEL + DWELL);
+    // Bounce sequence 0..N-1..0 across the stops.
+    const upLegs = WORLD_ELEVATOR_STOPS.length - 1;
+    const fromIndex = leg < upLegs ? leg : legs - leg;
+    const toIndex = leg < upLegs ? leg + 1 : legs - leg - 1;
+    const fromY = WORLD_ELEVATOR_STOPS[fromIndex];
+    const toY = WORLD_ELEVATOR_STOPS[toIndex];
+
+    let cabY: number;
+    let doorOpen = 0;
+    if (within < TRAVEL) {
+      const progress = within / TRAVEL;
+      cabY = fromY + (toY - fromY) * (progress * progress * (3 - 2 * progress));
+    } else {
+      cabY = toY;
+      const dwellT = (within - TRAVEL) / DWELL;
+      // Open, hold, close.
+      doorOpen = dwellT < 0.25 ? dwellT / 0.25 : dwellT > 0.75 ? (1 - dwellT) / 0.25 : 1;
+    }
+
+    if (cabRef.current) cabRef.current.position.y = cabY;
+    const slide = 0.12 + doorOpen * 0.78;
+    if (doorNorthRef.current) doorNorthRef.current.position.z = centerZ - slide;
+    if (doorSouthRef.current) doorSouthRef.current.position.z = centerZ + slide;
+  });
+
+  return (
+    <group>
+      <group ref={cabRef}>
+        {/* Cab body */}
+        <mesh position={[centerX, 1.5, centerZ]}>
+          <boxGeometry args={[3.2, 2.9, 3.2]} />
+          <meshLambertMaterial color="#b9cdd4" />
+        </mesh>
+        {/* Sliding doors on the east face */}
+        <mesh ref={doorNorthRef} position={[doorX, 1.45, centerZ - 0.12]}>
+          <boxGeometry args={[0.1, 2.7, 1.5]} />
+          <meshLambertMaterial color="#7fd4c0" />
+        </mesh>
+        <mesh ref={doorSouthRef} position={[doorX, 1.45, centerZ + 0.12]}>
+          <boxGeometry args={[0.1, 2.7, 1.5]} />
+          <meshLambertMaterial color="#7fd4c0" />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+/** Helipad on the grounds plus an occasional helicopter arrival. */
+function Helipad() {
+  const marking = useMemo(() => {
+    const bar = (w: number, h: number, x: number, z: number) => {
+      const geo = new BoxGeometry(w, 0.05, h);
+      geo.translate(x, 0, z);
+      return geo;
+    };
+    return mergeGeometries([
+      bar(0.5, 3.2, -1, 0),
+      bar(0.5, 3.2, 1, 0),
+      bar(1.6, 0.5, 0, 0),
+    ]);
+  }, []);
+  const [cx, cy, cz] = WORLD_HELIPAD.center;
+  return (
+    <group position={[cx, cy, cz]}>
+      <mesh>
+        <cylinderGeometry args={[WORLD_HELIPAD.radius, WORLD_HELIPAD.radius, 0.12, 24]} />
+        <meshLambertMaterial color="#22343d" />
+      </mesh>
+      <mesh position={[0, 0.08, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[WORLD_HELIPAD.radius - 0.7, WORLD_HELIPAD.radius - 0.25, 24]} />
+        <meshLambertMaterial color="#e8ecef" />
+      </mesh>
+      <mesh geometry={marking} position={[0, 0.1, 0]}>
+        <meshLambertMaterial color="#e8ecef" />
+      </mesh>
+    </group>
+  );
+}
+
+function Helicopter() {
+  const groupRef = useRef<Group>(null);
+  const rotorRef = useRef<Group>(null);
+  const clock = useRef(0);
+  const PERIOD = 55;
+  const [px, , pz] = WORLD_HELIPAD.center;
+
+  useFrame((_, delta) => {
+    clock.current += delta;
+    const t = clock.current % PERIOD;
+    const group = groupRef.current;
+    if (!group) return;
+
+    let x = px + 34;
+    let y = 26;
+    let z = pz - 22;
+    let visible = false;
+    let rotorSpeed = 18;
+
+    const ease = (v: number) => v * v * (3 - 2 * v);
+    if (t >= 25 && t < 33) {
+      const p = ease((t - 25) / 8);
+      x = px + 34 - 34 * p;
+      y = 26 - 16 * p;
+      z = pz - 22 + 22 * p;
+      visible = true;
+    } else if (t >= 33 && t < 37) {
+      const p = ease((t - 33) / 4);
+      x = px;
+      y = 10 - 9.3 * p;
+      z = pz;
+      visible = true;
+    } else if (t >= 37 && t < 45) {
+      x = px;
+      y = 0.7;
+      z = pz;
+      visible = true;
+      rotorSpeed = 6;
+    } else if (t >= 45 && t < 49) {
+      const p = ease((t - 45) / 4);
+      x = px;
+      y = 0.7 + 12 * p;
+      z = pz;
+      visible = true;
+    } else if (t >= 49 && t < 55) {
+      const p = ease((t - 49) / 6);
+      x = px + 40 * p;
+      y = 12.7 + 14 * p;
+      z = pz - 26 * p;
+      visible = true;
+    }
+
+    group.position.set(x, y, z);
+    group.visible = visible;
+    if (rotorRef.current) rotorRef.current.rotation.y += delta * rotorSpeed;
+  });
+
+  return (
+    <group ref={groupRef} visible={false}>
+      {/* Fuselage */}
+      <mesh position={[0, 0.9, 0]}>
+        <boxGeometry args={[2.6, 1.3, 1.4]} />
+        <meshLambertMaterial color="#e04f48" />
+      </mesh>
+      <mesh position={[1.5, 0.85, 0]}>
+        <boxGeometry args={[0.6, 0.9, 1.1]} />
+        <meshLambertMaterial color="#cfe0e8" />
+      </mesh>
+      {/* Tail boom + fin */}
+      <mesh position={[-2.1, 1.05, 0]}>
+        <boxGeometry args={[2.4, 0.3, 0.3]} />
+        <meshLambertMaterial color="#e04f48" />
+      </mesh>
+      <mesh position={[-3.2, 1.5, 0]}>
+        <boxGeometry args={[0.3, 0.9, 0.12]} />
+        <meshLambertMaterial color="#e8ecef" />
+      </mesh>
+      {/* Skids */}
+      <mesh position={[0, 0.15, 0.6]}>
+        <boxGeometry args={[2.6, 0.1, 0.12]} />
+        <meshLambertMaterial color="#5b6d74" />
+      </mesh>
+      <mesh position={[0, 0.15, -0.6]}>
+        <boxGeometry args={[2.6, 0.1, 0.12]} />
+        <meshLambertMaterial color="#5b6d74" />
+      </mesh>
+      {/* Main rotor */}
+      <group ref={rotorRef} position={[0, 1.7, 0]}>
+        <mesh>
+          <boxGeometry args={[5.6, 0.06, 0.3]} />
+          <meshLambertMaterial color="#22343d" />
+        </mesh>
+        <mesh rotation={[0, Math.PI / 2, 0]}>
+          <boxGeometry args={[5.6, 0.06, 0.3]} />
+          <meshLambertMaterial color="#22343d" />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+/** Glass elevator core riding the tower's open west end. */
 function ElevatorCore() {
   const size: [number, number, number] = [
     WORLD_ELEVATOR.max[0] - WORLD_ELEVATOR.min[0],
@@ -322,7 +533,7 @@ function RoadMarkings() {
 function ZoneOutlines({ ceilingY }: { ceilingY: number }) {
   const outlines = useMemo(
     () =>
-      Object.values(Z).map((zone) => {
+      Object.values(Z).filter((zone) => zone.id !== "home").map((zone) => {
         const size: [number, number, number] = [
           zone.max[0] - zone.min[0],
           zone.max[1] - zone.min[1],
@@ -403,6 +614,9 @@ export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
       <House position={[43.5, Z.home.min[1], 17.5]} scale={0.7} />
 
       <ElevatorCore />
+      <ElevatorCab />
+      <Helipad />
+      <Helicopter />
       <ParkedCars />
       <RoadMarkings />
       <ZoneOutlines ceilingY={ceilingY} />
