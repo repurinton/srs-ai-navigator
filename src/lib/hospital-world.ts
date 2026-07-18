@@ -285,6 +285,57 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
 ];
 
 /**
+ * The patient journey: one polyline through every care stage, walked by a
+ * continuous population of patients. Waypoints tagged with a `queueStage`
+ * are gate checkpoints — when the story's active pressure sits on that
+ * stage, arriving patients stop there and accumulate.
+ * Vertical segments read as elevators at the building edges.
+ */
+export interface PatientJourneyWaypoint {
+  point: Vec3;
+  queueStage?: StageId;
+}
+
+export const PATIENT_FLOW_COUNT = 26;
+
+/** Walking speed in meters/second. */
+export const PATIENT_FLOW_SPEED = 1.7;
+
+/** Seconds of waiting after which a queued patient reads fully red. */
+export const PATIENT_WAIT_RED_SECONDS = 12;
+
+export const WORLD_PATIENT_JOURNEY: readonly PatientJourneyWaypoint[] = [
+  { point: [-3, 0.2, 7] },
+  { point: [-5, 0.2, -3], queueStage: "access" },
+  { point: [-13, 0.2, -8] },
+  { point: [-19, 0.2, -15] },
+  { point: [-19, 9.4, -15] },
+  { point: [-11, 9.4, -12], queueStage: "diagnosis" },
+  { point: [-8, 9.4, -15] },
+  { point: [-8, 4.95, -15] },
+  { point: [-13, 4.95, -9], queueStage: "readiness" },
+  { point: [-2, 4.95, -7], queueStage: "robotics" },
+  { point: [15, 4.95, -8], queueStage: "care" },
+  { point: [24, 4.95, -4] },
+  { point: [24, 0.2, -4] },
+  { point: [16, 0.2, -6], queueStage: "longitudinal" },
+  { point: [17, 0.2, 8] },
+  { point: [34, 0.2, 10] },
+  { point: [43, 0.2, 12] },
+];
+
+/** Queue slot grids per gate stage: slot = origin + right·column + back·row. */
+export const WORLD_PATIENT_QUEUES: Record<StageId, { origin: Vec3; right: Vec3; back: Vec3; perRow: number }> = {
+  access: { origin: [-5, 0.2, -3], right: [-1.1, 0, 0], back: [0, 0, 1.15], perRow: 5 },
+  diagnosis: { origin: [-11, 9.4, -12], right: [-1.1, 0, 0], back: [0, 0, 1.05], perRow: 6 },
+  precision: { origin: [2, 9.4, -12], right: [1.1, 0, 0], back: [0, 0, 1.05], perRow: 5 },
+  readiness: { origin: [-13, 4.95, -9], right: [-1.1, 0, 0], back: [0, 0, 1.1], perRow: 5 },
+  robotics: { origin: [-2, 4.95, -7], right: [1.1, 0, 0], back: [0, 0, 1.1], perRow: 5 },
+  care: { origin: [15, 4.95, -8], right: [1.1, 0, 0], back: [0, 0, 1.1], perRow: 5 },
+  longitudinal: { origin: [16, 0.2, -6], right: [1.1, 0, 0], back: [0, 0, 1.15], perRow: 5 },
+};
+
+/**
  * Zoom values are authored against the reference width and scale linearly
  * with viewport width, so the same value frames the same world width on any
  * device — portrait variants exist only for poses whose *target* needs to

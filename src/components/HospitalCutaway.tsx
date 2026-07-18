@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useCallback, useId, useMemo, useState, useSyncExternalStore } from "react";
+import { Component, lazy, Suspense, useCallback, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   LEVER_META,
@@ -301,7 +301,17 @@ export function HospitalCutaway({
 }: HospitalCutawayProps) {
   const descriptionId = useId();
   const [rendererMode, setRendererMode] = useState<HospitalRendererMode>(resolveHospitalRendererMode);
+  // One free retry: a single context loss (usually browser context-pool
+  // pressure) remounts the scene; a second failure latches 2D for the session.
+  const [sceneAttempt, setSceneAttempt] = useState(0);
+  const retriedRef = useRef(false);
   const fallbackTo2D = useCallback((reason: string) => {
+    if (!retriedRef.current) {
+      retriedRef.current = true;
+      console.warn(`[hospital-renderer] 3D failed once (${reason}); retrying with a fresh context`);
+      setSceneAttempt((attempt) => attempt + 1);
+      return;
+    }
     latchRendererFallback(reason);
     setRendererMode("2d");
   }, []);
@@ -425,7 +435,7 @@ export function HospitalCutaway({
           {rendererMode === "2d" ? (
             <CutawayScene2D visualSet={visualSet} />
           ) : (
-            <SceneErrorBoundary onError={fallbackTo2D}>
+            <SceneErrorBoundary key={sceneAttempt} onError={fallbackTo2D}>
               <Suspense fallback={<CutawayScene2D visualSet={visualSet} />}>
                 <CutawayScene3D
                   tier={rendererMode}

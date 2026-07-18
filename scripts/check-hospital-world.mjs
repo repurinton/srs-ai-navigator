@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import {
+  PATIENT_FLOW_COUNT,
   WORLD_ANCHORS,
   WORLD_CAMERA_POSES,
   WORLD_GROUND,
+  WORLD_PATIENT_JOURNEY,
+  WORLD_PATIENT_QUEUES,
   WORLD_ROUTES,
   WORLD_ZONE_LABEL_ANCHORS,
   WORLD_ZONES,
@@ -71,8 +74,33 @@ for (const route of WORLD_ROUTES) {
   assert.ok(route.duration >= 6 && route.duration <= 24, `Route ${route.id} duration must stay in the executive pacing band`);
 }
 
+// Patient journey: a continuous path visiting the care stages in causal
+// order, with a queue checkpoint (and in-zone slot grid) for each gated stage.
+assert.ok(PATIENT_FLOW_COUNT >= 16 && PATIENT_FLOW_COUNT <= 48, "Patient population must stay in the legible band");
+assert.ok(WORLD_PATIENT_JOURNEY.length >= 12, "The patient journey needs enough waypoints to read as a pathway");
+const journeyGates = WORLD_PATIENT_JOURNEY.filter((w) => w.queueStage).map((w) => w.queueStage);
+const EXPECTED_GATE_ORDER = ["access", "diagnosis", "readiness", "robotics", "care", "longitudinal"];
+assert.deepEqual(journeyGates, EXPECTED_GATE_ORDER, "Journey gates must follow the causal stage order");
+for (const [index, waypoint] of WORLD_PATIENT_JOURNEY.entries()) {
+  assert.ok(
+    inside(waypoint.point, WORLD_GROUND.min, WORLD_GROUND.max, 2),
+    `Journey waypoint ${index} must stay on campus`,
+  );
+}
+for (const stage of EXPECTED_GATE_ORDER) {
+  const queue = WORLD_PATIENT_QUEUES[stage];
+  assert.ok(queue, `Queue grid for ${stage} must exist`);
+  assert.ok(queue.perRow >= 3, `Queue grid for ${stage} needs legible rows`);
+  const zone = WORLD_ZONES[stage];
+  assert.ok(
+    inside(queue.origin, zone.min, zone.max, 1.5),
+    `Queue origin for ${stage} must sit inside its zone`,
+  );
+}
+
 console.log(
   `Hospital world manifest passed: ${Object.keys(WORLD_ZONES).length} zones, `
   + `${Object.keys(WORLD_ANCHORS).length} anchors, ${Object.keys(WORLD_CAMERA_POSES).length} camera poses, `
-  + `${WORLD_ROUTES.length} routes.`,
+  + `${WORLD_ROUTES.length} routes, ${WORLD_PATIENT_JOURNEY.length}-waypoint patient journey `
+  + `(${PATIENT_FLOW_COUNT} patients, ${journeyGates.length} gates).`,
 );

@@ -50,23 +50,36 @@ export function clearRendererFallback() {
   storage?.removeItem(FALLBACK_REASON_KEY);
 }
 
+let cachedDetection: { supported: boolean; reducedTier: boolean } | undefined;
+
+/**
+ * Capability probe. Runs at most ONCE per page load (probe contexts count
+ * against the browser's small WebGL context pool — re-probing on every mount
+ * can evict the live scene's context). A null context with the API present is
+ * treated as pool pressure, not lack of support: the real canvas gets to try,
+ * and the error boundary ladder catches genuine failure.
+ */
 function detectWebGL2(): { supported: boolean; reducedTier: boolean } {
+  if (cachedDetection) return cachedDetection;
+  if (typeof WebGL2RenderingContext === "undefined") {
+    cachedDetection = { supported: false, reducedTier: false };
+    return cachedDetection;
+  }
   try {
     const canvas = document.createElement("canvas");
-    const strict = canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: true });
-    if (strict) {
-      strict.getExtension("WEBGL_lose_context")?.loseContext();
-      return { supported: true, reducedTier: false };
+    canvas.width = 1;
+    canvas.height = 1;
+    const gl = canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: true });
+    if (gl) {
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
+      cachedDetection = { supported: true, reducedTier: false };
+    } else {
+      cachedDetection = { supported: true, reducedTier: true };
     }
-    const lenient = document.createElement("canvas").getContext("webgl2");
-    if (lenient) {
-      lenient.getExtension("WEBGL_lose_context")?.loseContext();
-      return { supported: true, reducedTier: true };
-    }
-    return { supported: false, reducedTier: false };
   } catch {
-    return { supported: false, reducedTier: false };
+    cachedDetection = { supported: true, reducedTier: true };
   }
+  return cachedDetection;
 }
 
 function isConstrainedDevice(): boolean {

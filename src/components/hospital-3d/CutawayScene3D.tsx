@@ -7,6 +7,7 @@ import { CampusShell } from "./CampusShell";
 import { CameraDirector } from "./CameraDirector";
 import { AnchorProjector } from "./AnchorProjector";
 import { ActorSystem } from "./actors/ActorSystem";
+import { PatientFlow } from "./actors/PatientFlow";
 import { ZoneEquipment } from "./ZoneEquipment";
 import { ZoneStateEffects, type ZoneVisualState } from "./ZoneStateEffects";
 
@@ -51,7 +52,6 @@ function useReducedMotion() {
 export default function CutawayScene3D({ scene, poseId, tier, onFallback }: CutawayScene3DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = useReducedMotion();
-  const playing = scene.isPlaying ?? true;
   const dpr = tier === "3d" ? Math.min(window.devicePixelRatio || 1, 1.5) : 1;
 
   useEffect(() => {
@@ -89,9 +89,21 @@ export default function CutawayScene3D({ scene, poseId, tier, onFallback }: Cuta
           visualState={scene.painPoints?.[0]?.visualState as ZoneVisualState | undefined}
           storyBeat={scene.storyBeat ?? "surface"}
           materializingLever={scene.materializingLever}
-          simulation={scene.simulation}
         />
-        <ActorSystem playing={playing} reducedMotion={reducedMotion} />
+        {/* Ambient life keeps moving while the presenter pauses to talk; only
+            reduced motion freezes the diorama. */}
+        <ActorSystem playing={!reducedMotion} reducedMotion={reducedMotion} />
+        <PatientFlow
+          gateStage={(() => {
+            const visualState = scene.painPoints?.[0]?.visualState as ZoneVisualState | undefined;
+            const beat = scene.storyBeat ?? "surface";
+            if (beat === "resolve") return undefined;
+            const pressureShown = visualState === "pressure" || visualState === "constraint" || beat === "materialize";
+            return pressureShown ? scene.focusStage : undefined;
+          })()}
+          playing={!reducedMotion}
+          reducedMotion={reducedMotion}
+        />
       </Canvas>
     </div>
   );

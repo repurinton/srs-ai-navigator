@@ -21,9 +21,11 @@ import {
 } from "./RouteRunner";
 import { Vector3 } from "three";
 
+// The journey population owns the pale-patient look; decorative walkers on
+// the contract routes read as visitors/staff support.
 const PERSON_COLORS: Record<WorldPersonRole, string> = {
   caregiver: "#6fd9bd",
-  patient: "#c7d3e4",
+  patient: "#93a8bd",
   valet: "#ffb454",
 };
 
