@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { BoxGeometry } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { WORLD_GROUND, WORLD_SURFACES, WORLD_ZONES, type Vec3, type WorldZone } from "@/lib/hospital-world";
+import { FadeGroup } from "./FadeGroup";
 
 function boxCenter(min: Vec3, max: Vec3): Vec3 {
   return [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
@@ -55,9 +56,10 @@ function Surface({ min, max, color }: { min: Vec3; max: Vec3; color: string }) {
 
 /**
  * The open-sided campus: ground, roads, parking, and one graybox volume per
- * zone. The fidelity pass (equipment, AO, edge lines) layers onto this.
+ * zone. Zone volumes at or above the camera's focus ceiling fade out so the
+ * zoomed floor reads unobstructed.
  */
-export function CampusShell() {
+export function CampusShell({ ceilingY }: { ceilingY: number }) {
   const groundCenter = boxCenter(WORLD_GROUND.min, WORLD_GROUND.max);
   const groundSize = boxSize(WORLD_GROUND.min, WORLD_GROUND.max);
   const zones = useMemo(() => Object.values(WORLD_ZONES), []);
@@ -76,7 +78,9 @@ export function CampusShell() {
       <Surface min={WORLD_SURFACES.dischargePlaza.min} max={WORLD_SURFACES.dischargePlaza.max} color="#26404b" />
 
       {zones.map((zone) => (
-        <ZoneVolume key={zone.id} zone={zone} />
+        <FadeGroup key={zone.id} hidden={zone.min[1] >= ceilingY - 0.01}>
+          <ZoneVolume zone={zone} />
+        </FadeGroup>
       ))}
     </group>
   );

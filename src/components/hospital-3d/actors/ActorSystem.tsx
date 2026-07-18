@@ -79,7 +79,7 @@ const matrix = new Matrix4();
 const dummy = new Object3D();
 const pose: ActorPose = { position: new Vector3(), heading: 0, presence: 1 };
 
-function PoolMesh({ pool, timeRef }: { pool: Pool; timeRef: { current: number } }) {
+function PoolMesh({ pool, timeRef, ceilingRef }: { pool: Pool; timeRef: { current: number }; ceilingRef: { current: number } }) {
   const meshRef = useRef<InstancedMesh>(null);
   const geometry = useMemo(() => {
     if (pool.kind === "person") return personGeometry();
@@ -95,7 +95,8 @@ function PoolMesh({ pool, timeRef }: { pool: Pool; timeRef: { current: number } 
       poseOnRoute(pool.actors[index], timeRef.current, pose);
       dummy.position.copy(pose.position);
       dummy.rotation.set(0, pose.heading, 0);
-      const scale = Math.max(0.0001, pose.presence);
+      const hidden = pose.position.y >= ceilingRef.current - 0.01;
+      const scale = hidden ? 0.0001 : Math.max(0.0001, pose.presence);
       dummy.scale.set(scale, scale, scale);
       dummy.updateMatrix();
       mesh.setMatrixAt(index, dummy.matrix);
@@ -122,7 +123,7 @@ function PoolMesh({ pool, timeRef }: { pool: Pool; timeRef: { current: number } 
 }
 
 /** Soft grounding discs under every actor — one instanced draw call. */
-function BlobShadows({ actors, timeRef }: { actors: RouteActor[]; timeRef: { current: number } }) {
+function BlobShadows({ actors, timeRef, ceilingRef }: { actors: RouteActor[]; timeRef: { current: number }; ceilingRef: { current: number } }) {
   const meshRef = useRef<InstancedMesh>(null);
   const geometry = useMemo(() => {
     const circle = new CircleGeometry(0.85, 12);
@@ -137,8 +138,9 @@ function BlobShadows({ actors, timeRef }: { actors: RouteActor[]; timeRef: { cur
       poseOnRoute(actors[index], timeRef.current, pose);
       dummy.position.set(pose.position.x, pose.position.y + 0.02, pose.position.z);
       dummy.rotation.set(0, 0, 0);
+      const hidden = pose.position.y >= ceilingRef.current - 0.01;
       const wide = actors[index].route.kind === "person" ? 0.7 : 1.5;
-      const scale = Math.max(0.0001, pose.presence) * wide;
+      const scale = hidden ? 0.0001 : Math.max(0.0001, pose.presence) * wide;
       dummy.scale.set(scale, 1, scale);
       dummy.updateMatrix();
       mesh.setMatrixAt(index, dummy.matrix);
@@ -159,8 +161,18 @@ function BlobShadows({ actors, timeRef }: { actors: RouteActor[]; timeRef: { cur
  * pausing freezes the world exactly; reduced motion pins it to a canonical
  * populated moment.
  */
-export function ActorSystem({ playing, reducedMotion }: { playing: boolean; reducedMotion: boolean }) {
+export function ActorSystem({
+  playing,
+  reducedMotion,
+  ceilingY,
+}: {
+  playing: boolean;
+  reducedMotion: boolean;
+  ceilingY: number;
+}) {
   const timeRef = useRef(REDUCED_MOTION_SCENE_TIME);
+  const ceilingRef = useRef(ceilingY);
+  ceilingRef.current = ceilingY;
 
   const pools = useMemo<Pool[]>(() => {
     const actors = buildRouteActors();
@@ -183,9 +195,9 @@ export function ActorSystem({ playing, reducedMotion }: { playing: boolean; redu
   return (
     <group name="actors">
       {pools.map((pool) => (
-        <PoolMesh key={pool.kind} pool={pool} timeRef={timeRef} />
+        <PoolMesh key={pool.kind} pool={pool} timeRef={timeRef} ceilingRef={ceilingRef} />
       ))}
-      <BlobShadows actors={allActors} timeRef={timeRef} />
+      <BlobShadows actors={allActors} timeRef={timeRef} ceilingRef={ceilingRef} />
     </group>
   );
 }

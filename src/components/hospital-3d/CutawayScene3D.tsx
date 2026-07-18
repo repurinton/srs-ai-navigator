@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import type { HospitalCutawayProps } from "@/components/HospitalCutaway";
 import type { HospitalRendererMode } from "@/lib/renderer-mode";
-import type { WorldPoseId } from "@/lib/hospital-world";
+import { WORLD_POSE_CEILING, type WorldPoseId } from "@/lib/hospital-world";
 import { CampusShell } from "./CampusShell";
 import { CameraDirector } from "./CameraDirector";
 import { AnchorProjector } from "./AnchorProjector";
@@ -52,6 +52,7 @@ function useReducedMotion() {
 export default function CutawayScene3D({ scene, poseId, tier, onFallback }: CutawayScene3DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = useReducedMotion();
+  const ceilingY = WORLD_POSE_CEILING[poseId] ?? Number.POSITIVE_INFINITY;
   const dpr = tier === "3d" ? Math.min(window.devicePixelRatio || 1, 1.5) : 1;
 
   useEffect(() => {
@@ -82,8 +83,8 @@ export default function CutawayScene3D({ scene, poseId, tier, onFallback }: Cuta
         <directionalLight position={[30, 48, 18]} intensity={1.4} color="#fff4e0" />
         <CameraDirector poseId={poseId} reducedMotion={reducedMotion} />
         <AnchorProjector />
-        <CampusShell />
-        <ZoneEquipment />
+        <CampusShell ceilingY={ceilingY} />
+        <ZoneEquipment ceilingY={ceilingY} />
         <ZoneStateEffects
           focusStage={scene.focusStage}
           visualState={scene.painPoints?.[0]?.visualState as ZoneVisualState | undefined}
@@ -92,7 +93,7 @@ export default function CutawayScene3D({ scene, poseId, tier, onFallback }: Cuta
         />
         {/* Ambient life keeps moving while the presenter pauses to talk; only
             reduced motion freezes the diorama. */}
-        <ActorSystem playing={!reducedMotion} reducedMotion={reducedMotion} />
+        <ActorSystem playing={!reducedMotion} reducedMotion={reducedMotion} ceilingY={ceilingY} />
         <PatientFlow
           gateStage={(() => {
             const visualState = scene.painPoints?.[0]?.visualState as ZoneVisualState | undefined;
@@ -103,6 +104,7 @@ export default function CutawayScene3D({ scene, poseId, tier, onFallback }: Cuta
           })()}
           playing={!reducedMotion}
           reducedMotion={reducedMotion}
+          ceilingY={ceilingY}
         />
       </Canvas>
     </div>

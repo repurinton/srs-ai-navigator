@@ -171,10 +171,12 @@ export function PatientFlow({
   gateStage,
   playing,
   reducedMotion,
+  ceilingY,
 }: {
   gateStage?: StageId;
   playing: boolean;
   reducedMotion: boolean;
+  ceilingY: number;
 }) {
   const walkerRef = useRef<InstancedMesh>(null);
   const stretcherRef = useRef<InstancedMesh>(null);
@@ -294,12 +296,22 @@ export function PatientFlow({
       }
 
       // Presentation mode: sprite while on foot (including the intake and
-      // discharge queues), stretcher for the clinical tower legs.
+      // discharge queues), stretcher for the clinical tower legs. Patients on
+      // floors above the camera's focus hide with those floors.
       const queueTravel = patient.queueStage ? journey.checkpointMode[patient.queueStage] : undefined;
       const presentation = queuedHere ? queueTravel ?? "walk" : travel;
+      const hiddenAbove = patient.position.y >= ceilingY - 0.01;
       color.copy(BASE_COLOR).lerp(WAIT_COLOR, patient.tint);
 
-      if (presentation === "walk") {
+      if (hiddenAbove) {
+        dummy.position.copy(patient.position);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.setScalar(0.0001);
+        dummy.updateMatrix();
+        walker.setMatrixAt(i, dummy.matrix);
+        stretcher.setMatrixAt(i, dummy.matrix);
+        body.setMatrixAt(i, dummy.matrix);
+      } else if (presentation === "walk") {
         dummy.position.copy(patient.position);
         dummy.rotation.set(0, 0, 0);
         dummy.scale.setScalar(1);

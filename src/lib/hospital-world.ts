@@ -381,3 +381,20 @@ export const WORLD_CAMERA_POSES: Record<WorldPoseId, WorldCameraPose> = {
   longitudinal: { target: [20, 3, 1], zoom: 15 },
   automation: { target: [2, 13, -8], zoom: 7.2 },
 };
+
+/**
+ * When the camera zooms into a floor, everything at or above this height
+ * fades out so the interior reads unobstructed; zoomed-out poses show the
+ * whole tower. Values are the ceiling (floor-slab base) of the focused level.
+ */
+export const WORLD_POSE_CEILING: Record<WorldPoseId, number> = {
+  overview: Number.POSITIVE_INFINITY,
+  automation: Number.POSITIVE_INFINITY,
+  access: 4.5,
+  longitudinal: 4.5,
+  diagnosis: 9,
+  precision: 9,
+  readiness: 13.5,
+  robotics: 18,
+  care: 22.5,
+};

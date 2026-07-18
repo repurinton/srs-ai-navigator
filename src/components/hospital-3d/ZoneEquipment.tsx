@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { EdgesGeometry, BoxGeometry } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { WORLD_ELEVATOR, WORLD_SURFACES, WORLD_ZONES } from "@/lib/hospital-world";
+import { FadeGroup } from "./FadeGroup";
 
 function translatedBox(size: [number, number, number], position: [number, number, number]) {
   const geometry = new BoxGeometry(...size);
@@ -318,7 +319,7 @@ function RoadMarkings() {
 }
 
 /** One silhouette outline per zone volume — the "architectural drawing" read. */
-function ZoneOutlines() {
+function ZoneOutlines({ ceilingY }: { ceilingY: number }) {
   const outlines = useMemo(
     () =>
       Object.values(Z).map((zone) => {
@@ -332,61 +333,69 @@ function ZoneOutlines() {
           (zone.min[1] + zone.max[1]) / 2,
           (zone.min[2] + zone.max[2]) / 2,
         ];
-        return { id: zone.id, geometry: new EdgesGeometry(new BoxGeometry(...size)), center };
+        return { id: zone.id, minY: zone.min[1], geometry: new EdgesGeometry(new BoxGeometry(...size)), center };
       }),
     [],
   );
   return (
     <group>
-      {outlines.map(({ id, geometry, center }) => (
-        <lineSegments key={id} geometry={geometry} position={center}>
-          <lineBasicMaterial color="#04141c" transparent opacity={0.55} />
-        </lineSegments>
+      {outlines.map(({ id, minY, geometry, center }) => (
+        <FadeGroup key={id} hidden={minY >= ceilingY - 0.01}>
+          <lineSegments geometry={geometry} position={center}>
+            <lineBasicMaterial color="#04141c" transparent opacity={0.55} />
+          </lineSegments>
+        </FadeGroup>
       ))}
     </group>
   );
 }
 
-export function ZoneEquipment() {
+export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
+  const hiddenAbove = (floorMinY: number) => floorMinY >= ceilingY - 0.01;
+
   return (
     <group name="equipment">
-      {/* Floor 1 — intake lobby: registration counters + valet canopy */}
+      {/* Floor 1 — intake lobby, ED + EMS, discharge (never above the focus) */}
       <Counter position={[0, Z.access.min[1] + 0.9, -3]} width={5} />
       <Counter position={[6, Z.access.min[1] + 0.9, -3]} width={3} />
       <Canopy position={[2, Z.access.min[1], 9]} width={9} depth={3.2} accent="#7fd4c0" />
-
-      {/* Floor 1 — ED bays + EMS dock canopy */}
       <BedRow start={[-22, Z.ems.min[1] + 0.4, -3]} count={6} gap={2.3} />
       <Canopy position={[-26.5, Z.ems.min[1], -4]} width={4.5} depth={7} accent="#ff716d" />
-
-      {/* Floor 1 — discharge lounge seats */}
       <SeatRows position={[18, Z.longitudinal.min[1] + 0.4, -2]} />
 
-      {/* Floor 2 — radiology: two CT, two MRI, two X-ray */}
-      <CTScanner position={[-22, Z.diagnosis.min[1] + 0.4, -9]} />
-      <CTScanner position={[-17, Z.diagnosis.min[1] + 0.4, -9]} />
-      <MRIScanner position={[-11, Z.diagnosis.min[1] + 0.4, -9.5]} />
-      <MRIScanner position={[-6, Z.diagnosis.min[1] + 0.4, -9.5]} />
-      <XRayMachine position={[-1, Z.diagnosis.min[1] + 0.4, -9]} />
-      <XRayMachine position={[-19, Z.diagnosis.min[1] + 0.4, -13]} />
-
-      {/* Floor 2 — precision planning workstations */}
-      <Workstations position={[9, Z.precision.min[1] + 0.4, -9]} />
-      <Workstations position={[9, Z.precision.min[1] + 0.4, -13]} />
+      {/* Floor 2 — radiology (two CT, two MRI, two X-ray) + precision */}
+      <FadeGroup hidden={hiddenAbove(Z.diagnosis.min[1])}>
+        <CTScanner position={[-22, Z.diagnosis.min[1] + 0.4, -9]} />
+        <CTScanner position={[-17, Z.diagnosis.min[1] + 0.4, -9]} />
+        <MRIScanner position={[-11, Z.diagnosis.min[1] + 0.4, -9.5]} />
+        <MRIScanner position={[-6, Z.diagnosis.min[1] + 0.4, -9.5]} />
+        <XRayMachine position={[-1, Z.diagnosis.min[1] + 0.4, -9]} />
+        <XRayMachine position={[-19, Z.diagnosis.min[1] + 0.4, -13]} />
+        <Workstations position={[9, Z.precision.min[1] + 0.4, -9]} />
+        <Workstations position={[9, Z.precision.min[1] + 0.4, -13]} />
+      </FadeGroup>
 
       {/* Floor 3 — pre-op readiness bays */}
-      <BedRow start={[-21, Z.readiness.min[1] + 0.4, -9.5]} count={8} gap={2.4} />
+      <FadeGroup hidden={hiddenAbove(Z.readiness.min[1])}>
+        <BedRow start={[-21, Z.readiness.min[1] + 0.4, -9.5]} count={8} gap={2.4} />
+      </FadeGroup>
 
       {/* Floor 4 — eight robotic ORs */}
-      <ORRow
-        positions={Array.from({ length: 8 }, (_, i) => [-21 + i * 5.6, Z.robotics.min[1] + 0.4, -9.5])}
-      />
+      <FadeGroup hidden={hiddenAbove(Z.robotics.min[1])}>
+        <ORRow
+          positions={Array.from({ length: 8 }, (_, i) => [-21 + i * 5.6, Z.robotics.min[1] + 0.4, -9.5])}
+        />
+      </FadeGroup>
 
       {/* Floors 5–6 — recovery wards */}
-      <BedRow start={[-21, Z.care.min[1] + 0.4, -9.5]} count={8} gap={2.4} />
-      <BedRow start={[2, Z.care.min[1] + 0.4, -12.5]} count={6} gap={2.4} />
-      <BedRow start={[-21, Z["care-upper"].min[1] + 0.4, -9.5]} count={8} gap={2.4} />
-      <BedRow start={[2, Z["care-upper"].min[1] + 0.4, -12.5]} count={6} gap={2.4} />
+      <FadeGroup hidden={hiddenAbove(Z.care.min[1])}>
+        <BedRow start={[-21, Z.care.min[1] + 0.4, -9.5]} count={8} gap={2.4} />
+        <BedRow start={[2, Z.care.min[1] + 0.4, -12.5]} count={6} gap={2.4} />
+      </FadeGroup>
+      <FadeGroup hidden={hiddenAbove(Z["care-upper"].min[1])}>
+        <BedRow start={[-21, Z["care-upper"].min[1] + 0.4, -9.5]} count={8} gap={2.4} />
+        <BedRow start={[2, Z["care-upper"].min[1] + 0.4, -12.5]} count={6} gap={2.4} />
+      </FadeGroup>
 
       {/* Home node — the longitudinal-care destination */}
       <House position={[43, Z.home.min[1], 11]} />
@@ -396,7 +405,7 @@ export function ZoneEquipment() {
       <ElevatorCore />
       <ParkedCars />
       <RoadMarkings />
-      <ZoneOutlines />
+      <ZoneOutlines ceilingY={ceilingY} />
     </group>
   );
 }
