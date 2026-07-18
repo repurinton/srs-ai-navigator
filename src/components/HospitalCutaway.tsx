@@ -124,10 +124,10 @@ function isAutomationFocused(painPoint: HospitalPainPoint | undefined, materiali
 }
 
 const ZONE_LABELS = [
-  { id: "imaging", label: "CT + MRI", x: 36, y: 13 },
+  { id: "imaging", label: "Radiology", x: 36, y: 13 },
   { id: "robotics", label: "Robotic ORs", x: 55, y: 29.5 },
   { id: "recovery", label: "Recovery + beds", x: 76, y: 36 },
-  { id: "emergency", label: "EMS", x: 13, y: 38 },
+  { id: "emergency", label: "ED + EMS", x: 13, y: 38 },
   { id: "arrivals", label: "Valet + arrivals", x: 41, y: 73 },
 ] as const;
 

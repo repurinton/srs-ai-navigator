@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { EdgesGeometry, BoxGeometry } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { WORLD_SURFACES, WORLD_ZONES } from "@/lib/hospital-world";
+import { WORLD_ELEVATOR, WORLD_SURFACES, WORLD_ZONES } from "@/lib/hospital-world";
 
 function translatedBox(size: [number, number, number], position: [number, number, number]) {
   const geometry = new BoxGeometry(...size);
@@ -9,23 +9,15 @@ function translatedBox(size: [number, number, number], position: [number, number
   return geometry;
 }
 
-/**
- * Procedural low-poly equipment that makes each zone read as itself within
- * seconds: CT/MRI gantries, robotic OR tables, bed rows, canopies, houses.
- * All positions derive from the zone bounds in the world manifest.
- */
-
 const Z = WORLD_ZONES;
 
 function CTScanner({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
-      {/* Gantry ring */}
-      <mesh position={[0, 1.5, 0]} rotation={[0, 0, 0]}>
+      <mesh position={[0, 1.5, 0]}>
         <torusGeometry args={[1.35, 0.42, 10, 20]} />
         <meshLambertMaterial color="#e8ecef" />
       </mesh>
-      {/* Patient bed through the bore */}
       <mesh position={[0, 0.8, 1.6]}>
         <boxGeometry args={[0.75, 0.18, 3.6]} />
         <meshLambertMaterial color="#cfd8dd" />
@@ -45,7 +37,6 @@ function MRIScanner({ position }: { position: [number, number, number] }) {
         <boxGeometry args={[2.6, 2.5, 2.2]} />
         <meshLambertMaterial color="#dde4e8" />
       </mesh>
-      {/* Bore */}
       <mesh position={[0, 1.1, 0.85]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.62, 0.62, 0.5, 14]} />
         <meshLambertMaterial color="#25333c" />
@@ -58,34 +49,69 @@ function MRIScanner({ position }: { position: [number, number, number] }) {
   );
 }
 
-function ORBay({ position }: { position: [number, number, number] }) {
+function XRayMachine({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       {/* Table */}
-      <mesh position={[0, 0.45, 0]}>
-        <boxGeometry args={[0.55, 0.9, 0.5]} />
-        <meshLambertMaterial color="#9aa7ae" />
-      </mesh>
-      <mesh position={[0, 0.98, 0]}>
-        <boxGeometry args={[2.1, 0.14, 0.75]} />
+      <mesh position={[0, 0.85, 0]}>
+        <boxGeometry args={[2.2, 0.14, 0.85]} />
         <meshLambertMaterial color="#dfe6ea" />
       </mesh>
-      {/* Robot column + boom arms */}
-      <mesh position={[1.15, 1.05, -0.85]}>
-        <cylinderGeometry args={[0.16, 0.22, 2.1, 8]} />
-        <meshLambertMaterial color="#e8ecef" />
+      <mesh position={[0, 0.42, 0]}>
+        <boxGeometry args={[0.6, 0.85, 0.6]} />
+        <meshLambertMaterial color="#9aa7ae" />
       </mesh>
-      <mesh position={[0.7, 1.95, -0.5]} rotation={[0, 0.7, -0.35]}>
-        <boxGeometry args={[1.35, 0.14, 0.16]} />
-        <meshLambertMaterial color="#dde4e8" />
+      {/* Overhead tube on a column */}
+      <mesh position={[1.15, 1.5, 0]}>
+        <cylinderGeometry args={[0.12, 0.16, 3, 8]} />
+        <meshLambertMaterial color="#c3ccd2" />
       </mesh>
-      <mesh position={[0.25, 1.55, -0.15]} rotation={[0, 0.4, 0.5]}>
-        <boxGeometry args={[1.05, 0.12, 0.14]} />
-        <meshLambertMaterial color="#cfd8dd" />
+      <mesh position={[0.35, 2.7, 0]}>
+        <boxGeometry args={[1.7, 0.14, 0.16]} />
+        <meshLambertMaterial color="#c3ccd2" />
       </mesh>
-      {/* Overhead light */}
-      <mesh position={[-0.7, 2.3, 0.35]}>
-        <cylinderGeometry args={[0.4, 0.46, 0.14, 10]} />
+      <mesh position={[-0.35, 2.35, 0]}>
+        <boxGeometry args={[0.5, 0.55, 0.5]} />
+        <meshLambertMaterial color="#e8ecef" emissive="#8fb9c9" emissiveIntensity={0.25} />
+      </mesh>
+    </group>
+  );
+}
+
+/** All OR bays merged into two draw calls: structure + emissive lights. */
+function ORRow({ positions }: { positions: [number, number, number][] }) {
+  const { structure, lights } = useMemo(() => {
+    const structureParts = [];
+    const lightParts = [];
+    for (const [x, y, z] of positions) {
+      const pedestal = new BoxGeometry(0.55, 0.9, 0.5);
+      pedestal.translate(x, y + 0.45, z);
+      const table = new BoxGeometry(2.1, 0.14, 0.75);
+      table.translate(x, y + 0.98, z);
+      const column = new BoxGeometry(0.3, 2.1, 0.3);
+      column.translate(x + 1.15, y + 1.05, z - 0.85);
+      const boomA = new BoxGeometry(1.35, 0.14, 0.16);
+      boomA.rotateZ(-0.35);
+      boomA.rotateY(0.7);
+      boomA.translate(x + 0.7, y + 1.95, z - 0.5);
+      const boomB = new BoxGeometry(1.05, 0.12, 0.14);
+      boomB.rotateZ(0.5);
+      boomB.rotateY(0.4);
+      boomB.translate(x + 0.25, y + 1.55, z - 0.15);
+      structureParts.push(pedestal, table, column, boomA, boomB);
+      const light = new BoxGeometry(0.8, 0.14, 0.8);
+      light.translate(x - 0.7, y + 2.3, z + 0.35);
+      lightParts.push(light);
+    }
+    return { structure: mergeGeometries(structureParts), lights: mergeGeometries(lightParts) };
+  }, [positions]);
+
+  return (
+    <group>
+      <mesh geometry={structure}>
+        <meshLambertMaterial color="#dbe2e7" />
+      </mesh>
+      <mesh geometry={lights}>
         <meshLambertMaterial color="#f2f6f8" emissive="#8fb9c9" emissiveIntensity={0.35} />
       </mesh>
     </group>
@@ -189,20 +215,77 @@ function Counter({ position, width }: { position: [number, number, number]; widt
 }
 
 function Workstations({ position }: { position: [number, number, number] }) {
+  const { desks, screens } = useMemo(() => {
+    const deskParts = [];
+    const screenParts = [];
+    for (let i = 0; i < 3; i += 1) {
+      const desk = new BoxGeometry(1.8, 0.1, 0.9);
+      desk.translate(i * 2.6, 0.75, 0);
+      deskParts.push(desk);
+      const screen = new BoxGeometry(1.3, 0.75, 0.08);
+      screen.translate(i * 2.6, 1.35, -0.3);
+      screenParts.push(screen);
+    }
+    return { desks: mergeGeometries(deskParts), screens: mergeGeometries(screenParts) };
+  }, []);
   return (
     <group position={position}>
-      {[0, 1, 2].map((i) => (
-        <group key={i} position={[i * 2.6, 0, 0]}>
-          <mesh position={[0, 0.75, 0]}>
-            <boxGeometry args={[1.8, 0.1, 0.9]} />
-            <meshLambertMaterial color="#b3bfc7" />
-          </mesh>
-          <mesh position={[0, 1.35, -0.3]}>
-            <boxGeometry args={[1.3, 0.75, 0.08]} />
-            <meshLambertMaterial color="#1d3d4d" emissive="#3b8ca8" emissiveIntensity={0.4} />
-          </mesh>
-        </group>
-      ))}
+      <mesh geometry={desks}>
+        <meshLambertMaterial color="#b3bfc7" />
+      </mesh>
+      <mesh geometry={screens}>
+        <meshLambertMaterial color="#1d3d4d" emissive="#3b8ca8" emissiveIntensity={0.4} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Static parked cars filling stalls while animated traffic comes and goes. */
+function ParkedCars() {
+  const geometry = useMemo(() => {
+    const parking = WORLD_SURFACES.parking;
+    const parts = [];
+    const stallCount = Math.floor((parking.max[0] - parking.min[0] - 4) / 3.2);
+    for (let i = 0; i < stallCount; i += 1) {
+      if (i % 3 === 1) continue; // leave some stalls open for the animated cars
+      const x = parking.min[0] + 3.6 + i * 3.2;
+      const z = (parking.min[2] + parking.max[2]) / 2 + (i % 2 === 0 ? -1.6 : 1.6);
+      parts.push(
+        translatedBox([2.2, 0.55, 1.05], [x, 0.45, z]),
+        translatedBox([1.15, 0.42, 0.9], [x - 0.12, 0.93, z]),
+      );
+    }
+    return mergeGeometries(parts);
+  }, []);
+  return (
+    <mesh geometry={geometry}>
+      <meshLambertMaterial color="#6c8296" />
+    </mesh>
+  );
+}
+
+/** Glass elevator core riding the tower's open south-east face. */
+function ElevatorCore() {
+  const size: [number, number, number] = [
+    WORLD_ELEVATOR.max[0] - WORLD_ELEVATOR.min[0],
+    WORLD_ELEVATOR.max[1] - WORLD_ELEVATOR.min[1],
+    WORLD_ELEVATOR.max[2] - WORLD_ELEVATOR.min[2],
+  ];
+  const center: [number, number, number] = [
+    (WORLD_ELEVATOR.min[0] + WORLD_ELEVATOR.max[0]) / 2,
+    (WORLD_ELEVATOR.min[1] + WORLD_ELEVATOR.max[1]) / 2,
+    (WORLD_ELEVATOR.min[2] + WORLD_ELEVATOR.max[2]) / 2,
+  ];
+  const edges = useMemo(() => new EdgesGeometry(new BoxGeometry(...size)), []);
+  return (
+    <group>
+      <mesh position={center}>
+        <boxGeometry args={size} />
+        <meshLambertMaterial color="#7fd4c0" transparent opacity={0.12} depthWrite={false} />
+      </mesh>
+      <lineSegments geometry={edges} position={center}>
+        <lineBasicMaterial color="#7fd4c0" transparent opacity={0.5} />
+      </lineSegments>
     </group>
   );
 }
@@ -267,40 +350,51 @@ function ZoneOutlines() {
 export function ZoneEquipment() {
   return (
     <group name="equipment">
-      {/* Diagnostics — CT + MRI */}
-      <CTScanner position={[(Z.diagnosis.min[0] + Z.diagnosis.max[0]) / 2 - 3.5, Z.diagnosis.min[1] + 0.4, -13.5]} />
-      <MRIScanner position={[(Z.diagnosis.min[0] + Z.diagnosis.max[0]) / 2 + 3.5, Z.diagnosis.min[1] + 0.4, -14]} />
+      {/* Floor 1 — intake lobby: registration counters + valet canopy */}
+      <Counter position={[0, Z.access.min[1] + 0.9, -3]} width={5} />
+      <Counter position={[6, Z.access.min[1] + 0.9, -3]} width={3} />
+      <Canopy position={[2, Z.access.min[1], 9]} width={9} depth={3.2} accent="#7fd4c0" />
 
-      {/* Precision planning — workstation row */}
-      <Workstations position={[Z.precision.min[0] + 1.6, Z.precision.min[1] + 0.4, -13.5]} />
+      {/* Floor 1 — ED bays + EMS dock canopy */}
+      <BedRow start={[-22, Z.ems.min[1] + 0.4, -3]} count={6} gap={2.3} />
+      <Canopy position={[-26.5, Z.ems.min[1], -4]} width={4.5} depth={7} accent="#ff716d" />
 
-      {/* Pre-op readiness — six prep bays along the open south edge, in view
-          below the stepped-back third floor */}
-      <BedRow start={[Z.readiness.min[0] + 2, Z.readiness.min[1] + 0.4, -5.2]} count={6} gap={2.3} />
+      {/* Floor 1 — discharge lounge seats */}
+      <SeatRows position={[18, Z.longitudinal.min[1] + 0.4, -2]} />
 
-      {/* Robotic ORs — two bays with tables, arms, lights on the open edge */}
-      <ORBay position={[-3, Z.robotics.min[1] + 0.4, -5.5]} />
-      <ORBay position={[3.5, Z.robotics.min[1] + 0.4, -5.5]} />
+      {/* Floor 2 — radiology: two CT, two MRI, two X-ray */}
+      <CTScanner position={[-22, Z.diagnosis.min[1] + 0.4, -9]} />
+      <CTScanner position={[-17, Z.diagnosis.min[1] + 0.4, -9]} />
+      <MRIScanner position={[-11, Z.diagnosis.min[1] + 0.4, -9.5]} />
+      <MRIScanner position={[-6, Z.diagnosis.min[1] + 0.4, -9.5]} />
+      <XRayMachine position={[-1, Z.diagnosis.min[1] + 0.4, -9]} />
+      <XRayMachine position={[-19, Z.diagnosis.min[1] + 0.4, -13]} />
 
-      {/* Recovery ward — two bed rows */}
-      <BedRow start={[Z.care.min[0] + 1.6, Z.care.min[1] + 0.4, -14.5]} count={6} gap={2.3} />
-      <BedRow start={[Z.care.min[0] + 1.6, Z.care.min[1] + 0.4, -6.5]} count={6} gap={2.3} />
+      {/* Floor 2 — precision planning workstations */}
+      <Workstations position={[9, Z.precision.min[1] + 0.4, -9]} />
+      <Workstations position={[9, Z.precision.min[1] + 0.4, -13]} />
 
-      {/* Arrival — registration counter + valet canopy at the front doors */}
-      <Counter position={[-6, Z.access.min[1] + 0.9, -10]} width={5} />
-      <Canopy position={[-6, Z.access.min[1], 5.6]} width={9} depth={3.4} accent="#7fd4c0" />
+      {/* Floor 3 — pre-op readiness bays */}
+      <BedRow start={[-21, Z.readiness.min[1] + 0.4, -9.5]} count={8} gap={2.4} />
 
-      {/* EMS — dock canopy with a coral accent */}
-      <Canopy position={[Z.ems.min[0] - 2.2, Z.ems.min[1], -5]} width={4.5} depth={7} accent="#ff716d" />
+      {/* Floor 4 — eight robotic ORs */}
+      <ORRow
+        positions={Array.from({ length: 8 }, (_, i) => [-21 + i * 5.6, Z.robotics.min[1] + 0.4, -9.5])}
+      />
 
-      {/* Discharge lounge — seat rows facing the plaza */}
-      <SeatRows position={[(Z.longitudinal.min[0] + Z.longitudinal.max[0]) / 2, Z.longitudinal.min[1] + 0.4, -12]} />
+      {/* Floors 5–6 — recovery wards */}
+      <BedRow start={[-21, Z.care.min[1] + 0.4, -9.5]} count={8} gap={2.4} />
+      <BedRow start={[2, Z.care.min[1] + 0.4, -12.5]} count={6} gap={2.4} />
+      <BedRow start={[-21, Z["care-upper"].min[1] + 0.4, -9.5]} count={8} gap={2.4} />
+      <BedRow start={[2, Z["care-upper"].min[1] + 0.4, -12.5]} count={6} gap={2.4} />
 
       {/* Home node — the longitudinal-care destination */}
       <House position={[43, Z.home.min[1], 11]} />
       <House position={[48.5, Z.home.min[1], 15]} scale={0.85} />
       <House position={[43.5, Z.home.min[1], 17.5]} scale={0.7} />
 
+      <ElevatorCore />
+      <ParkedCars />
       <RoadMarkings />
       <ZoneOutlines />
     </group>

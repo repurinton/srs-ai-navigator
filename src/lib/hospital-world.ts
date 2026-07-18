@@ -12,7 +12,8 @@ export type Vec3 = readonly [number, number, number];
 export type WorldZoneId =
   | StageId
   | "ems"
-  | "home";
+  | "home"
+  | "care-upper";
 
 export type WorldAnchorId = StageId | "automation" | "ems" | "home";
 
@@ -48,69 +49,78 @@ export const CAMERA_TWEEN_SECONDS = 1.4;
 export const WORLD_GROUND = { min: [-60, -1, -35] as Vec3, max: [60, 0, 35] as Vec3 };
 
 /**
- * Three stepped clinical floor plates on an open-sided campus:
- *   ground — EMS bay, arrival/access lobby, discharge lounge
- *   floor 2 — pre-op readiness, robotic ORs, recovery ward
- *   floor 3 — diagnostics (CT + MRI), precision planning
+ * A six-story dollhouse tower on a wide podium, open on the south face so the
+ * camera reads every interior through the cutaway:
+ *   floor 1 (podium) — ED + EMS west, intake lobby center, discharge east
+ *   floor 2 — radiology (2× CT, 2× MRI, 2× X-ray) west, precision east
+ *   floor 3 — pre-op readiness
+ *   floor 4 — eight robotic ORs
+ *   floors 5–6 — recovery wards
+ * An elevator core on the south-east face carries patient flow between floors.
  */
 export const WORLD_ZONES: Record<WorldZoneId, WorldZone> = {
   ems: {
     id: "ems",
-    name: "EMS bay",
-    min: [-30, 0, -16],
-    max: [-18, 4, 4],
+    name: "ED and EMS",
+    min: [-24, 0, -18],
+    max: [-8, 4.5, 4],
     color: "#8e8a84",
   },
   access: {
     id: "access",
-    name: "Arrival and access center",
-    min: [-14, 0, -16],
-    max: [2, 4, 4],
+    name: "Intake lobby",
+    min: [-6, 0, -18],
+    max: [10, 4.5, 8],
     color: "#98948d",
   },
   longitudinal: {
     id: "longitudinal",
     name: "Discharge lounge",
-    min: [10, 0, -16],
-    max: [26, 4, 4],
+    min: [12, 0, -18],
+    max: [24, 4.5, 4],
     color: "#8f8b85",
   },
-  readiness: {
-    id: "readiness",
-    name: "Pre-op readiness",
-    min: [-26, 4.5, -18],
-    max: [-10, 8.5, -2],
-    color: "#9a968f",
-  },
-  robotics: {
-    id: "robotics",
-    name: "Robotic operating rooms",
-    min: [-6, 4.5, -18],
-    max: [8, 8.5, -2],
-    color: "#a19d96",
-  },
-  care: {
-    id: "care",
-    name: "Recovery ward",
-    min: [12, 4.5, -18],
-    max: [26, 8.5, -2],
-    color: "#96928b",
-  },
-  // Floor three steps back (shallower z) so the camera can see into the
-  // floor-two interiors below it.
   diagnosis: {
     id: "diagnosis",
-    name: "Diagnostics (CT + MRI)",
-    min: [-20, 9, -18],
-    max: [-6, 13, -9],
+    name: "Radiology (CT · MRI · X-ray)",
+    min: [-24, 4.5, -18],
+    max: [2, 9, -6],
     color: "#a5a19a",
   },
   precision: {
     id: "precision",
     name: "Precision planning",
-    min: [-2, 9, -18],
-    max: [8, 13, -9],
+    min: [6, 4.5, -18],
+    max: [24, 9, -6],
     color: "#9d9992",
+  },
+  readiness: {
+    id: "readiness",
+    name: "Pre-op readiness",
+    min: [-24, 9, -18],
+    max: [24, 13.5, -6],
+    color: "#9a968f",
+  },
+  robotics: {
+    id: "robotics",
+    name: "Robotic operating rooms",
+    min: [-24, 13.5, -18],
+    max: [24, 18, -6],
+    color: "#a19d96",
+  },
+  care: {
+    id: "care",
+    name: "Recovery ward — floor five",
+    min: [-24, 18, -18],
+    max: [24, 22.5, -6],
+    color: "#96928b",
+  },
+  "care-upper": {
+    id: "care-upper",
+    name: "Recovery ward — floor six",
+    min: [-24, 22.5, -18],
+    max: [24, 27, -6],
+    color: "#938f88",
   },
   home: {
     id: "home",
@@ -124,33 +134,36 @@ export const WORLD_ZONES: Record<WorldZoneId, WorldZone> = {
 /** Flat campus surfaces (roads, parking, plazas) drawn on the ground plane. */
 export const WORLD_SURFACES = {
   mainRoad: { min: [-60, 0, 12] as Vec3, max: [60, 0.1, 18] as Vec3 },
-  arrivalLoop: { min: [-12, 0, 4] as Vec3, max: [4, 0.1, 12] as Vec3 },
-  emsSpur: { min: [-46, 0, -8] as Vec3, max: [-30, 0.1, -2] as Vec3 },
-  parking: { min: [-52, 0, 2] as Vec3, max: [-34, 0.1, 11] as Vec3 },
-  dischargePlaza: { min: [10, 0, 4] as Vec3, max: [28, 0.1, 12] as Vec3 },
+  arrivalLoop: { min: [-6, 0, 8] as Vec3, max: [10, 0.1, 12] as Vec3 },
+  emsSpur: { min: [-46, 0, -8] as Vec3, max: [-24, 0.1, -2] as Vec3 },
+  parking: { min: [-56, 0, 2] as Vec3, max: [-32, 0.1, 11] as Vec3 },
+  dischargePlaza: { min: [12, 0, 4] as Vec3, max: [28, 0.1, 12] as Vec3 },
 } as const;
+
+/** The glass elevator core on the tower's open face. */
+export const WORLD_ELEVATOR = { min: [16, 0, -10] as Vec3, max: [20, 27, -6] as Vec3 };
 
 /** Semantic world points the DOM overlay projects into screen space. */
 export const WORLD_ANCHORS: Record<WorldAnchorId, Vec3> = {
-  access: [-6, 3, -6],
-  diagnosis: [-13, 11.5, -13],
-  precision: [3, 11.5, -13],
-  readiness: [-18, 7, -10],
-  robotics: [1, 7, -10],
-  care: [19, 7, -10],
-  longitudinal: [18, 3, -6],
-  automation: [10, 16, -10],
-  ems: [-24, 3, -6],
+  access: [2, 3, -2],
+  diagnosis: [-8, 7, -8],
+  precision: [14, 7, -8],
+  readiness: [-4, 11.5, -8],
+  robotics: [-2, 16, -8],
+  care: [-2, 20.5, -8],
+  longitudinal: [18, 3, -3],
+  automation: [-10, 29, -10],
+  ems: [-16, 3, -4],
   home: [46, 2, 14],
 };
 
 /** Zone-label world points (ids match the DOM `.cutaway-zone-*` labels). */
 export const WORLD_ZONE_LABEL_ANCHORS: Record<string, Vec3> = {
-  imaging: [-13, 13.5, -13],
-  robotics: [1, 9, -10],
-  recovery: [19, 9, -10],
-  emergency: [-24, 4.5, -6],
-  arrivals: [-6, 0.4, 8],
+  imaging: [-10, 8, -7],
+  robotics: [-8, 17, -7],
+  recovery: [-8, 25.8, -7],
+  emergency: [-17, 3.6, -5],
+  arrivals: [2, 0.4, 9],
 };
 
 export type WorldRouteKind = "car" | "ambulance" | "person" | "gurney";
@@ -172,8 +185,9 @@ export const WORLD_ACTORS_PER_ROUTE = 2;
 
 /**
  * The same 14 route families as the 2D cutaway, authored as world-space
- * waypoint polylines. Ground traffic moves at y≈0.2; clinical floor-two
- * actors at y≈4.95 (above the floor slab).
+ * waypoint polylines. Ground traffic moves at y≈0.2; clinical floors follow
+ * the tower levels (F3 pre-op y≈9.4, F4 ORs y≈13.9, F5–F6 recovery
+ * y≈18.4/22.9).
  */
 export const WORLD_ROUTES: readonly WorldRoute[] = [
   {
@@ -181,28 +195,28 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     kind: "car",
     duration: 13,
     closed: false,
-    points: [[-58, 0.2, 15], [-14, 0.2, 15], [-9, 0.2, 10], [-4, 0.2, 7]],
+    points: [[-58, 0.2, 15], [-10, 0.2, 15], [-4, 0.2, 11], [1, 0.2, 9]],
   },
   {
     id: "car-departure",
     kind: "car",
     duration: 13,
     closed: false,
-    points: [[-1, 0.2, 7], [3, 0.2, 10], [10, 0.2, 15], [58, 0.2, 15]],
+    points: [[3, 0.2, 9], [7, 0.2, 11], [13, 0.2, 15], [58, 0.2, 15]],
   },
   {
     id: "car-parking",
     kind: "car",
     duration: 12,
     closed: false,
-    points: [[-58, 0.2, 16], [-40, 0.2, 15], [-42, 0.2, 9], [-46, 0.2, 5]],
+    points: [[-58, 0.2, 16], [-38, 0.2, 15], [-40, 0.2, 9], [-44, 0.2, 5]],
   },
   {
     id: "ambulance",
     kind: "ambulance",
     duration: 15,
     closed: false,
-    points: [[-58, 0.2, 14], [-45, 0.2, 12], [-42, 0.2, -4], [-33, 0.2, -5]],
+    points: [[-58, 0.2, 14], [-45, 0.2, 12], [-40, 0.2, -4], [-27, 0.2, -4]],
   },
   {
     id: "valet-curb",
@@ -210,7 +224,7 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "valet",
     duration: 9,
     closed: true,
-    points: [[-6, 0.2, 3.5], [-4.5, 0.2, 6.5], [-2, 0.2, 7.5], [-3.5, 0.2, 4.5]],
+    points: [[0, 0.2, 4], [1.5, 0.2, 7], [4, 0.2, 8], [2.5, 0.2, 5]],
   },
   {
     id: "valet-entry",
@@ -218,7 +232,7 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "valet",
     duration: 10,
     closed: false,
-    points: [[-2.5, 0.2, 7], [-6, 0.2, 3], [-6, 0.2, -3]],
+    points: [[4, 0.2, 8], [1, 0.2, 3], [0, 0.2, -2]],
   },
   {
     id: "patient-arrival",
@@ -226,7 +240,7 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "patient",
     duration: 15,
     closed: false,
-    points: [[-4, 0.2, 6], [-6, 0.2, 0.5], [-8, 0.2, -7]],
+    points: [[1, 0.2, 7], [-2, 0.2, 0.5], [-4, 0.2, -6]],
   },
   {
     id: "patient-ward",
@@ -242,7 +256,7 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "caregiver",
     duration: 12,
     closed: true,
-    points: [[-23, 4.95, -10], [-15, 4.95, -11], [-11, 4.95, -6], [-19, 4.95, -5.5]],
+    points: [[-18, 9.4, -10], [-10, 9.4, -11], [-6, 9.4, -7], [-14, 9.4, -6.8]],
   },
   {
     id: "caregiver-or",
@@ -250,7 +264,7 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "caregiver",
     duration: 13,
     closed: true,
-    points: [[-9, 4.95, -10], [-3, 4.95, -11], [3, 4.95, -8], [-4, 4.95, -6]],
+    points: [[-10, 13.9, -10], [-4, 13.9, -11], [2, 13.9, -8], [-5, 13.9, -7]],
   },
   {
     id: "caregiver-recovery",
@@ -258,7 +272,7 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "caregiver",
     duration: 14,
     closed: true,
-    points: [[7, 4.95, -10], [13, 4.95, -11], [19, 4.95, -8], [12, 4.95, -6]],
+    points: [[2, 18.4, -10], [8, 18.4, -11], [14, 18.4, -8], [7, 18.4, -7]],
   },
   {
     id: "caregiver-ward",
@@ -266,21 +280,21 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     role: "caregiver",
     duration: 17,
     closed: true,
-    points: [[13.5, 4.95, -6], [21, 4.95, -5.5], [24.5, 4.95, -12], [15, 4.95, -13]],
+    points: [[-14, 22.9, -7], [-6, 22.9, -6.8], [-2, 22.9, -11], [-12, 22.9, -12]],
   },
   {
     id: "gurney-prep",
     kind: "gurney",
     duration: 14,
     closed: false,
-    points: [[-17, 4.95, -7.5], [-8, 4.95, -7], [-0.5, 4.95, -7.5]],
+    points: [[-16, 9.4, -9], [-8, 9.4, -8.6], [0, 9.4, -9]],
   },
   {
     id: "gurney-recovery",
     kind: "gurney",
     duration: 14,
     closed: false,
-    points: [[4, 4.95, -13.5], [11, 4.95, -13], [17.5, 4.95, -10.5]],
+    points: [[-14, 18.4, -9], [-6, 18.4, -8.6], [2, 18.4, -9]],
   },
 ];
 
@@ -291,64 +305,79 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
  * stage, arriving patients stop there and accumulate.
  * Vertical segments read as elevators at the building edges.
  */
+export type PatientTravelMode = "walk" | "stretcher";
+
 export interface PatientJourneyWaypoint {
   point: Vec3;
   queueStage?: StageId;
+  /** Travel mode from this waypoint onward (inherits when omitted). */
+  travel?: PatientTravelMode;
 }
 
 export const PATIENT_FLOW_COUNT = 26;
 
-/** Walking speed in meters/second. */
+/** Walking speed in meters/second; stretchers roll faster. */
 export const PATIENT_FLOW_SPEED = 1.7;
+export const PATIENT_STRETCHER_SPEED = 2.9;
 
 /** Seconds of waiting after which a queued patient reads fully red. */
 export const PATIENT_WAIT_RED_SECONDS = 12;
 
+/**
+ * Patients walk in from the curb, queue at intake, transfer onto a
+ * stretcher, ride the south-east elevator core up through radiology,
+ * pre-op, the ORs, and recovery, then return to ground, come off the
+ * stretcher at discharge, and walk out toward home.
+ */
 export const WORLD_PATIENT_JOURNEY: readonly PatientJourneyWaypoint[] = [
-  { point: [-3, 0.2, 7] },
-  { point: [-5, 0.2, -3], queueStage: "access" },
-  { point: [-13, 0.2, -8] },
-  { point: [-19, 0.2, -15] },
-  { point: [-19, 9.4, -15] },
-  { point: [-11, 9.4, -12], queueStage: "diagnosis" },
-  { point: [-8, 9.4, -15] },
-  { point: [-8, 4.95, -15] },
-  { point: [-13, 4.95, -9], queueStage: "readiness" },
-  { point: [-2, 4.95, -7], queueStage: "robotics" },
-  { point: [15, 4.95, -8], queueStage: "care" },
-  { point: [24, 4.95, -4] },
-  { point: [24, 0.2, -4] },
-  { point: [16, 0.2, -6], queueStage: "longitudinal" },
-  { point: [17, 0.2, 8] },
+  { point: [1, 0.2, 9], travel: "walk" },
+  { point: [2, 0.2, -1], queueStage: "access" },
+  { point: [8, 0.2, -5], travel: "stretcher" },
+  { point: [18, 0.2, -8] },
+  { point: [18, 4.9, -8] },
+  { point: [-4, 4.9, -7.5], queueStage: "diagnosis" },
+  { point: [18, 4.9, -8] },
+  { point: [18, 9.4, -8] },
+  { point: [-2, 9.4, -7.5], queueStage: "readiness" },
+  { point: [18, 9.4, -8] },
+  { point: [18, 13.9, -8] },
+  { point: [0, 13.9, -7.5], queueStage: "robotics" },
+  { point: [18, 13.9, -8] },
+  { point: [18, 18.4, -8] },
+  { point: [0, 18.4, -7.5], queueStage: "care" },
+  { point: [18, 18.4, -8] },
+  { point: [18, 0.2, -8] },
+  { point: [17, 0.2, -2], queueStage: "longitudinal", travel: "walk" },
+  { point: [18, 0.2, 8] },
   { point: [34, 0.2, 10] },
   { point: [43, 0.2, 12] },
 ];
 
 /** Queue slot grids per gate stage: slot = origin + right·column + back·row. */
 export const WORLD_PATIENT_QUEUES: Record<StageId, { origin: Vec3; right: Vec3; back: Vec3; perRow: number }> = {
-  access: { origin: [-5, 0.2, -3], right: [-1.1, 0, 0], back: [0, 0, 1.15], perRow: 5 },
-  diagnosis: { origin: [-11, 9.4, -12], right: [-1.1, 0, 0], back: [0, 0, 1.05], perRow: 6 },
-  precision: { origin: [2, 9.4, -12], right: [1.1, 0, 0], back: [0, 0, 1.05], perRow: 5 },
-  readiness: { origin: [-13, 4.95, -9], right: [-1.1, 0, 0], back: [0, 0, 1.1], perRow: 5 },
-  robotics: { origin: [-2, 4.95, -7], right: [1.1, 0, 0], back: [0, 0, 1.1], perRow: 5 },
-  care: { origin: [15, 4.95, -8], right: [1.1, 0, 0], back: [0, 0, 1.1], perRow: 5 },
-  longitudinal: { origin: [16, 0.2, -6], right: [1.1, 0, 0], back: [0, 0, 1.15], perRow: 5 },
+  access: { origin: [2, 0.2, -1], right: [-1.2, 0, 0], back: [0, 0, 1.2], perRow: 5 },
+  diagnosis: { origin: [-4, 4.9, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
+  precision: { origin: [12, 4.9, -7.5], right: [2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
+  readiness: { origin: [-2, 9.4, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
+  robotics: { origin: [0, 13.9, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
+  care: { origin: [0, 18.4, -7.5], right: [-2.2, 0, 0], back: [0, 0, -1.9], perRow: 5 },
+  longitudinal: { origin: [17, 0.2, -2], right: [1.2, 0, 0], back: [0, 0, 1.2], perRow: 5 },
 };
 
 /**
  * Zoom values are authored against the reference width and scale linearly
  * with viewport width, so the same value frames the same world width on any
- * device — portrait variants exist only for poses whose *target* needs to
- * shift on tall screens.
+ * device. The choreography zooms INTO each successive problem floor and back
+ * OUT (overview/automation) to show the whole system.
  */
 export const WORLD_CAMERA_POSES: Record<WorldPoseId, WorldCameraPose> = {
-  overview: { target: [0, 4, -4], zoom: 11 },
-  access: { target: [-6, 2, -3], zoom: 17 },
-  diagnosis: { target: [-9, 10, -12], zoom: 17 },
-  precision: { target: [2, 10, -12], zoom: 18 },
-  readiness: { target: [-17, 6, -9], zoom: 18 },
-  robotics: { target: [1, 6, -9], zoom: 18 },
-  care: { target: [18, 6, -9], zoom: 18 },
-  longitudinal: { target: [24, 2, 1], zoom: 14.5 },
-  automation: { target: [4, 8, -7], zoom: 12 },
+  overview: { target: [2, 11, -6], zoom: 7.6 },
+  access: { target: [2, 3, -1], zoom: 17 },
+  diagnosis: { target: [-6, 7.5, -8], zoom: 17 },
+  precision: { target: [13, 7.5, -8], zoom: 17 },
+  readiness: { target: [-2, 12, -8], zoom: 16.5 },
+  robotics: { target: [0, 16.5, -8], zoom: 16.5 },
+  care: { target: [0, 21, -8], zoom: 16.5 },
+  longitudinal: { target: [20, 3, 1], zoom: 15 },
+  automation: { target: [2, 13, -8], zoom: 7.2 },
 };
