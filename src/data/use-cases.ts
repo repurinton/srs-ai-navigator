@@ -35,6 +35,17 @@ function withRoboticsTrack(uc: unknown): unknown {
   return { ...rec, track };
 }
 
+// All-specialty cases (XC/ADM/AUTO) enumerate every clinical service line in
+// the source data, which buried line-specific evidence — filtering "Cancer"
+// returned every scheduling/billing/coding case. Anything claiming most of the
+// clinical lines is really cross-cutting; deliberate 2–3-line mappings stay.
+const CROSS_CUTTING_THRESHOLD = 4;
+function withNormalizedServiceLines(uc: unknown): unknown {
+  const rec = uc as { serviceLines?: unknown };
+  if (!Array.isArray(rec.serviceLines) || rec.serviceLines.length < CROSS_CUTTING_THRESHOLD) return uc;
+  return { ...rec, serviceLines: ["Cross-Cutting"] };
+}
+
 /**
  * Hand-authored robotic-surgery use cases (the meeting-track lens), written from
  * public sources. Authored in a robotics-native shape and transformed below into
@@ -686,6 +697,9 @@ const roboticsCanonical: unknown[] = roboticsNative.map((uc) => {
 });
 
 export const useCases: UseCase[] = parseUseCases(
-  [...serviceLineUseCasesRaw, ...roboticsCanonical].map(withAugmentedDeployments).map(withRoboticsTrack),
+  [...serviceLineUseCasesRaw, ...roboticsCanonical]
+    .map(withAugmentedDeployments)
+    .map(withRoboticsTrack)
+    .map(withNormalizedServiceLines),
 );
 
