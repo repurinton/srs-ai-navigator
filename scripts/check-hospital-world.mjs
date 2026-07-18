@@ -3,6 +3,7 @@ import {
   PATIENT_FLOW_COUNT,
   WORLD_ANCHORS,
   WORLD_CAMERA_POSES,
+  WORLD_DOORWAY,
   WORLD_GROUND,
   WORLD_PATIENT_JOURNEY,
   WORLD_PATIENT_QUEUES,
@@ -98,9 +99,37 @@ for (const stage of EXPECTED_GATE_ORDER) {
   );
 }
 
+// Anti-collision contract: horizontal journey legs may cross a zone's side
+// walls only inside the shared doorway band. (South faces are open; nothing
+// crosses north walls.)
+let doorwayCrossings = 0;
+for (let i = 0; i < WORLD_PATIENT_JOURNEY.length - 1; i += 1) {
+  const a = WORLD_PATIENT_JOURNEY[i].point;
+  const b = WORLD_PATIENT_JOURNEY[i + 1].point;
+  if (Math.abs(a[1] - b[1]) > 0.01) continue; // vertical legs ride the elevator
+  for (const zone of Object.values(WORLD_ZONES)) {
+    if (zone.id === "home") continue;
+    if (a[1] < zone.min[1] || a[1] > zone.max[1]) continue; // different floor
+    for (const wallX of [zone.min[0], zone.max[0]]) {
+      const [ax, bx] = [a[0], b[0]];
+      if ((ax - wallX) * (bx - wallX) >= 0) continue; // no crossing of this plane
+      const t = (wallX - ax) / (bx - ax);
+      const crossZ = a[2] + (b[2] - a[2]) * t;
+      if (crossZ < zone.min[2] || crossZ > zone.max[2]) continue; // misses the wall
+      doorwayCrossings += 1;
+      assert.ok(
+        crossZ >= WORLD_DOORWAY.zMin && crossZ <= WORLD_DOORWAY.zMax,
+        `Journey leg ${i} clips through the ${zone.id} wall at x=${wallX} (z=${crossZ.toFixed(2)} outside the doorway band)`,
+      );
+    }
+  }
+}
+assert.ok(doorwayCrossings > 0, "The journey should pass through at least one doorway (sanity check)");
+
 console.log(
   `Hospital world manifest passed: ${Object.keys(WORLD_ZONES).length} zones, `
   + `${Object.keys(WORLD_ANCHORS).length} anchors, ${Object.keys(WORLD_CAMERA_POSES).length} camera poses, `
   + `${WORLD_ROUTES.length} routes, ${WORLD_PATIENT_JOURNEY.length}-waypoint patient journey `
-  + `(${PATIENT_FLOW_COUNT} patients, ${journeyGates.length} gates).`,
+  + `(${PATIENT_FLOW_COUNT} patients, ${journeyGates.length} gates, `
+  + `${doorwayCrossings} wall crossings all through doorways).`,
 );

@@ -24,6 +24,7 @@ import {
   type PatientTravelMode,
 } from "@/lib/hospital-world";
 import { createWalkSpriteTexture, WALK_FRAME_COUNT } from "./walk-sprite";
+import { ELEVATOR_CABS, elevatorCabState, elevatorStopIndexForY } from "../elevators";
 
 const BASE_COLOR = new Color("#cfd9e6");
 const WAIT_COLOR = new Color("#ff5347");
@@ -56,6 +57,12 @@ interface PatientState {
   transfer: number;
   station?: readonly [number, number, number, number];
   laneOffset: number;
+  /** Elevator cab index while riding, -1 otherwise. */
+  cab: number;
+  rideToStop: number;
+  rideEndS: number;
+  /** True once fully inside the cab and tracking it exactly. */
+  locked: boolean;
 }
 
 interface JourneyGeometry {
@@ -65,6 +72,8 @@ interface JourneyGeometry {
   segmentMode: PatientTravelMode[];
   checkpointS: Partial<Record<StageId, number>>;
   checkpointMode: Partial<Record<StageId, PatientTravelMode>>;
+  /** Vertical legs that must be traveled inside an elevator cab. */
+  elevatorSegments: Map<number, { fromStop: number; toStop: number }>;
 }
 
 function buildJourney(): JourneyGeometry {
@@ -87,7 +96,25 @@ function buildJourney(): JourneyGeometry {
       checkpointMode[waypoint.queueStage] = segmentMode[i];
     }
   });
-  return { points, cumulative, total: cumulative[cumulative.length - 1], segmentMode, checkpointS, checkpointMode };
+  const elevatorSegments = new Map<number, { fromStop: number; toStop: number }>();
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i];
+    const b = points[i + 1];
+    if (Math.abs(a.x - b.x) < 0.01 && Math.abs(a.z - b.z) < 0.01 && Math.abs(a.y - b.y) > 0.5) {
+      const fromStop = elevatorStopIndexForY(a.y);
+      const toStop = elevatorStopIndexForY(b.y);
+      if (fromStop >= 0 && toStop >= 0) elevatorSegments.set(i, { fromStop, toStop });
+    }
+  }
+  return {
+    points,
+    cumulative,
+    total: cumulative[cumulative.length - 1],
+    segmentMode,
+    checkpointS,
+    checkpointMode,
+    elevatorSegments,
+  };
 }
 
 function segmentIndexAt(journey: JourneyGeometry, s: number): number {
@@ -230,6 +257,10 @@ export function PatientFlow({
         transfer: 0,
         station: undefined,
         laneOffset: ((i * 37) % 9 - 4) * 0.14,
+        cab: -1,
+        rideToStop: -1,
+        rideEndS: 0,
+        locked: false,
       };
     });
   }
@@ -271,23 +302,53 @@ export function PatientFlow({
       const speed = travel === "stretcher" ? PATIENT_STRETCHER_SPEED : PATIENT_FLOW_SPEED;
 
       if (patient.mode === "walking") {
-        const previousS = patient.s;
-        patient.s += speed * delta;
         patient.tint = Math.max(0, patient.tint - delta / RELEASE_RECOVERY_SECONDS);
-        if (gateStage && gateS !== undefined && previousS < gateS && patient.s >= gateS) {
-          patient.mode = "queued";
-          patient.queueStage = gateStage;
-          patient.slot = queueLength.current;
-          queueLength.current += 1;
-          patient.s = gateS;
-          patient.wait = 0;
-          const stations = WORLD_PATIENT_STATIONS[gateStage];
-          patient.station = stations && patient.slot < stations.length ? stations[patient.slot] : undefined;
-        }
-        if (patient.s >= journey.total) {
-          patient.s -= journey.total;
-          patient.tint = 0;
-          patient.position.copy(pointAt(journey, patient.s, target));
+        if (patient.cab >= 0) {
+          // Riding: alight only when the cab dwells at the target floor
+          // with its doors open.
+          const state = elevatorCabState(elapsed.current, ELEVATOR_CABS[patient.cab]);
+          if (patient.locked && state.stopIndex === patient.rideToStop && state.doorsOpen > 0.5) {
+            patient.s = patient.rideEndS;
+            patient.cab = -1;
+            patient.locked = false;
+          }
+        } else {
+          const previousS = patient.s;
+          let nextS = patient.s + speed * delta;
+          // Vertical legs require a cab: hold at the lobby until one dwells
+          // here with doors open, heading the right way.
+          const segment2 = segmentIndexAt(journey, Math.min(nextS + 0.001, journey.total));
+          const lift = journey.elevatorSegments.get(segment2);
+          if (lift && nextS > journey.cumulative[segment2]) {
+            nextS = journey.cumulative[segment2];
+            const wantedDirection = lift.toStop > lift.fromStop ? 1 : -1;
+            for (let cabIndex = 0; cabIndex < ELEVATOR_CABS.length; cabIndex += 1) {
+              const state = elevatorCabState(elapsed.current, ELEVATOR_CABS[cabIndex]);
+              if (state.stopIndex === lift.fromStop && state.doorsOpen > 0.5 && state.direction === wantedDirection) {
+                patient.cab = cabIndex;
+                patient.rideToStop = lift.toStop;
+                patient.rideEndS = journey.cumulative[segment2 + 1];
+                patient.locked = false;
+                break;
+              }
+            }
+          }
+          patient.s = nextS;
+          if (gateStage && gateS !== undefined && previousS < gateS && patient.s >= gateS) {
+            patient.mode = "queued";
+            patient.queueStage = gateStage;
+            patient.slot = queueLength.current;
+            queueLength.current += 1;
+            patient.s = gateS;
+            patient.wait = 0;
+            const stations = WORLD_PATIENT_STATIONS[gateStage];
+            patient.station = stations && patient.slot < stations.length ? stations[patient.slot] : undefined;
+          }
+          if (patient.s >= journey.total) {
+            patient.s -= journey.total;
+            patient.tint = 0;
+            patient.position.copy(pointAt(journey, patient.s, target));
+          }
         }
       } else if (patient.mode === "queued") {
         patient.wait += delta;
@@ -316,19 +377,24 @@ export function PatientFlow({
         } else {
           slotPosition(patient.queueStage ?? gateStage ?? "access", patient.slot, target);
         }
+      } else if (patient.cab >= 0) {
+        // Board and track the assigned elevator cab.
+        const cabSpec = ELEVATOR_CABS[patient.cab];
+        const state = elevatorCabState(elapsed.current, cabSpec);
+        target.set(cabSpec.x, state.y, cabSpec.z);
       } else {
         pointAt(journey, patient.s, target);
-        if (travel === "walk") {
-          // Personal lane offset keeps the walking crowd from merging.
-          target.x += Math.cos(patient.heading) * patient.laneOffset;
-          target.z -= Math.sin(patient.heading) * patient.laneOffset;
-        }
+        // Personal lane offset keeps the moving crowd from merging.
+        target.x += Math.cos(patient.heading) * patient.laneOffset;
+        target.z -= Math.sin(patient.heading) * patient.laneOffset;
       }
 
       const distance = patient.position.distanceTo(target);
       let moving = false;
-      if (distance > 0.001) {
-        const step = (patient.mode === "walking" ? speed : SLOT_APPROACH_SPEED) * delta;
+      if (patient.cab >= 0 && patient.locked) {
+        patient.position.copy(target);
+      } else if (distance > 0.001) {
+        const step = (patient.cab >= 0 || patient.mode !== "walking" ? SLOT_APPROACH_SPEED : speed) * delta;
         if (delta === 0 || step >= distance) {
           patient.position.copy(target);
         } else {
@@ -340,6 +406,7 @@ export function PatientFlow({
           patient.walkDistance += step;
         }
       }
+      if (patient.cab >= 0 && !patient.locked && distance < 0.25) patient.locked = true;
 
       // Once parked at a berth, float the patient in.
       if (patient.mode === "queued" && patient.station && distance < 0.12) {

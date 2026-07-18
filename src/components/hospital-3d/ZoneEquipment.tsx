@@ -4,11 +4,11 @@ import { EdgesGeometry, BoxGeometry, type Group, type Mesh } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   WORLD_ELEVATOR,
-  WORLD_ELEVATOR_STOPS,
   WORLD_HELIPAD,
   WORLD_SURFACES,
   WORLD_ZONES,
 } from "@/lib/hospital-world";
+import { ELEVATOR_CABS, elevatorCabState, type ElevatorCabSpec } from "./elevators";
 import { FadeGroup } from "./FadeGroup";
 
 function translatedBox(size: [number, number, number], position: [number, number, number]) {
@@ -92,12 +92,14 @@ function ORRow({ positions }: { positions: [number, number, number][] }) {
     const structureParts = [];
     const dividerParts = [];
     const lightParts = [];
-    // Partition walls between adjacent bays so each OR reads as its own room.
+    // Partition walls between adjacent bays so each OR reads as its own
+    // room. They stop short of the docking lane so stretchers pulling up
+    // alongside the tables never pass through them.
     for (let i = 0; i < positions.length - 1; i += 1) {
       const [ax, ay, az] = positions[i];
       const [bx] = positions[i + 1];
-      const wall = new BoxGeometry(0.25, 3.4, 5.4);
-      wall.translate((ax + bx) / 2, ay + 1.7, az + 0.6);
+      const wall = new BoxGeometry(0.25, 3.4, 3.0);
+      wall.translate((ax + bx) / 2, ay + 1.7, az - 0.9);
       dividerParts.push(wall);
     }
     for (const [x, y, z] of positions) {
@@ -289,72 +291,52 @@ function ParkedCars() {
 }
 
 /**
- * The animated elevator cab: rides the shaft stop-to-stop and slides its
- * doors open at every floor. Deterministic time loop, doors face east so the
- * camera sees them open and close as patients flow.
+ * The two independent elevator cabs. Both render from the same pure
+ * schedule function that drives patient boarding, so a cab's position and
+ * door state always match the riders. Doors face east and slide open at
+ * every dwell so patients visibly enter and exit.
  */
-function ElevatorCab() {
+function ElevatorCabs() {
+  return (
+    <group>
+      {ELEVATOR_CABS.map((cab, index) => (
+        <ElevatorCabUnit key={index} cab={cab} />
+      ))}
+    </group>
+  );
+}
+
+function ElevatorCabUnit({ cab }: { cab: ElevatorCabSpec }) {
   const cabRef = useRef<Group>(null);
   const doorNorthRef = useRef<Mesh>(null);
   const doorSouthRef = useRef<Mesh>(null);
   const clock = useRef(0);
-
-  const TRAVEL = 2.2;
-  const DWELL = 3.2;
-  const legs = WORLD_ELEVATOR_STOPS.length * 2 - 2;
-  const period = legs * (TRAVEL + DWELL);
-  const centerX = (WORLD_ELEVATOR.min[0] + WORLD_ELEVATOR.max[0]) / 2;
-  const centerZ = (WORLD_ELEVATOR.min[2] + WORLD_ELEVATOR.max[2]) / 2;
   const doorX = WORLD_ELEVATOR.max[0] - 0.12;
 
   useFrame((_, delta) => {
     clock.current += delta;
-    const t = clock.current % period;
-    const leg = Math.floor(t / (TRAVEL + DWELL));
-    const within = t - leg * (TRAVEL + DWELL);
-    // Bounce sequence 0..N-1..0 across the stops.
-    const upLegs = WORLD_ELEVATOR_STOPS.length - 1;
-    const fromIndex = leg < upLegs ? leg : legs - leg;
-    const toIndex = leg < upLegs ? leg + 1 : legs - leg - 1;
-    const fromY = WORLD_ELEVATOR_STOPS[fromIndex];
-    const toY = WORLD_ELEVATOR_STOPS[toIndex];
-
-    let cabY: number;
-    let doorOpen = 0;
-    if (within < TRAVEL) {
-      const progress = within / TRAVEL;
-      cabY = fromY + (toY - fromY) * (progress * progress * (3 - 2 * progress));
-    } else {
-      cabY = toY;
-      const dwellT = (within - TRAVEL) / DWELL;
-      // Open, hold, close.
-      doorOpen = dwellT < 0.25 ? dwellT / 0.25 : dwellT > 0.75 ? (1 - dwellT) / 0.25 : 1;
-    }
-
-    if (cabRef.current) cabRef.current.position.y = cabY;
-    const slide = 0.12 + doorOpen * 0.78;
-    if (doorNorthRef.current) doorNorthRef.current.position.z = centerZ - slide;
-    if (doorSouthRef.current) doorSouthRef.current.position.z = centerZ + slide;
+    const state = elevatorCabState(clock.current, cab);
+    if (cabRef.current) cabRef.current.position.y = state.y;
+    const slide = 0.12 + state.doorsOpen * 0.72;
+    if (doorNorthRef.current) doorNorthRef.current.position.z = cab.z - slide;
+    if (doorSouthRef.current) doorSouthRef.current.position.z = cab.z + slide;
   });
 
   return (
-    <group>
-      <group ref={cabRef}>
-        {/* Cab body */}
-        <mesh position={[centerX, 1.5, centerZ]}>
-          <boxGeometry args={[3.2, 2.9, 3.2]} />
-          <meshLambertMaterial color="#b9cdd4" />
-        </mesh>
-        {/* Sliding doors on the east face */}
-        <mesh ref={doorNorthRef} position={[doorX, 1.45, centerZ - 0.12]}>
-          <boxGeometry args={[0.1, 2.7, 1.5]} />
-          <meshLambertMaterial color="#7fd4c0" />
-        </mesh>
-        <mesh ref={doorSouthRef} position={[doorX, 1.45, centerZ + 0.12]}>
-          <boxGeometry args={[0.1, 2.7, 1.5]} />
-          <meshLambertMaterial color="#7fd4c0" />
-        </mesh>
-      </group>
+    <group ref={cabRef}>
+      <mesh position={[cab.x, 1.5, cab.z]}>
+        <boxGeometry args={[3.2, 2.9, 2.3]} />
+        <meshLambertMaterial color="#b9cdd4" />
+      </mesh>
+      {/* Sliding doors on the east face */}
+      <mesh ref={doorNorthRef} position={[doorX, 1.45, cab.z - 0.12]}>
+        <boxGeometry args={[0.1, 2.7, 1.1]} />
+        <meshLambertMaterial color="#7fd4c0" />
+      </mesh>
+      <mesh ref={doorSouthRef} position={[doorX, 1.45, cab.z + 0.12]}>
+        <boxGeometry args={[0.1, 2.7, 1.1]} />
+        <meshLambertMaterial color="#7fd4c0" />
+      </mesh>
     </group>
   );
 }
@@ -673,7 +655,7 @@ export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
       <House position={[43.5, Z.home.min[1], 17.5]} scale={0.7} />
 
       <ElevatorCore />
-      <ElevatorCab />
+      <ElevatorCabs />
       <Helipad />
       <MedicalQuadcopter />
       <ParkedCars />

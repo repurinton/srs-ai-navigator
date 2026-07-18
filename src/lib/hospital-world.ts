@@ -140,11 +140,18 @@ export const WORLD_SURFACES = {
   dischargePlaza: { min: [12, 0, 4] as Vec3, max: [28, 0.1, 12] as Vec3 },
 } as const;
 
-/** The glass elevator core on the tower's west end, doors facing east. */
-export const WORLD_ELEVATOR = { min: [-28.5, 0, -10] as Vec3, max: [-24.5, 27, -6] as Vec3 };
+/** The glass elevator core on the tower's west end: two independent cabs,
+ * doors facing east. */
+export const WORLD_ELEVATOR = { min: [-28.5, 0, -10.8] as Vec3, max: [-24.5, 27, -5.2] as Vec3 };
 
-/** Floor stop heights (walking surface) the elevator cab serves. */
+/** Floor stop heights (walking surface) the elevator cabs serve. */
 export const WORLD_ELEVATOR_STOPS = [0.45, 4.95, 9.45, 13.95, 18.45, 22.95] as const;
+
+/**
+ * Every zone wall carries a doorway gap in this z band so authored paths
+ * cross walls only through openings. The world contract check enforces it.
+ */
+export const WORLD_DOORWAY = { zMin: -9.5, zMax: -6.5 } as const;
 
 /** Helipad on the north-east corner of the grounds. */
 export const WORLD_HELIPAD = { center: [44, 0.16, -26] as Vec3, radius: 5 };
@@ -336,25 +343,32 @@ export const PATIENT_WAIT_RED_SECONDS = 12;
  * stretcher at discharge, and walk out toward home.
  * Walking surfaces sit 0.45m above each floor's base (clear of the slab).
  */
+/**
+ * Vertical legs sit at the elevator lobby (x −23.2, just outside the cab
+ * doors); patients hold there until a cab dwells at their floor with doors
+ * open, ride it, and walk out through the doors. Horizontal legs cross zone
+ * walls only inside the doorway z band.
+ */
 export const WORLD_PATIENT_JOURNEY: readonly PatientJourneyWaypoint[] = [
   { point: [1, 0.45, 9], travel: "walk" },
   { point: [2, 0.45, -1], queueStage: "access" },
   { point: [6, 0.45, -5], travel: "stretcher" },
   { point: [-8, 0.45, -8] },
-  { point: [-26.5, 0.45, -8] },
-  { point: [-26.5, 4.95, -8] },
+  { point: [-23.2, 0.45, -8] },
+  { point: [-23.2, 4.95, -8] },
   { point: [-4, 4.95, -7.5], queueStage: "diagnosis" },
-  { point: [-26.5, 4.95, -8] },
-  { point: [-26.5, 9.45, -8] },
+  { point: [-23.2, 4.95, -8] },
+  { point: [-23.2, 9.45, -8] },
   { point: [-2, 9.45, -7.5], queueStage: "readiness" },
-  { point: [-26.5, 9.45, -8] },
-  { point: [-26.5, 13.95, -8] },
+  { point: [-23.2, 9.45, -8] },
+  { point: [-23.2, 13.95, -8] },
   { point: [0, 13.95, -7.5], queueStage: "robotics" },
-  { point: [-26.5, 13.95, -8] },
-  { point: [-26.5, 18.45, -8] },
+  { point: [-23.2, 13.95, -8] },
+  { point: [-23.2, 18.45, -8] },
   { point: [0, 18.45, -7.5], queueStage: "care" },
-  { point: [-26.5, 18.45, -8] },
-  { point: [-26.5, 0.45, -8] },
+  { point: [-23.2, 18.45, -8] },
+  { point: [-23.2, 0.45, -8] },
+  { point: [11, 0.45, -8] },
   { point: [16, 0.45, -2], queueStage: "longitudinal", travel: "walk" },
   { point: [18, 0.45, 8] },
   { point: [34, 0.45, 10] },
