@@ -10,13 +10,23 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "check:simulation": "node scripts/check-hospital-sim.ts",
+    "check:story": "node scripts/check-hospital-story.ts",
+    "check:motion": "node scripts/check-hospital-motion.mjs",
+    "check:motion-3d": "node scripts/check-hospital-motion-3d.mjs",
+    "check:world": "node scripts/check-hospital-world.mjs",
+    "check:evals": "node scripts/check-hospital-evals.mjs",
+    "check:browser-evidence": "node scripts/check-hospital-browser-evidence.mjs",
+    "eval:release": "node scripts/build-hospital-release-scorecard.mjs",
+    "check:all": "npm run typecheck && npm run check:story && npm run check:simulation && npm run check:motion && npm run check:motion-3d && npm run check:world && npm run check:evals && npm run check:browser-evidence && npm run build",
     "migrate": "node scripts/migrate-original.mjs"
   },
   "dependencies": {
+    "@react-three/fiber": "^9.6.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.0",
     "recharts": "^2.15.0",
+    "three": "^0.185.1",
     "zod": "^3.24.0"
   },
   "devDependencies": {
@@ -24,6 +34,7 @@
     "@types/node": "^22.19.21",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "@types/three": "^0.185.1",
     "@vitejs/plugin-react": "^4.4.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.8.0",

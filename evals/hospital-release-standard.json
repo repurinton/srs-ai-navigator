@@ -1,0 +1,346 @@
+{
+  "schemaVersion": "1.0.0",
+  "standardId": "srs-hospital-twin-release-standard",
+  "title": "SRS Hospital Operating Twin Executive Release Standard",
+  "intent": "Release only when the demo communicates one causal idea at a time, proves the operating impact, and remains presentation-safe across supported viewports.",
+  "releasePolicy": {
+    "minimumWeightedScore": 93,
+    "minimumDomainPercent": 85,
+    "minimumCoreDomainPercent": 92,
+    "coreDomainIds": ["narrative-causality", "visual-composition", "motion-choreography", "evidence-decision-utility"],
+    "requireAllHardGates": true,
+    "maximumCriticalFindings": 0,
+    "maximumHighFindings": 0,
+    "maximumMediumFindings": 2,
+    "requiredHumanSessions": 9,
+    "requiredExecutiveSessions": 4,
+    "requiredAudienceMedian": 4.6,
+    "decision": "Release only when every hard gate passes and all score thresholds are met. Weighted score cannot compensate for a failed gate."
+  },
+  "measurementProtocol": {
+    "canonicalStoryFile": "evals/canonical-story-states.json",
+    "viewportEvidence": "Capture all 19 canonical states at every required viewport, plus one complete autoplay recording at the primary stage viewport.",
+    "performanceEvidence": "Measure a production build on presentation-class hardware with browser zoom at 100 percent and no CPU throttling, then repeat once with a 4x CPU slowdown as a resilience check.",
+    "humanEvidence": "Use evals/human-audience-scorecard.template.json immediately after an uninterrupted run; do not coach answers before recall questions.",
+    "namingConvention": "<candidate>/<viewport-id>/<state-order>-<beat>.<ext>"
+  },
+  "viewportMatrix": [
+    {
+      "id": "stage-1080p",
+      "width": 1920,
+      "height": 1080,
+      "deviceScaleFactor": 1,
+      "required": true,
+      "purpose": "Full-stage confidence check",
+      "safeMarginPx": 32,
+      "minimumBodyTextPx": 16,
+      "calloutPolicy": "in-scene"
+    },
+    {
+      "id": "presentation-laptop",
+      "width": 1440,
+      "height": 900,
+      "deviceScaleFactor": 1,
+      "required": true,
+      "purpose": "Primary live-demo composition",
+      "safeMarginPx": 24,
+      "minimumBodyTextPx": 15,
+      "calloutPolicy": "in-scene"
+    },
+    {
+      "id": "projector-safe",
+      "width": 1280,
+      "height": 720,
+      "deviceScaleFactor": 1,
+      "required": true,
+      "purpose": "Low-height conference projection",
+      "safeMarginPx": 20,
+      "minimumBodyTextPx": 14,
+      "calloutPolicy": "in-scene"
+    },
+    {
+      "id": "tablet-landscape",
+      "width": 1024,
+      "height": 768,
+      "deviceScaleFactor": 1,
+      "required": true,
+      "purpose": "Responsive breakpoint and speaker-console check",
+      "safeMarginPx": 18,
+      "minimumBodyTextPx": 14,
+      "calloutPolicy": "responsive"
+    },
+    {
+      "id": "phone-standard",
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 3,
+      "required": true,
+      "purpose": "Modern mobile handoff",
+      "safeMarginPx": 12,
+      "minimumBodyTextPx": 13,
+      "calloutPolicy": "below-scene"
+    },
+    {
+      "id": "phone-narrow",
+      "width": 320,
+      "height": 568,
+      "deviceScaleFactor": 2,
+      "required": true,
+      "purpose": "Worst-case mobile composition",
+      "safeMarginPx": 10,
+      "minimumBodyTextPx": 13,
+      "calloutPolicy": "below-scene"
+    }
+  ],
+  "thresholds": {
+    "layout": {
+      "maximumProtectedRegionOverlapPx2": 0,
+      "maximumHorizontalOverflowPx": 0,
+      "maximumClippedTextElements": 0,
+      "minimumCalloutToDashboardGapPx": 16,
+      "minimumForegroundElementGapPx": 12,
+      "minimumTouchTargetPx": 44,
+      "maximumCumulativeLayoutShift": 0.03,
+      "maximumForegroundCallouts": 1
+    },
+    "motion": {
+      "minimumAutoplayRuntimeSeconds": 120,
+      "maximumAutoplayRuntimeSeconds": 130,
+      "minimumSettledTimeBeforeAdvanceMs": 800,
+      "cameraMovesPerCycle": 1,
+      "maximumConcurrentForegroundPulses": 1,
+      "maximumReducedMotionTransitionMs": 50,
+      "maximumReducedMotionInfiniteAnimations": 0
+    },
+    "performance": {
+      "minimumAnimationFpsP95": 55,
+      "maximumFrameTimeP95Ms": 18.2,
+      "maximumLongTasksOver50MsPerRun": 1,
+      "maximumTotalBlockingTimeMs": 100,
+      "maximumLargestContentfulPaintMs": 2000,
+      "maximumInteractionToNextPaintMs": 200,
+      "maximumConsoleErrors": 0,
+      "maximumFailedAssetRequests": 0
+    },
+    "accessibility": {
+      "minimumNormalTextContrast": 4.5,
+      "minimumLargeTextContrast": 3,
+      "minimumFocusIndicatorContrast": 3,
+      "minimumKeyboardReachabilityPercent": 100,
+      "minimumColorIndependentMeaningPercent": 100,
+      "maximumDuplicateAccessibleNames": 0,
+      "maximumCriticalAutomatedViolations": 0,
+      "autoplayMustBeUserInitiated": true,
+      "autoplayMustBePausable": true,
+      "liveRegionMustDescribeCurrentBeat": true
+    }
+  },
+  "hardGates": [
+    {
+      "id": "HG-NAR-01",
+      "category": "narrative",
+      "name": "Canonical state contract",
+      "requirement": "The guided story implements exactly 19 canonical states in the specified order.",
+      "measure": "state-count-and-order",
+      "pass": 19
+    },
+    {
+      "id": "HG-NAR-02",
+      "category": "narrative",
+      "name": "One foreground proposition",
+      "requirement": "No state presents more than one foreground callout or competing primary message.",
+      "measure": "maximum-foreground-callouts",
+      "pass": 1
+    },
+    {
+      "id": "HG-NAR-03",
+      "category": "narrative",
+      "name": "No repeated surface",
+      "requirement": "A pressure revealed at the end of one cycle advances directly to the next AI materialization and is not surfaced again.",
+      "measure": "surface-state-count",
+      "pass": 1
+    },
+    {
+      "id": "HG-NAR-04",
+      "category": "narrative",
+      "name": "Semantic alignment",
+      "requirement": "Callout, caption, dashboard focus, and camera focus describe the same pressure in every state.",
+      "measure": "aligned-canonical-states-percent",
+      "pass": 100
+    },
+    {
+      "id": "HG-NAR-05",
+      "category": "narrative",
+      "name": "Claim integrity",
+      "requirement": "Every item labeled system constraint matches the model-selected constraint; pain points and operating friction are labeled distinctly.",
+      "measure": "model-backed-claims-percent",
+      "pass": 100
+    },
+    {
+      "id": "HG-NAR-06",
+      "category": "narrative",
+      "name": "Atomic metric timing",
+      "requirement": "Metrics remain frozen through materialize and change once, on entry to resolve.",
+      "measure": "metric-timing-mismatches",
+      "pass": 0
+    },
+    {
+      "id": "HG-NAR-07",
+      "category": "narrative",
+      "name": "Atomic camera timing",
+      "requirement": "The camera holds through resolve and moves once on reveal.",
+      "measure": "camera-timing-mismatches",
+      "pass": 0
+    },
+    {
+      "id": "HG-NAR-08",
+      "category": "narrative",
+      "name": "Explicit visual state",
+      "requirement": "No callout is simultaneously materializing and resolved, and undefined lever metadata cannot create a materializing state.",
+      "measure": "invalid-visual-state-count",
+      "pass": 0
+    },
+    {
+      "id": "HG-LAY-01",
+      "category": "layout",
+      "name": "Protected regions never overlap",
+      "requirement": "Callouts, dashboard, controls, and captions have zero geometric overlap at every required viewport and canonical state.",
+      "measure": "protected-region-overlap-px2",
+      "pass": 0
+    },
+    {
+      "id": "HG-LAY-02",
+      "category": "layout",
+      "name": "No overflow or clipping",
+      "requirement": "There is no horizontal overflow and no visible text clipping at any required viewport.",
+      "measure": "overflow-or-clipping-count",
+      "pass": 0
+    },
+    {
+      "id": "HG-MOT-01",
+      "category": "motion",
+      "name": "Executive pacing",
+      "requirement": "The uninterrupted guided story runs between 120 and 130 seconds and each foreground animation settles before the next beat.",
+      "measure": "runtime-and-settle-window",
+      "pass": "120-130s; settle>=800ms"
+    },
+    {
+      "id": "HG-MOT-02",
+      "category": "motion",
+      "name": "Reduced-motion equivalence",
+      "requirement": "Reduced-motion mode communicates all 19 states without infinite motion or semantic loss.",
+      "measure": "reduced-motion-state-coverage-percent",
+      "pass": 100
+    },
+    {
+      "id": "HG-PERF-01",
+      "category": "performance",
+      "name": "Presentation-safe rendering",
+      "requirement": "Animation and interaction meet all performance thresholds on presentation-class hardware.",
+      "measure": "performance-threshold-breaches",
+      "pass": 0
+    },
+    {
+      "id": "HG-A11Y-01",
+      "category": "accessibility",
+      "name": "Operable without pointer",
+      "requirement": "All controls are keyboard reachable, visibly focused, correctly named, and at least 44 by 44 CSS pixels.",
+      "measure": "keyboard-or-target-failures",
+      "pass": 0
+    },
+    {
+      "id": "HG-A11Y-02",
+      "category": "accessibility",
+      "name": "Perceivable meaning",
+      "requirement": "Contrast meets WCAG AA and no story state relies on color or animation alone.",
+      "measure": "contrast-or-color-only-failures",
+      "pass": 0
+    },
+    {
+      "id": "HG-REL-01",
+      "category": "reliability",
+      "name": "Deterministic control",
+      "requirement": "Autoplay and manual stepping produce the same state sequence; pause, resume, replay, and reset never skip or double-commit a lever.",
+      "measure": "control-sequence-mismatches",
+      "pass": 0
+    },
+    {
+      "id": "HG-REL-02",
+      "category": "reliability",
+      "name": "Clean production run",
+      "requirement": "The production build completes with zero console errors and zero failed asset requests.",
+      "measure": "runtime-error-count",
+      "pass": 0
+    }
+  ],
+  "rubric": {
+    "maximumPoints": 100,
+    "domains": [
+      {
+        "id": "narrative-causality",
+        "name": "Narrative causality",
+        "points": 25,
+        "criteria": [
+          { "id": "NC-01", "name": "Each intervention visibly causes one operating change", "points": 8 },
+          { "id": "NC-02", "name": "Each reveal creates the logic for the next intervention", "points": 7 },
+          { "id": "NC-03", "name": "Pain point, constraint, and friction language remains precise", "points": 5 },
+          { "id": "NC-04", "name": "The final capacity decision feels inevitable", "points": 5 }
+        ]
+      },
+      {
+        "id": "executive-comprehension",
+        "name": "Executive comprehension and retention",
+        "points": 20,
+        "criteria": [
+          { "id": "EC-01", "name": "The active beat is understood within three seconds", "points": 6 },
+          { "id": "EC-02", "name": "The six-lever sequence can be accurately recalled", "points": 5 },
+          { "id": "EC-03", "name": "Cognitive load remains low without speaker rescue", "points": 5 },
+          { "id": "EC-04", "name": "The next executive decision is unambiguous", "points": 4 }
+        ]
+      },
+      {
+        "id": "visual-composition",
+        "name": "Visual composition",
+        "points": 20,
+        "criteria": [
+          { "id": "VC-01", "name": "Hierarchy directs attention to one focal point", "points": 6 },
+          { "id": "VC-02", "name": "Hospital, callout, dashboard, and caption form one composition", "points": 5 },
+          { "id": "VC-03", "name": "Spacing, typography, and alignment are executive-grade", "points": 5 },
+          { "id": "VC-04", "name": "Responsive compositions preserve meaning and polish", "points": 4 }
+        ]
+      },
+      {
+        "id": "motion-choreography",
+        "name": "Motion choreography",
+        "points": 15,
+        "criteria": [
+          { "id": "MC-01", "name": "Motion explains state change rather than decorating it", "points": 5 },
+          { "id": "MC-02", "name": "Pacing creates comprehension without drag", "points": 4 },
+          { "id": "MC-03", "name": "Camera and foreground transitions never compete", "points": 3 },
+          { "id": "MC-04", "name": "Ambient motion remains precise and unobtrusive", "points": 3 }
+        ]
+      },
+      {
+        "id": "evidence-decision-utility",
+        "name": "Evidence and decision utility",
+        "points": 10,
+        "criteria": [
+          { "id": "ED-01", "name": "Before-after evidence is legible and credible", "points": 4 },
+          { "id": "ED-02", "name": "Model assumptions and illustrative status are clear", "points": 3 },
+          { "id": "ED-03", "name": "The demo changes an investment or operating-model decision", "points": 3 }
+        ]
+      },
+      {
+        "id": "technical-readiness",
+        "name": "Technical and inclusive readiness",
+        "points": 10,
+        "criteria": [
+          { "id": "TR-01", "name": "The live run is stable and presentation-safe", "points": 3 },
+          { "id": "TR-02", "name": "Keyboard and assistive semantics are complete", "points": 3 },
+          { "id": "TR-03", "name": "Reduced-motion and mobile experiences preserve the story", "points": 2 },
+          { "id": "TR-04", "name": "Performance stays within release thresholds", "points": 2 }
+        ]
+      }
+    ]
+  }
+}

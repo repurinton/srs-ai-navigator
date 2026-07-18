@@ -76,6 +76,21 @@ export interface SimulationResult {
   activeLevers: LeverId[];
 }
 
+export type LeverEvidence = {
+  lever: LeverId;
+  addressedStage: StageId;
+  beforePressure: number;
+  afterPressure: number;
+  pressureDelta: number;
+  beforeQueue: number;
+  afterQueue: number;
+  beforeWaitHours: number;
+  afterWaitHours: number;
+  completedDelta: number;
+  journeyDeltaDays: number;
+  administrativeTouchesDelta: number;
+};
+
 export const SIMULATION_HORIZON_DAYS = 30;
 export const SIMULATION_EPISODES = 600;
 
@@ -87,6 +102,15 @@ export const LEVER_SEQUENCE: LeverId[] = [
   "longitudinal",
   "automation",
 ];
+
+export const LEVER_EVIDENCE_STAGE: Record<LeverId, StageId> = {
+  "front-door": "access",
+  diagnosis: "diagnosis",
+  precision: "readiness",
+  robotics: "robotics",
+  longitudinal: "longitudinal",
+  automation: "readiness",
+};
 
 export const LEVER_META: Record<
   LeverId,
@@ -193,8 +217,8 @@ export const STAGE_CONFIGS: StageConfig[] = [
     name: "Robotic operating rooms",
     shortName: "Operate",
     leverId: "robotics",
-    servers: 5,
-    serviceHours: 4.55,
+    servers: 4,
+    serviceHours: 5.5,
     handoffHours: 3,
     exceptionRate: 0.08,
     reworkHours: 2,
@@ -357,12 +381,15 @@ function effectiveStage(
   }
 
   if (stage.id === "readiness" && episode.cohort === "precisionSurgery" && active.has("precision")) {
-    exceptionRate = 0.08;
+    serviceHours *= 0.65;
+    handoffHours = 8;
+    exceptionRate = 0.03;
+    reworkHours = 4;
     touches = Math.max(1, touches - 1);
   }
 
   if (stage.id === "robotics" && active.has("robotics")) {
-    serviceHours = 3.94;
+    serviceHours = 3.2;
   }
 
   if (stage.id === "care" && active.has("longitudinal")) {
@@ -488,8 +515,8 @@ export function simulateHospital(activeLeverIds: Iterable<LeverId>): SimulationR
   const constraint = STAGE_CONFIGS.reduce((current, candidate) => {
     const currentResult = stageResults[current.id];
     const candidateResult = stageResults[candidate.id];
-    const currentPressure = currentResult.peakQueue + currentResult.averageWaitHours / 2;
-    const candidatePressure = candidateResult.peakQueue + candidateResult.averageWaitHours / 2;
+    const currentPressure = stagePressureScore(currentResult);
+    const candidatePressure = stagePressureScore(candidateResult);
     return candidatePressure > currentPressure ? candidate : current;
   }, STAGE_CONFIGS[0]).id;
 
@@ -501,6 +528,37 @@ export function simulateHospital(activeLeverIds: Iterable<LeverId>): SimulationR
     stageResults,
     constraint,
     activeLevers: LEVER_SEQUENCE.filter((lever) => active.has(lever)),
+  };
+}
+
+export function stagePressureScore(stage: Pick<StageResult, "peakQueue" | "averageWaitHours">) {
+  return stage.peakQueue + stage.averageWaitHours / 2;
+}
+
+export function buildLeverEvidence(
+  lever: LeverId,
+  before: SimulationResult,
+  after: SimulationResult,
+): LeverEvidence {
+  const addressedStage = LEVER_EVIDENCE_STAGE[lever];
+  const beforeStage = before.stageResults[addressedStage];
+  const afterStage = after.stageResults[addressedStage];
+  const beforePressure = stagePressureScore(beforeStage);
+  const afterPressure = stagePressureScore(afterStage);
+
+  return {
+    lever,
+    addressedStage,
+    beforePressure,
+    afterPressure,
+    pressureDelta: afterPressure - beforePressure,
+    beforeQueue: beforeStage.peakQueue,
+    afterQueue: afterStage.peakQueue,
+    beforeWaitHours: beforeStage.averageWaitHours,
+    afterWaitHours: afterStage.averageWaitHours,
+    completedDelta: after.completed - before.completed,
+    journeyDeltaDays: after.medianJourneyDays - before.medianJourneyDays,
+    administrativeTouchesDelta: after.administrativeTouches - before.administrativeTouches,
   };
 }
 

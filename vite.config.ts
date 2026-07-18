@@ -16,5 +16,12 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        // three.js caches independently from scene-code iterations; the chunk
+        // is lazy-loaded so the other chapters never pay for it.
+        manualChunks: { "three-vendor": ["three"] },
+      },
+    },
   },
 });

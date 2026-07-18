@@ -1,4 +1,4 @@
-import { useId, useMemo } from "react";
+import { Component, lazy, Suspense, useCallback, useId, useMemo, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   LEVER_META,
@@ -8,7 +8,21 @@ import {
   type StageId,
 } from "@/lib/hospital-sim";
 import type { HospitalStoryBeat } from "@/lib/hospital-story";
+import { CutawayScene2D } from "@/components/CutawayScene2D";
+import {
+  latchRendererFallback,
+  resolveHospitalRendererMode,
+  type HospitalRendererMode,
+} from "@/lib/renderer-mode";
+import {
+  projectedAnchor,
+  projectedAnchorsVersion,
+  subscribeProjectedAnchors,
+} from "@/lib/anchor-projection";
+import type { WorldPoseId } from "@/lib/hospital-world";
 import "./HospitalCutaway.css";
+
+const CutawayScene3D = lazy(() => import("@/components/hospital-3d/CutawayScene3D"));
 
 export type CutawayAnchor = {
   /** Horizontal position as a percentage of the scene width. */
@@ -16,6 +30,8 @@ export type CutawayAnchor = {
   /** Vertical position as a percentage of the scene height. */
   y: number;
 };
+
+export type HospitalCalloutVisualState = "pressure" | "solution" | "resolved" | "constraint";
 
 export type HospitalPainPoint = {
   id: string;
@@ -33,6 +49,12 @@ export type HospitalPainPoint = {
   callout?: CutawayAnchor;
   /** The lever expected to relieve this pain point. */
   resolvedBy?: LeverId;
+  /**
+   * Authored presentation state. Prefer this over inferring visual meaning from
+   * severity or lever membership so a callout can never be both resolving and
+   * materializing.
+   */
+  visualState?: HospitalCalloutVisualState;
   /** Set false to retain a pain point in data without presenting it in this scene. */
   visible?: boolean;
 };
@@ -51,6 +73,16 @@ export type HospitalCutawayProps = {
   constraintLabel?: string;
   materializingLever?: LeverId;
   storyBeat?: HospitalStoryBeat;
+  /** Explicitly aligns the scene halo and semantic focus with the story model. */
+  focusStage?: StageId;
+  /** Overrides the focus location when the story target is not a modeled stage. */
+  focusAnchor?: CutawayAnchor;
+  /** Independent mobile camera target; falls back to the focus anchor. */
+  cameraTarget?: CutawayAnchor;
+  /** Keeps dashboard language synchronized with the authored story state. */
+  dashboardStage?: StageId;
+  /** Optional compact label for the mobile camera focus pill. */
+  focusLabel?: string;
 };
 
 type SceneStyle = CSSProperties & Record<`--${string}`, string | number>;
@@ -73,6 +105,22 @@ const LEVER_BEACONS: Record<LeverId, CutawayAnchor> = {
   longitudinal: { x: 88, y: 70 },
   automation: { x: 77, y: 18 },
 };
+
+/** World-anchor key each lever beacon projects from in 3D mode. */
+const LEVER_WORLD_ANCHORS: Record<LeverId, string> = {
+  "front-door": "access",
+  diagnosis: "diagnosis",
+  precision: "precision",
+  robotics: "robotics",
+  longitudinal: "longitudinal",
+  automation: "automation",
+};
+
+function isAutomationFocused(painPoint: HospitalPainPoint | undefined, materializingLever: LeverId | undefined) {
+  if (materializingLever === "automation") return true;
+  if (!painPoint) return false;
+  return painPoint.id.includes("automation") || painPoint.id.includes("administrative-handoffs");
+}
 
 const ZONE_LABELS = [
   { id: "imaging", label: "CT + MRI", x: 36, y: 13 },
@@ -99,15 +147,17 @@ function describeYieldDelta(delta: number | undefined) {
 }
 
 function describeJourneyDelta(delta: number | undefined) {
-  if (delta === undefined) return "Arrival to completion";
+  if (delta === undefined) return "Arrival to home";
   if (delta === 0) return "At baseline";
-  return delta < 0 ? `${Math.abs(delta)}d faster` : `${delta}d slower`;
+  const days = Math.abs(delta);
+  return delta < 0 ? `${days} ${days === 1 ? "day" : "days"} faster` : `${days} ${days === 1 ? "day" : "days"} slower`;
 }
 
 function describeTouchesDelta(delta: number | undefined) {
-  if (delta === undefined) return "Per episode";
+  if (delta === undefined) return "Per patient";
   if (delta === 0) return "At baseline";
-  return delta < 0 ? `${Math.abs(delta)} fewer vs baseline` : `${delta} more vs baseline`;
+  const touches = Math.abs(delta);
+  return delta < 0 ? `${touches} fewer ${touches === 1 ? "handoff" : "handoffs"}` : `${touches} more ${touches === 1 ? "handoff" : "handoffs"}`;
 }
 
 function defaultCallout(anchor: CutawayAnchor): CutawayAnchor {
@@ -126,112 +176,83 @@ function buildAutomaticPainPoints(simulation: SimulationResult): HospitalPainPoi
       const isConstraint = stage.id === simulation.constraint;
       return {
         id: `queue-${stage.id}`,
-        title: isConstraint ? `${stage.shortName} is the constraint` : `${stage.shortName} queue is building`,
-        detail: `${stage.peakQueue} cases at peak; ${Math.round(stage.averageWaitHours)} average wait hours.`,
+        title: isConstraint ? `${stage.shortName} is the bottleneck` : `${stage.shortName} queue is building`,
+        detail: `${stage.peakQueue} patients waiting at peak · ${Math.round(stage.averageWaitHours)} hr average wait.`,
         stage: stage.id,
-        value: `${stage.peakQueue} queued`,
+        value: `${stage.peakQueue} waiting`,
         severity: isConstraint ? "critical" : index === 1 ? "pressure" : "watch",
         anchor: placement.anchor,
         callout: placement.callout,
         resolvedBy: stage.leverId,
+        visualState: isConstraint ? "constraint" : "pressure",
       };
     });
 }
 
-function MotionActor({
-  visualClassName,
-  routeClassName,
-  children,
-  delay,
-  secondary = false,
-}: {
-  visualClassName: string;
-  routeClassName: string;
-  children?: ReactNode;
-  delay: string;
-  secondary?: boolean;
-}) {
-  return (
-    <span
-      className={`cutaway-motion-track ${routeClassName}`}
-      style={{ "--actor-delay": delay } as SceneStyle}
-      aria-hidden="true"
-    >
-      <span className={`cutaway-motion-glyph ${visualClassName}${secondary ? " cutaway-actor-secondary" : ""}`}>{children}</span>
-    </span>
-  );
+function inferVisualState(
+  painPoint: HospitalPainPoint,
+  activeLevers: ReadonlySet<LeverId>,
+  materializingLever: LeverId | undefined,
+  constraintStage: StageId,
+): HospitalCalloutVisualState {
+  if (painPoint.visualState) return painPoint.visualState;
+
+  // Order matters: an already-active lever is a resolved receipt, never a
+  // materializing solution. The truthy guard prevents undefined === undefined.
+  if (painPoint.resolvedBy && activeLevers.has(painPoint.resolvedBy)) return "resolved";
+  if (materializingLever && painPoint.resolvedBy === materializingLever) return "solution";
+  if (painPoint.stage === constraintStage || painPoint.severity === "critical") return "constraint";
+  return "pressure";
 }
 
-function Person({
-  role,
-  route,
-  delay,
-  secondary = false,
-}: {
-  role: "caregiver" | "patient" | "valet";
-  route: string;
-  delay: string;
-  secondary?: boolean;
-}) {
-  return (
-    <MotionActor
-      visualClassName={`cutaway-person cutaway-person-${role}`}
-      routeClassName={`cutaway-route-${route}`}
-      delay={delay}
-      secondary={secondary}
-    >
-      <i className="cutaway-person-head" />
-      <i className="cutaway-person-body" />
-    </MotionActor>
-  );
-}
+/**
+ * Catches 3D chunk-load or render failures and demotes the scene to the 2D
+ * renderer for the rest of the session without touching story state.
+ */
+class SceneErrorBoundary extends Component<
+  { onError: (reason: string) => void; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
 
-function Vehicle({
-  kind,
-  route,
-  delay,
-  secondary = false,
-}: {
-  kind: "car" | "ambulance";
-  route: string;
-  delay: string;
-  secondary?: boolean;
-}) {
-  return (
-    <MotionActor
-      visualClassName={`cutaway-vehicle cutaway-${kind}`}
-      routeClassName={`cutaway-route-${route}`}
-      delay={delay}
-      secondary={secondary}
-    >
-      <i className="cutaway-vehicle-cabin" />
-      <i className="cutaway-wheel cutaway-wheel-front" />
-      <i className="cutaway-wheel cutaway-wheel-back" />
-      {kind === "ambulance" ? <i className="cutaway-ambulance-mark">+</i> : null}
-    </MotionActor>
-  );
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: Error) {
+    this.props.onError(error.message || "3d renderer error");
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 function PainPointCard({
   painPoint,
   active,
-  resolved,
-  materializing,
+  visualState,
   onSelect,
 }: {
   painPoint: HospitalPainPoint;
   active: boolean;
-  resolved: boolean;
-  materializing: boolean;
+  visualState: HospitalCalloutVisualState;
   onSelect?: (painPoint: HospitalPainPoint) => void;
 }) {
+  const resolved = visualState === "resolved";
+  const materializing = visualState === "solution";
+  const stateLabel = resolved
+    ? painPoint.resolvedLabel ?? "Pressure relieved"
+    : painPoint.kicker ?? (visualState === "constraint"
+      ? "Constraint"
+      : materializing
+        ? "AI response"
+        : "Pressure surfaces");
   const content = (
     <>
       <span className="cutaway-callout-kicker">
         <i aria-hidden="true" />
-        {resolved
-          ? painPoint.resolvedLabel ?? "Pressure relieved"
-          : painPoint.kicker ?? (painPoint.severity === "critical" ? "Constraint" : "Pain point")}
+        {stateLabel}
       </span>
       <strong>{painPoint.title}</strong>
       <span className="cutaway-callout-detail">{painPoint.detail}</span>
@@ -241,11 +262,18 @@ function PainPointCard({
 
   const className = `cutaway-callout-card cutaway-severity-${painPoint.severity ?? "pressure"}${active ? " is-active" : ""}${resolved ? " is-resolved" : ""}${materializing ? " is-materializing" : ""}`;
   return onSelect ? (
-    <button type="button" className={className} onClick={() => onSelect(painPoint)} aria-pressed={active}>
+    <button
+      type="button"
+      className={className}
+      data-state={visualState}
+      onClick={() => onSelect(painPoint)}
+      aria-label={`${stateLabel}: ${painPoint.title}`}
+      aria-pressed={active}
+    >
       {content}
     </button>
   ) : (
-    <div className={className}>{content}</div>
+    <div className={className} data-state={visualState}>{content}</div>
   );
 }
 
@@ -263,8 +291,29 @@ export function HospitalCutaway({
   constraintLabel = "Current constraint",
   materializingLever,
   storyBeat = "reveal",
+  focusStage: explicitFocusStage,
+  focusAnchor: explicitFocusAnchor,
+  cameraTarget,
+  dashboardStage,
+  focusLabel,
 }: HospitalCutawayProps) {
   const descriptionId = useId();
+  const [rendererMode, setRendererMode] = useState<HospitalRendererMode>(resolveHospitalRendererMode);
+  const fallbackTo2D = useCallback((reason: string) => {
+    latchRendererFallback(reason);
+    setRendererMode("2d");
+  }, []);
+  const is3D = rendererMode !== "2d";
+  // Re-render the overlay whenever the 3D camera publishes new projections so
+  // zone labels, beacons, and callout leaders stay attached through tweens.
+  useSyncExternalStore(subscribeProjectedAnchors, projectedAnchorsVersion);
+  const projected = useCallback(
+    (key: string, fallback: CutawayAnchor): CutawayAnchor => {
+      if (!is3D) return fallback;
+      return projectedAnchor(key) ?? fallback;
+    },
+    [is3D],
+  );
   const activeSet = useMemo(() => new Set(activeLevers), [activeLevers]);
   const visualSet = useMemo(() => {
     const next = new Set(activeLevers);
@@ -272,40 +321,60 @@ export function HospitalCutaway({
     return next;
   }, [activeLevers, materializingLever]);
   const presentedPainPoints = useMemo(
-    () => (painPoints ?? buildAutomaticPainPoints(simulation)).filter((painPoint) => painPoint.visible !== false).slice(0, 2),
+    () => (painPoints ?? buildAutomaticPainPoints(simulation)).filter((painPoint) => painPoint.visible !== false).slice(0, 3),
     [painPoints, simulation],
   );
   const activeNames = activeLevers.map((lever) => LEVER_META[lever].name);
-  const constraint = simulation.stageResults[simulation.constraint];
-  const systemConstraintAnchor = STAGE_ANCHORS[simulation.constraint].anchor;
+  const constraintStage = dashboardStage ?? simulation.constraint;
+  const constraint = simulation.stageResults[constraintStage];
+  const systemConstraintAnchor = STAGE_ANCHORS[constraintStage].anchor;
+  const visualStateById = useMemo(
+    () => new Map(presentedPainPoints.map((painPoint) => [
+      painPoint.id,
+      inferVisualState(painPoint, activeSet, materializingLever, constraintStage),
+    ])),
+    [activeSet, constraintStage, materializingLever, presentedPainPoints],
+  );
   const activePainPoint = presentedPainPoints.find((painPoint) => painPoint.id === activePainPointId);
-  const storyFocus = storyBeat === "reveal" ? undefined : activePainPoint;
-  const constraintAnchor = storyFocus?.anchor ?? systemConstraintAnchor;
-  const focusStage = storyFocus?.stage ?? simulation.constraint;
+  const primaryPainPoint = activePainPoint
+    ?? presentedPainPoints.find((painPoint) => visualStateById.get(painPoint.id) === "solution")
+    ?? presentedPainPoints.find((painPoint) => visualStateById.get(painPoint.id) === "constraint")
+    ?? presentedPainPoints[0];
+  const outgoingResolvedPainPoint = storyBeat === "reveal"
+    ? presentedPainPoints.find((painPoint) => (
+      painPoint.id !== primaryPainPoint?.id && visualStateById.get(painPoint.id) === "resolved"
+    ))
+    : undefined;
+  // Two cards exist only for the backwards-compatible reveal handoff. CSS makes
+  // them temporally exclusive: resolved exits, the scene exhales, then the new
+  // constraint enters. Every other beat renders one foreground proposition.
+  const foregroundPainPoints = [outgoingResolvedPainPoint, primaryPainPoint]
+    .filter((painPoint): painPoint is HospitalPainPoint => Boolean(painPoint));
+  const storyFocus = primaryPainPoint;
+  const constraintAnchor = explicitFocusAnchor ?? storyFocus?.anchor ?? systemConstraintAnchor;
+  const focusStage = explicitFocusStage ?? storyFocus?.stage ?? constraintStage;
+  const focusVisualState = (storyFocus ? visualStateById.get(storyFocus.id) : undefined) ?? "constraint";
+  const cameraPoseId: WorldPoseId = storyBeat === "surface"
+    ? "overview"
+    : isAutomationFocused(primaryPainPoint, materializingLever)
+      ? "automation"
+      : focusStage;
   const throughputDelta = baseline ? simulation.completed - baseline.completed : undefined;
   const flowYield = Math.round((simulation.completed / simulation.episodes) * 1_000) / 10;
   const baselineFlowYield = baseline ? Math.round((baseline.completed / baseline.episodes) * 1_000) / 10 : undefined;
   const flowYieldDelta = baselineFlowYield === undefined ? undefined : Math.round((flowYield - baselineFlowYield) * 10) / 10;
   const journeyDelta = baseline ? simulation.medianJourneyDays - baseline.medianJourneyDays : undefined;
   const touchesDelta = baseline ? simulation.administrativeTouches - baseline.administrativeTouches : undefined;
-  const resolvedPainPoint = presentedPainPoints.find(
-    (painPoint) => painPoint.resolvedBy && activeSet.has(painPoint.resolvedBy),
-  );
-  const averagePainPointX = presentedPainPoints.length
-    ? presentedPainPoints.reduce((sum, painPoint) => sum + painPoint.anchor.x, 0) / presentedPainPoints.length
-    : constraintAnchor.x;
-  const mobileFocusX = resolvedPainPoint
-    ? constraintAnchor.x * 0.64 + resolvedPainPoint.anchor.x * 0.36
-    : constraintAnchor.x * 0.72 + averagePainPointX * 0.28;
+  const cameraAnchor = cameraTarget ?? constraintAnchor;
+  const mobileFocusX = cameraAnchor.x;
   const mobileVisibleWorld = (1.15 / (16 / 9)) * 100;
   const mobileCameraShift = Math.max(
     0,
     Math.min(100 - mobileVisibleWorld, mobileFocusX - mobileVisibleWorld / 2),
   );
-  const mobilePainPoints = [...presentedPainPoints].sort((left, right) => {
-    const severityRank = { critical: 0, pressure: 1, watch: 2 } as const;
-    return severityRank[left.severity ?? "pressure"] - severityRank[right.severity ?? "pressure"];
-  });
+  const desktopCameraPanX = (50 - cameraAnchor.x) * 0.04;
+  const desktopCameraPanY = (50 - cameraAnchor.y) * 0.04;
+  const mobilePainPoints = foregroundPainPoints;
 
   return (
     <section
@@ -315,9 +384,11 @@ export function HospitalCutaway({
       data-diagnosis={visualSet.has("diagnosis") ? "true" : "false"}
       data-longitudinal={visualSet.has("longitudinal") ? "true" : "false"}
       data-focus={focusStage}
-      data-focus-kind={storyBeat === "materialize" ? "solution" : storyFocus?.stage === simulation.constraint ? "constraint" : storyFocus ? "pain" : "constraint"}
+      data-focus-kind={focusVisualState === "pressure" ? "pain" : focusVisualState}
       data-story-beat={storyBeat}
+      data-resolved-handoff={outgoingResolvedPainPoint ? "true" : "false"}
       data-materializing-lever={materializingLever ?? "none"}
+      data-renderer={rendererMode}
       style={{
         "--story-color": materializingLever ? LEVER_META[materializingLever].color : "#5bf0c3",
       } as SceneStyle}
@@ -343,70 +414,56 @@ export function HospitalCutaway({
           "--queue-intensity": Math.min(1, constraint.peakQueue / 40).toFixed(2),
           "--constraint-x": `${constraintAnchor.x}%`,
           "--constraint-y": `${constraintAnchor.y}%`,
-          "--mobile-camera-shift": `-${mobileCameraShift.toFixed(2)}%`,
+          "--mobile-camera-shift": is3D ? "0%" : `-${mobileCameraShift.toFixed(2)}%`,
+          "--camera-pan-x": is3D ? "0%" : `${desktopCameraPanX.toFixed(2)}%`,
+          "--camera-pan-y": is3D ? "0%" : `${desktopCameraPanY.toFixed(2)}%`,
         } as SceneStyle}
       >
         <div className="cutaway-world">
-          <div className="cutaway-raster" aria-hidden="true" />
-          <div className="cutaway-depth-light" aria-hidden="true" />
-          <div className="cutaway-constraint-zone" aria-hidden="true"><i /></div>
-
-          <div className="cutaway-network" aria-hidden="true">
-            {Array.from({ length: 6 }, (_, index) => <span key={index} />)}
-          </div>
+          {rendererMode === "2d" ? (
+            <CutawayScene2D visualSet={visualSet} />
+          ) : (
+            <SceneErrorBoundary onError={fallbackTo2D}>
+              <Suspense fallback={<CutawayScene2D visualSet={visualSet} />}>
+                <CutawayScene3D
+                  tier={rendererMode}
+                  poseId={cameraPoseId}
+                  onFallback={fallbackTo2D}
+                  scene={{
+                    simulation,
+                    activeLevers,
+                    painPoints,
+                    isPlaying,
+                    materializingLever,
+                    storyBeat,
+                    focusStage,
+                    focusAnchor: constraintAnchor,
+                    cameraTarget: cameraAnchor,
+                    dashboardStage: constraintStage,
+                  }}
+                />
+              </Suspense>
+            </SceneErrorBoundary>
+          )}
 
           <div className="cutaway-zone-labels" aria-hidden="true">
-            {ZONE_LABELS.map((zone) => (
-              <span
-                key={zone.label}
-                className={`cutaway-zone-${zone.id}`}
-                style={{ "--x": `${zone.x}%`, "--y": `${zone.y}%` } as SceneStyle}
-              >
-                {zone.label}
-              </span>
-            ))}
-          </div>
-
-          <div className="cutaway-motion-layer" aria-hidden="true">
-            <Vehicle kind="car" route="car-arrival" delay="-1.1s" />
-            <Vehicle kind="car" route="car-arrival" delay="-9.6s" secondary />
-            <Vehicle kind="car" route="car-departure" delay="-6.6s" />
-            <Vehicle kind="car" route="car-departure" delay="-16.1s" secondary />
-            <Vehicle kind="car" route="car-parking" delay="-11.8s" />
-            <Vehicle kind="car" route="car-parking" delay="-1.3s" secondary />
-            <Vehicle kind="ambulance" route="ambulance" delay="-3.8s" />
-            <Vehicle kind="ambulance" route="ambulance" delay="-10.8s" secondary />
-            <Person role="valet" route="valet-curb" delay="-1.4s" />
-            <Person role="valet" route="valet-curb" delay="-4.65s" secondary />
-            <Person role="valet" route="valet-entry" delay="-7.1s" />
-            <Person role="valet" route="valet-entry" delay="-15.1s" secondary />
-            <Person role="patient" route="patient-arrival" delay="-2.3s" />
-            <Person role="patient" route="patient-arrival" delay="-8.8s" secondary />
-            <Person role="patient" route="patient-ward" delay="-9.7s" />
-            <Person role="patient" route="patient-ward" delay="-21.7s" secondary />
-            <Person role="caregiver" route="caregiver-prep" delay="-0.8s" />
-            <Person role="caregiver" route="caregiver-prep" delay="-9.8s" secondary />
-            <Person role="caregiver" route="caregiver-or" delay="-4.2s" />
-            <Person role="caregiver" route="caregiver-or" delay="-14.2s" secondary />
-            <Person role="caregiver" route="caregiver-recovery" delay="-8.9s" />
-            <Person role="caregiver" route="caregiver-recovery" delay="-19.9s" secondary />
-            <Person role="caregiver" route="caregiver-ward" delay="-12.6s" />
-            <Person role="caregiver" route="caregiver-ward" delay="-24.6s" secondary />
-            <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-prep" delay="-1.8s"><i /><b /></MotionActor>
-            <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-prep" delay="-12.8s" secondary><i /><b /></MotionActor>
-            <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-recovery" delay="-6.1s"><i /><b /></MotionActor>
-            <MotionActor visualClassName="cutaway-gurney" routeClassName="cutaway-route-gurney-recovery" delay="-18.1s" secondary><i /><b /></MotionActor>
-            <span className={`cutaway-or-status cutaway-or-one ${visualSet.has("robotics") ? "is-live" : ""}`}><i />OR 01</span>
-            <span className={`cutaway-or-status cutaway-or-two ${visualSet.has("robotics") ? "is-live" : ""}`}><i />OR 02</span>
-            <span className={`cutaway-imaging-scan ${visualSet.has("diagnosis") ? "is-live" : ""}`}><i /></span>
-            <span className={`cutaway-bed cutaway-bed-one ${visualSet.has("longitudinal") ? "is-clearing" : ""}`}><i /></span>
-            <span className="cutaway-bed cutaway-bed-two"><i /></span>
-            <span className="cutaway-bed cutaway-bed-three"><i /></span>
+            {ZONE_LABELS.map((zone) => {
+              const position = projected(`zone-${zone.id}`, { x: zone.x, y: zone.y });
+              return (
+                <span
+                  key={zone.label}
+                  className={`cutaway-zone-${zone.id}`}
+                  style={{ "--x": `${position.x.toFixed(2)}%`, "--y": `${position.y.toFixed(2)}%` } as SceneStyle}
+                >
+                  {zone.label}
+                </span>
+              );
+            })}
           </div>
 
           <div className="cutaway-lever-layer" aria-label="AI lever locations">
             {LEVER_SEQUENCE.map((lever) => {
-              const beacon = LEVER_BEACONS[lever];
+              const beacon = projected(LEVER_WORLD_ANCHORS[lever], LEVER_BEACONS[lever]);
               const active = activeSet.has(lever);
               const materializing = materializingLever === lever;
               return (
@@ -414,8 +471,8 @@ export function HospitalCutaway({
                   key={lever}
                   className={`cutaway-lever-beacon cutaway-lever-${lever} ${active ? "is-live" : ""}${materializing ? " is-materializing" : ""}`}
                   style={{
-                    "--x": `${beacon.x}%`,
-                    "--y": `${beacon.y}%`,
+                    "--x": `${beacon.x.toFixed(2)}%`,
+                    "--y": `${beacon.y.toFixed(2)}%`,
                     "--lever-color": LEVER_META[lever].color,
                   } as SceneStyle}
                   aria-label={`${LEVER_META[lever].name}: ${active ? "active" : materializing ? "materializing" : "waiting"}`}
@@ -428,28 +485,32 @@ export function HospitalCutaway({
           </div>
 
           <div className="cutaway-callout-layer">
-            {presentedPainPoints.map((painPoint) => {
+            {foregroundPainPoints.map((painPoint) => {
               const card = painPoint.callout ?? defaultCallout(painPoint.anchor);
-              const resolved = Boolean(painPoint.resolvedBy && activeSet.has(painPoint.resolvedBy));
-              const materializing = painPoint.resolvedBy === materializingLever;
+              const visualState = visualStateById.get(painPoint.id) ?? "pressure";
+              const resolved = visualState === "resolved";
+              const anchorKey = isAutomationFocused(painPoint, materializingLever)
+                ? "automation"
+                : painPoint.stage ?? "access";
+              const anchorPosition = projected(anchorKey, painPoint.anchor);
               return (
                 <div
                   key={painPoint.id}
                   className={`cutaway-callout${painPoint.id === activePainPointId ? " is-active-callout" : ""}`}
+                  data-state={visualState}
                   style={{
-                    "--anchor-x": `${painPoint.anchor.x}%`,
-                    "--anchor-y": `${painPoint.anchor.y}%`,
+                    "--anchor-x": `${anchorPosition.x.toFixed(2)}%`,
+                    "--anchor-y": `${anchorPosition.y.toFixed(2)}%`,
                     "--card-x": `${card.x}%`,
                     "--card-y": `${card.y}%`,
                     "--story-color": painPoint.resolvedBy ? LEVER_META[painPoint.resolvedBy].color : "#ff716d",
                   } as SceneStyle}
                 >
-                  <span className={`cutaway-anchor ${resolved ? "is-resolved" : ""}`} aria-hidden="true"><i /></span>
+                  <span className={`cutaway-anchor ${resolved ? "is-resolved" : ""}`} data-state={visualState} aria-hidden="true"><i /></span>
                   <PainPointCard
                     painPoint={painPoint}
                     active={painPoint.id === activePainPointId}
-                    resolved={resolved}
-                    materializing={materializing}
+                    visualState={visualState}
                     onSelect={onPainPointSelect}
                   />
                 </div>
@@ -458,14 +519,16 @@ export function HospitalCutaway({
           </div>
         </div>
 
-        <div className="cutaway-mobile-focus" aria-hidden="true"><span>{constraintLabel}</span><strong>{constraint.shortName}</strong></div>
+        <div className="cutaway-mobile-focus" data-state={focusVisualState} aria-hidden="true"><span>{focusLabel ?? constraintLabel}</span><strong>{constraint.shortName}</strong></div>
       </div>
 
       <section className="cutaway-flow-dashboard" aria-label="Patient flow dashboard">
         <header className="cutaway-flow-dashboard-header">
           <div>
             <span className="cutaway-flow-kicker"><i aria-hidden="true" /> Patient flow</span>
-            <strong>{simulation.completed} of {simulation.episodes} episodes completed</strong>
+            <strong aria-label={`${simulation.completed} of ${simulation.episodes} episodes completed`}>
+              {simulation.completed} / {simulation.episodes}
+            </strong>
             {throughputDelta !== undefined ? (
               <small className={deltaClass(throughputDelta, true)}>
                 {throughputDelta === 0 ? "Baseline" : `${throughputDelta > 0 ? "+" : ""}${throughputDelta} vs baseline`}
@@ -491,22 +554,22 @@ export function HospitalCutaway({
 
         <dl className="cutaway-flow-metrics">
           <div>
-            <dt>Flow yield</dt>
+            <dt>Patients fully served</dt>
             <dd>{flowYield}%</dd>
             <small className={deltaClass(flowYieldDelta, true)}>{describeYieldDelta(flowYieldDelta)}</small>
           </div>
           <div>
-            <dt>Median journey</dt>
-            <dd>{simulation.medianJourneyDays}d</dd>
+            <dt>Arrival to home</dt>
+            <dd>{simulation.medianJourneyDays} {simulation.medianJourneyDays === 1 ? "day" : "days"}</dd>
             <small className={deltaClass(journeyDelta, false)}>{describeJourneyDelta(journeyDelta)}</small>
           </div>
           <div>
-            <dt>Peak queue</dt>
+            <dt>Waiting at once</dt>
             <dd>{constraint.peakQueue}</dd>
             <small>{constraint.shortName} stage</small>
           </div>
           <div>
-            <dt>Admin touches</dt>
+            <dt>Handoffs per patient</dt>
             <dd>{simulation.administrativeTouches}</dd>
             <small className={deltaClass(touchesDelta, false)}>{describeTouchesDelta(touchesDelta)}</small>
           </div>
@@ -519,8 +582,7 @@ export function HospitalCutaway({
             key={painPoint.id}
             painPoint={painPoint}
             active={painPoint.id === activePainPointId}
-            resolved={Boolean(painPoint.resolvedBy && activeSet.has(painPoint.resolvedBy))}
-            materializing={painPoint.resolvedBy === materializingLever}
+            visualState={visualStateById.get(painPoint.id) ?? "pressure"}
             onSelect={onPainPointSelect}
           />
         ))}
@@ -530,8 +592,11 @@ export function HospitalCutaway({
         A moving cutaway view of a regional medical center shows the parking and valet approach, patient arrivals,
         an ambulance entering emergency care, diagnostic imaging, robotic operating rooms, inpatient beds,
         caregivers, patients, and discharge flow. The current simulation has {simulation.completed} completed
-        episodes, a median journey of {simulation.medianJourneyDays} days, and {simulation.administrativeTouches}
-        administrative touches per episode. The current constraint is {constraint.name}. Active AI levers are
+        episodes, a median journey of {simulation.medianJourneyDays} days from arrival to home, and {simulation.administrativeTouches}{" "}
+        staff handoffs per patient. The dashboard focus is {constraint.name}; the modeled system constraint is{" "}
+        {simulation.stageResults[simulation.constraint].name}.
+        {primaryPainPoint ? ` The foreground ${focusVisualState} is: ${primaryPainPoint.title} ${primaryPainPoint.detail}` : ""}{" "}
+        Active AI levers are
         {activeNames.length ? ` ${activeNames.join(", ")}.` : " none."} Motion is illustrative; performance is
         communicated by the simulation metrics and queue callouts, not animation speed.
       </p>

@@ -11,6 +11,7 @@ const VIEW_ORDER: View[] = ["thesis", "levers", "case", "model", "portfolio", "t
 
 const loadPortfolioView = () => import("@/components/PortfolioView");
 const loadTelesurgeryMap = () => import("@/components/TelesurgeryMap");
+const loadHospital3D = () => import("@/components/hospital-3d/CutawayScene3D");
 
 const PortfolioView = lazy(() =>
   loadPortfolioView().then((module) => ({ default: module.PortfolioView })),
@@ -51,7 +52,7 @@ export default function App() {
 
   useEffect(() => {
     const preloadPresenterChapters = () => {
-      void Promise.allSettled([loadPortfolioView(), loadTelesurgeryMap()]);
+      void Promise.allSettled([loadPortfolioView(), loadTelesurgeryMap(), loadHospital3D()]);
     };
     const idleApi = window as unknown as {
       requestIdleCallback?: typeof window.requestIdleCallback;
@@ -85,7 +86,7 @@ export default function App() {
   }, [view]);
 
   return (
-    <div className="min-h-full bg-[var(--color-canvas)] text-[var(--color-ink)]">
+    <div className="min-h-full bg-[var(--color-night)] text-white">
       <Header view={view} onNavigate={navigate} />
 
       <main ref={mainRef} tabIndex={-1} className="focus:outline-none">
@@ -115,7 +116,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className="border-t border-[var(--color-line)] bg-white/70 px-5 py-5 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
+      <footer className="border-t border-white/10 bg-white/[0.04] px-5 py-5 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-white/50">
         AI Transforming Hospital Operations · Society of Robotic Surgery · July 2026 · Use arrow keys to move between chapters
       </footer>
     </div>

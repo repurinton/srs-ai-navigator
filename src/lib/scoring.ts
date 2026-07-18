@@ -67,7 +67,7 @@ export interface Recommendation {
 }
 
 export function recommendation(score: number): Recommendation {
-  if (score >= 2.8) return { label: "Adopt Now", color: "#2e9e6b" };
+  if (score >= 2.8) return { label: "Adopt Now", color: "#43c98d" };
   if (score >= 2.0) return { label: "Pilot & Scale", color: "#f2a33c" };
-  return { label: "Watch & Partner", color: "#7c5cff" };
+  return { label: "Watch & Partner", color: "#9d85ff" };
 }

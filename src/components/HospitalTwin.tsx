@@ -1,61 +1,46 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { HospitalCutaway, type HospitalPainPoint } from "@/components/HospitalCutaway";
+import {
+  HospitalCutaway,
+  type CutawayAnchor,
+  type HospitalCalloutVisualState,
+  type HospitalPainPoint,
+} from "@/components/HospitalCutaway";
 import {
   LEVER_META,
   LEVER_SEQUENCE,
   SIMULATION_EPISODES,
   SIMULATION_HORIZON_DAYS,
+  scenarioSignature,
   simulateHospital,
   type LeverId,
   type SimulationResult,
   type StageId,
 } from "@/lib/hospital-sim";
 import {
+  HOSPITAL_STORYBOARD,
+  hospitalPressureLabel,
+  type HospitalPressureId,
+  type HospitalStoryCycle,
+  type HospitalStoryPressure,
+} from "@/lib/hospital-storyboard";
+import { humanPressureValue, humanReceipt } from "@/lib/metric-language";
+import {
   HOSPITAL_STORY_DWELL_MS,
+  HOSPITAL_STORY_STATES,
   INITIAL_HOSPITAL_STORY,
   advanceHospitalStory,
+  currentHospitalStoryCycle,
+  currentHospitalStoryPressure,
+  hospitalStoryStateIndex,
   isHospitalStoryComplete,
-  nextHospitalStoryLever,
+  materializingHospitalStoryLever,
+  retreatHospitalStory,
   type HospitalStoryBeat,
+  type HospitalStoryState,
 } from "@/lib/hospital-story";
 
-const MOMENTS = [
-  {
-    title: "Queues are not isolated. They are coupled.",
-    copy: "The baseline hospital has enough technology. It loses time where demand, readiness, capacity, and follow-up change hands.",
-  },
-  {
-    title: "Access clears. Diagnosis inherits the pressure.",
-    copy: "The digital front door resolves intake exceptions sooner. More demand reaches the next constrained service instead of disappearing.",
-  },
-  {
-    title: "Routing improves. Readiness becomes visible.",
-    copy: "Clinical pathway intelligence reduces misrouting. The constraint moves into pre-op coordination and continuity.",
-  },
-  {
-    title: "Precision adds work upstream—and prevents revision downstream.",
-    copy: "This lever is not a pure speed play. Eligible patients receive more targeted planning so fewer plans have to be rebuilt later.",
-  },
-  {
-    title: "The robot accelerates. The hospital does not—yet.",
-    copy: "Turnover capacity is released locally, but recovery and longitudinal queues absorb the gain. Capital alone cannot close the loop.",
-  },
-  {
-    title: "Discharge clears. Handoffs remain the system tax.",
-    copy: "Longitudinal ownership releases flow beyond the procedure. Duplicate coordination still limits how fast the whole network can move.",
-  },
-  {
-    title: "The constraint did not disappear. It became investable.",
-    copy: "AI removed coordination friction. Staffed recovery capacity—not fragmented work—is now the explicit investment decision.",
-  },
-] as const;
-
-function isSequencePrefix(active: LeverId[]) {
-  return active.every((lever, index) => LEVER_SEQUENCE[index] === lever);
-}
-
-const SCENE_ANCHORS: Record<StageId, HospitalPainPoint["anchor"]> = {
+const STAGE_ANCHORS: Record<StageId, CutawayAnchor> = {
   access: { x: 42, y: 65 },
   diagnosis: { x: 36, y: 20 },
   precision: { x: 56, y: 22 },
@@ -65,376 +50,261 @@ const SCENE_ANCHORS: Record<StageId, HospitalPainPoint["anchor"]> = {
   longitudinal: { x: 88, y: 70 },
 };
 
-const SCENE_CALLOUTS: Record<StageId, HospitalPainPoint["anchor"]> = {
-  access: { x: 5, y: 69 },
+const STAGE_CALLOUTS: Record<StageId, CutawayAnchor> = {
+  access: { x: 5, y: 40 },
   diagnosis: { x: 4, y: 5 },
   precision: { x: 62, y: 4 },
   readiness: { x: 3, y: 30 },
-  robotics: { x: 58, y: 47 },
-  care: { x: 76, y: 26 },
-  longitudinal: { x: 70, y: 69 },
+  robotics: { x: 58, y: 39 },
+  care: { x: 66, y: 26 },
+  longitudinal: { x: 61, y: 38 },
 };
 
-const LEVER_RESOLUTIONS: Record<LeverId, Omit<HospitalPainPoint, "id" | "value">> = {
-  "front-door": {
-    title: "Context arrives before the patient",
-    detail: "Identity, intent, and prerequisites move with the arrival instead of being entered again.",
-    resolvedLabel: "Access friction cleared",
-    stage: "access",
-    severity: "pressure",
-    anchor: SCENE_ANCHORS.access,
-    callout: SCENE_CALLOUTS.access,
-    resolvedBy: "front-door",
+const PRESSURE_VISUALS: Record<HospitalPressureId, { anchor: CutawayAnchor; callout: CutawayAnchor }> = {
+  "access-friction": { anchor: STAGE_ANCHORS.access, callout: STAGE_CALLOUTS.access },
+  "diagnosis-constraint": { anchor: STAGE_ANCHORS.diagnosis, callout: STAGE_CALLOUTS.diagnosis },
+  "readiness-constraint": { anchor: STAGE_ANCHORS.readiness, callout: STAGE_CALLOUTS.readiness },
+  "or-capacity-constraint": { anchor: STAGE_ANCHORS.robotics, callout: STAGE_CALLOUTS.robotics },
+  "discharge-continuity-constraint": {
+    anchor: STAGE_ANCHORS.longitudinal,
+    callout: STAGE_CALLOUTS.longitudinal,
   },
-  diagnosis: {
-    title: "Right pathway, first time",
-    detail: "Clinical pathway intelligence removes avoidable routing resets around imaging and work-up.",
-    resolvedLabel: "Diagnosis cleared",
-    stage: "diagnosis",
-    severity: "pressure",
-    anchor: SCENE_ANCHORS.diagnosis,
-    callout: SCENE_CALLOUTS.diagnosis,
-    resolvedBy: "diagnosis",
-  },
-  precision: {
-    title: "Target earlier. Revise less.",
-    detail: "Eligible patients spend more time planning upstream so fewer treatment plans are rebuilt later.",
-    resolvedLabel: "Planning stabilized",
-    stage: "precision",
-    severity: "watch",
-    anchor: SCENE_ANCHORS.precision,
-    callout: SCENE_CALLOUTS.precision,
-    resolvedBy: "precision",
-  },
-  robotics: {
-    title: "Local OR capacity released",
-    detail: "Turnover and readiness improve, but the gain transfers pressure into recovery and beds.",
-    resolvedLabel: "OR capacity released",
-    stage: "robotics",
-    severity: "watch",
-    anchor: SCENE_ANCHORS.robotics,
-    callout: SCENE_CALLOUTS.robotics,
-    resolvedBy: "robotics",
-  },
-  longitudinal: {
-    title: "The next care step is already owned",
-    detail: "Discharge and follow-up begin before the bed decision instead of after the patient leaves.",
-    resolvedLabel: "Discharge path cleared",
-    stage: "longitudinal",
-    severity: "pressure",
-    anchor: SCENE_ANCHORS.longitudinal,
-    callout: SCENE_CALLOUTS.longitudinal,
-    resolvedBy: "longitudinal",
-  },
-  automation: {
-    title: "Agents execute. Humans govern.",
-    detail: "Routine handoffs move across the campus while consequential decisions stop at named approvals.",
-    resolvedLabel: "Handoffs cleared",
-    severity: "watch",
-    anchor: { x: 77, y: 18 },
-    callout: { x: 62, y: 3 },
-    resolvedBy: "automation",
-  },
+  "administrative-handoffs": { anchor: { x: 77, y: 18 }, callout: { x: 62, y: 3 } },
+  "recovery-capacity-constraint": { anchor: STAGE_ANCHORS.care, callout: STAGE_CALLOUTS.care },
 };
 
-type LeverStory = {
-  painTitle: string;
-  painDetail: string;
-  materializeTitle: string;
-  materializeDetail: string;
-  stage?: StageId;
-  anchor: HospitalPainPoint["anchor"];
-  callout: HospitalPainPoint["anchor"];
+type HospitalSceneModel = {
+  pressure: HospitalStoryPressure;
+  simulation: SimulationResult;
+  callout: HospitalPainPoint;
+  focusStage: StageId;
+  focusAnchor: CutawayAnchor;
+  dashboardLabel: string;
+  materializingLever?: LeverId;
 };
 
-const LEVER_STORIES: Record<LeverId, LeverStory> = {
-  "front-door": {
-    painTitle: "Every arrival starts over.",
-    painDetail: "Parking, valet, registration, and clinical intake each ask for context the system already has.",
-    materializeTitle: "Capture context once. Carry it forward.",
-    materializeDetail: "Voice, chat, text, scheduling, identity, and prerequisites become one persistent access thread.",
-    stage: "access",
-    anchor: SCENE_ANCHORS.access,
-    callout: SCENE_CALLOUTS.access,
-  },
-  diagnosis: {
-    painTitle: "Diagnosis absorbs the released demand.",
-    painDetail: "More eligible patients now reach imaging and work-up, making routing errors and incomplete prerequisites impossible to hide.",
-    materializeTitle: "Route correctly the first time.",
-    materializeDetail: "Pathway intelligence combines history, imaging, and readiness signals before the next handoff.",
-    stage: "diagnosis",
-    anchor: SCENE_ANCHORS.diagnosis,
-    callout: SCENE_CALLOUTS.diagnosis,
-  },
-  precision: {
-    painTitle: "The plan changes late.",
-    painDetail: "Targeted clinical context arrives after major decisions, forcing avoidable revisions downstream.",
-    materializeTitle: "Match the work-up before the procedure.",
-    materializeDetail: "Genomic and clinical context shifts targeted planning upstream, before the treatment plan hardens.",
-    stage: "precision",
-    anchor: SCENE_ANCHORS.precision,
-    callout: SCENE_CALLOUTS.precision,
-  },
-  robotics: {
-    painTitle: "Turnover consumes OR capacity.",
-    painDetail: "The robot can move faster than room readiness, instrument flow, recovery, and the surrounding operating model.",
-    materializeTitle: "Shorten cycle time. Preserve surgical judgment.",
-    materializeDetail: "Robotic workflows coordinate room readiness and turnover while clinical control stays with the team.",
-    stage: "robotics",
-    anchor: SCENE_ANCHORS.robotics,
-    callout: SCENE_CALLOUTS.robotics,
-  },
-  longitudinal: {
-    painTitle: "A discharge is nobody's workflow.",
-    painDetail: "Follow-up, navigation, and escalation begin after the bed decision—without one owner across the journey.",
-    materializeTitle: "Assign the next care step before discharge.",
-    materializeDetail: "Follow-up, navigation, and escalation receive named ownership before the patient leaves.",
-    stage: "longitudinal",
-    anchor: SCENE_ANCHORS.longitudinal,
-    callout: SCENE_CALLOUTS.longitudinal,
-  },
-  automation: {
-    painTitle: "Every handoff creates another task.",
-    painDetail: "Even after clinical flow improves, duplicate coordination keeps humans carrying routine work between systems.",
-    materializeTitle: "Agents execute. Humans govern.",
-    materializeDetail: "Agents move routine work across the campus while consequential decisions stop at named approvals.",
-    anchor: { x: 77, y: 18 },
-    callout: { x: 62, y: 3 },
-  },
-};
-
-const CONSTRAINT_TITLES: Record<StageId, string> = {
-  access: "Arrival repeats itself",
-  diagnosis: "The scanner is not the bottleneck",
-  precision: "The plan changes late",
-  readiness: "Readiness is the invisible queue",
-  robotics: "The robot waits for the hospital",
-  care: "Recovery has become the limiting capacity",
-  longitudinal: "A discharge is nobody's workflow",
-};
-
-function describeConstraintTransition(
-  activeLevers: LeverId[],
-  current: SimulationResult,
-  previous?: SimulationResult,
-) {
-  if (activeLevers.length === 0 || !previous) return "Starting constraint";
-  if (previous.constraint !== current.constraint) return "New constraint";
-
-  const previousPeak = previous.stageResults[previous.constraint].peakQueue;
-  const currentPeak = current.stageResults[current.constraint].peakQueue;
-  return currentPeak > previousPeak ? "Constraint intensifies" : "Constraint persists";
+function pressureVisualState(pressure: HospitalStoryPressure): HospitalCalloutVisualState {
+  return pressure.kind === "system-constraint" || pressure.kind === "investment-constraint"
+    ? "constraint"
+    : "pressure";
 }
 
-function buildCurrentConstraint(
-  activeLevers: LeverId[],
-  current: SimulationResult,
-  constraintLabel: string,
-): HospitalPainPoint {
-  const constraint = current.stageResults[current.constraint];
-  const diagnosisIntensified = current.constraint === "diagnosis" && constraintLabel === "Constraint intensifies";
+function buildSceneModel(
+  story: HospitalStoryState,
+  cycle: HospitalStoryCycle,
+  before: SimulationResult,
+  after: SimulationResult,
+): HospitalSceneModel {
+  const beat = story.beat;
+  const pressure = currentHospitalStoryPressure(story) ?? cycle.pressure;
+  const visual = PRESSURE_VISUALS[pressure.id];
+  const simulation = beat === "surface" || beat === "materialize" ? before : after;
+  const focusStage = pressure.stage ?? simulation.constraint;
+
+  if (beat === "materialize") {
+    return {
+      pressure,
+      simulation,
+      focusStage,
+      focusAnchor: visual.anchor,
+      dashboardLabel: hospitalPressureLabel(pressure),
+      materializingLever: cycle.lever,
+      callout: {
+        id: `${cycle.lever}:solution`,
+        title: cycle.intervention.title,
+        detail: cycle.intervention.detail,
+        kicker: `AI response · ${LEVER_META[cycle.lever].name}`,
+        value: `Responding to: ${cycle.pressure.title}`,
+        stage: pressure.stage,
+        severity: "watch",
+        anchor: visual.anchor,
+        callout: visual.callout,
+        resolvedBy: cycle.lever,
+        visualState: "solution",
+      },
+    };
+  }
+
+  if (beat === "resolve") {
+    return {
+      pressure,
+      simulation,
+      focusStage,
+      focusAnchor: visual.anchor,
+      dashboardLabel: cycle.resolution.receipt,
+      callout: {
+        id: `${cycle.lever}:resolved`,
+        title: cycle.resolution.title,
+        detail: cycle.resolution.detail,
+        kicker: cycle.resolution.kicker,
+        resolvedLabel: cycle.resolution.receipt,
+        value: humanReceipt(cycle.resolution.metric, before, after),
+        stage: pressure.stage,
+        severity: "watch",
+        anchor: visual.anchor,
+        callout: visual.callout,
+        resolvedBy: cycle.lever,
+        visualState: "resolved",
+      },
+    };
+  }
+
+  const state = pressureVisualState(pressure);
   return {
-    id: `constraint-${activeLevers.length}-${current.constraint}`,
-    title: diagnosisIntensified ? "Diagnosis absorbs the released demand" : CONSTRAINT_TITLES[current.constraint],
-    detail:
-      diagnosisIntensified
-        ? "The digital front door clears access, releasing more eligible demand into diagnosis. The bottleneck is now explicit—and larger."
-        : current.constraint === "care"
-        ? "Coordination is no longer limiting flow. Staffed recovery capacity is now the investment decision."
-        : `${constraint.name} now absorbs the demand released upstream. The constraint moved; it did not disappear.`,
-    kicker: constraintLabel,
-    stage: current.constraint,
-    value: `${constraint.peakQueue} peak queue · ${Math.round(constraint.averageWaitHours)}h average wait`,
-    severity: "critical",
-    anchor: SCENE_ANCHORS[current.constraint],
-    callout: SCENE_CALLOUTS[current.constraint],
-  };
-}
-
-function buildLeverStoryPoint(
-  lever: LeverId,
-  current: SimulationResult,
-  beat: Extract<HospitalStoryBeat, "surface" | "materialize">,
-): HospitalPainPoint {
-  const story = LEVER_STORIES[lever];
-  const stage = story.stage ? current.stageResults[story.stage] : undefined;
-  const isConstraint = story.stage === current.constraint;
-  const materializing = beat === "materialize";
-
-  return {
-    id: `story-${lever}`,
-    title: materializing ? story.materializeTitle : story.painTitle,
-    detail: materializing ? story.materializeDetail : story.painDetail,
-    kicker: materializing
-      ? "AI response materializing"
-      : isConstraint
-        ? "Constraint surfaces"
-        : "Pain point surfaces",
-    stage: story.stage,
-    value: materializing
-      ? "Connecting into the operating model"
-      : stage
-        ? `${stage.peakQueue} peak queue · ${Math.round(stage.averageWaitHours)}h average wait`
-        : `${current.administrativeTouches} administrative touches`,
-    severity: materializing ? "watch" : isConstraint ? "critical" : "pressure",
-    anchor: story.anchor,
-    callout: story.callout,
-    resolvedBy: lever,
-  };
-}
-
-function buildScenePainPoints(
-  activeLevers: LeverId[],
-  current: SimulationResult,
-  constraintLabel: string,
-  beat: HospitalStoryBeat,
-  nextLever: LeverId | undefined,
-  guidedState: boolean,
-): HospitalPainPoint[] {
-  const currentConstraint = buildCurrentConstraint(activeLevers, current, constraintLabel);
-
-  if (!guidedState) return [currentConstraint];
-  if (beat === "surface" && nextLever) return [buildLeverStoryPoint(nextLever, current, "surface")];
-  if (beat === "materialize" && nextLever) return [buildLeverStoryPoint(nextLever, current, "materialize")];
-
-  const latestLever = activeLevers.at(-1);
-  if (!latestLever) return [currentConstraint];
-
-  const resolution = LEVER_RESOLUTIONS[latestLever];
-  const stage = resolution.stage ? current.stageResults[resolution.stage] : undefined;
-  return [
-    {
-      ...resolution,
-      id: `story-${latestLever}`,
-      value:
-        latestLever === "diagnosis"
-          ? "No longer the system constraint"
-          : stage
-            ? `${stage.peakQueue} peak queue after intervention`
-            : `${current.administrativeTouches} touches per episode`,
+    pressure,
+    simulation,
+    focusStage,
+    focusAnchor: visual.anchor,
+    dashboardLabel: hospitalPressureLabel(pressure),
+    callout: {
+      id: `${pressure.id}:${beat}`,
+      title: pressure.title,
+      detail: pressure.detail,
+      kicker: pressure.label,
+      value: humanPressureValue(pressure, simulation),
+      stage: pressure.stage,
+      severity: state === "constraint" ? "critical" : "pressure",
+      anchor: visual.anchor,
+      callout: visual.callout,
+      visualState: state,
     },
-    currentConstraint,
-  ];
+  };
+}
+
+function cloneCanonicalState(index: number): HospitalStoryState {
+  const state = HOSPITAL_STORY_STATES[index] ?? HOSPITAL_STORY_STATES[0];
+  return { ...state, activeLevers: [...state.activeLevers] };
 }
 
 export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
-  const [story, setStory] = useState(INITIAL_HOSPITAL_STORY);
+  const [story, setStory] = useState<HospitalStoryState>(INITIAL_HOSPITAL_STORY);
   const [isPlaying, setIsPlaying] = useState(false);
-  const activeLevers = story.activeLevers;
-  const storyBeat = story.beat;
+  const [isStageMode, setIsStageMode] = useState(false);
+  const interactionLockUntil = useRef(0);
   const baseline = useMemo(() => simulateHospital([]), []);
-  const current = useMemo(() => simulateHospital(activeLevers), [activeLevers]);
-  const previous = useMemo(
-    () => (activeLevers.length ? simulateHospital(activeLevers.slice(0, -1)) : undefined),
-    [activeLevers],
+  const cycle = currentHospitalStoryCycle(story) ?? HOSPITAL_STORYBOARD[0];
+  const cycleIndex = HOSPITAL_STORYBOARD.indexOf(cycle);
+  const before = useMemo(
+    () => simulateHospital(LEVER_SEQUENCE.slice(0, Math.max(0, cycleIndex))),
+    [cycleIndex],
   );
-  const activeSet = useMemo(() => new Set(activeLevers), [activeLevers]);
-  const transitionLabel = useMemo(
-    () => describeConstraintTransition(activeLevers, current, previous),
-    [activeLevers, current, previous],
+  const after = useMemo(
+    () => simulateHospital(LEVER_SEQUENCE.slice(0, Math.max(0, cycleIndex) + 1)),
+    [cycleIndex],
   );
-  const guidedState = isSequencePrefix(activeLevers);
-  const nextLever = guidedState ? nextHospitalStoryLever(story) : undefined;
-  const materializingLever = storyBeat === "materialize" ? nextLever : undefined;
+  const scene = useMemo(() => buildSceneModel(story, cycle, before, after), [after, before, cycle, story]);
+  const stateIndex = hospitalStoryStateIndex(story);
   const storyComplete = isHospitalStoryComplete(story);
-  const constraintLabel = storyBeat === "reveal"
-    ? transitionLabel
-    : activeLevers.length === 0
-      ? "Starting constraint"
-      : "System constraint";
-  const nextLeverStory = nextLever ? LEVER_STORIES[nextLever] : undefined;
-  const beatLabel = !guidedState
-    ? "Manual scenario"
-    : storyBeat === "surface"
-      ? nextLeverStory?.stage === current.constraint
-        ? "01 · Constraint surfaces"
-        : "01 · Pain point surfaces"
-      : storyBeat === "materialize"
-        ? "02 · AI materializes"
-        : "03 · Operating impact";
-  const moment = !guidedState
-    ? {
-        title: `${activeLevers.length} levers are active. The constraint is ${current.stageResults[current.constraint].name.toLowerCase()}.`,
-        copy: "Manual combinations use the same deterministic demand trace. Reset or run the guided sequence to see the intended transformation story.",
-      }
-    : storyBeat === "surface" && nextLeverStory
-      ? { title: nextLeverStory.painTitle, copy: nextLeverStory.painDetail }
-      : storyBeat === "materialize" && nextLeverStory
-        ? { title: nextLeverStory.materializeTitle, copy: nextLeverStory.materializeDetail }
-        : MOMENTS[activeLevers.length] ?? MOMENTS[0];
-  const scenePainPoints = useMemo(
-    () => buildScenePainPoints(activeLevers, current, constraintLabel, storyBeat, nextLever, guidedState),
-    [activeLevers, constraintLabel, current, guidedState, nextLever, storyBeat],
-  );
-  const activePainPointId = storyBeat === "reveal"
-    ? scenePainPoints.find((painPoint) => !painPoint.resolvedBy)?.id
-    : scenePainPoints[0]?.id;
+  const activeLevers = story.activeLevers;
+  const activeSet = useMemo(() => new Set(activeLevers), [activeLevers]);
+  const materializingLever = materializingHospitalStoryLever(story);
+  const nextCycle = story.beat === "reveal" ? HOSPITAL_STORYBOARD[cycleIndex + 1] : undefined;
+  const railFocusLever = nextCycle?.lever ?? cycle.lever;
+  const evidenceAligned = story.beat === "resolve"
+    || scene.pressure.evidenceBasis !== "simulation-constraint"
+    || scene.pressure.stage === scene.simulation.constraint;
 
   useEffect(() => {
     if (!isPlaying) return;
-    if (!guidedState || storyComplete) {
-      setIsPlaying(false);
-      return;
-    }
 
     const handle = window.setTimeout(() => {
-      setStory((currentStory) => advanceHospitalStory(currentStory));
-    }, HOSPITAL_STORY_DWELL_MS[storyBeat]);
+      if (storyComplete) {
+        setIsPlaying(false);
+      } else {
+        setStory((current) => advanceHospitalStory(current));
+      }
+    }, HOSPITAL_STORY_DWELL_MS[story.beat]);
     return () => window.clearTimeout(handle);
-  }, [guidedState, isPlaying, storyBeat, storyComplete]);
+  }, [isPlaying, story.beat, storyComplete]);
+
+  useEffect(() => {
+    document.body.classList.toggle("hospital-stage-mode", isStageMode);
+    if (isStageMode) window.scrollTo({ top: 0, behavior: "instant" });
+    return () => document.body.classList.remove("hospital-stage-mode");
+  }, [isStageMode]);
+
+  function guardInteraction(action: () => void) {
+    const now = performance.now();
+    if (now < interactionLockUntil.current) return;
+    interactionLockUntil.current = now + 420;
+    action();
+  }
 
   function toggleGuidedRun() {
     if (isPlaying) {
       setIsPlaying(false);
       return;
     }
-    if (!guidedState || activeLevers.length === LEVER_SEQUENCE.length) {
-      setStory({ ...INITIAL_HOSPITAL_STORY, activeLevers: [] });
-    }
+    if (storyComplete) setStory(cloneCanonicalState(0));
     setIsPlaying(true);
   }
 
   function stepForward() {
-    setIsPlaying(false);
-    if (!guidedState) {
-      setStory({ ...INITIAL_HOSPITAL_STORY, activeLevers: [] });
-      return;
-    }
-    setStory((currentStory) => advanceHospitalStory(currentStory));
+    guardInteraction(() => {
+      setIsPlaying(false);
+      setStory((current) => advanceHospitalStory(current));
+    });
   }
 
-  function toggleLever(lever: LeverId) {
-    setIsPlaying(false);
-    const next = new Set(activeLevers);
-    if (next.has(lever)) next.delete(lever);
-    else next.add(lever);
-    setStory({
-      activeLevers: LEVER_SEQUENCE.filter((candidate) => next.has(candidate)),
-      beat: "surface",
+  function stepBack() {
+    guardInteraction(() => {
+      setIsPlaying(false);
+      setStory((current) => retreatHospitalStory(current));
     });
+  }
+
+  function replayCycle() {
+    setIsPlaying(false);
+    const replayIndex = cycleIndex <= 0 ? 0 : cycleIndex * 3;
+    setStory(cloneCanonicalState(replayIndex));
+  }
+
+  function jumpToLever(lever: LeverId) {
+    setIsPlaying(false);
+    const targetCycle = HOSPITAL_STORYBOARD.findIndex((candidate) => candidate.lever === lever);
+    const targetIndex = targetCycle <= 0 ? 0 : targetCycle * 3;
+    setStory(cloneCanonicalState(targetIndex));
   }
 
   function reset() {
     setIsPlaying(false);
-    setStory({ ...INITIAL_HOSPITAL_STORY, activeLevers: [] });
+    setStory(cloneCanonicalState(0));
   }
 
-  const stepButtonLabel = !guidedState
-    ? "Restart guided story →"
-    : storyBeat === "surface"
-      ? "Materialize AI response →"
-      : storyBeat === "materialize"
-        ? "Show operating impact →"
+  const beatLabel: Record<HospitalStoryBeat, string> = {
+    surface: "01 · The problem",
+    materialize: "02 · The AI response",
+    resolve: "03 · The result",
+    reveal: "04 · What it uncovers next",
+  };
+
+  const moment = story.beat === "materialize"
+    ? { title: cycle.intervention.title, copy: cycle.intervention.detail }
+    : story.beat === "resolve"
+      ? { title: cycle.resolution.title, copy: cycle.resolution.detail }
+      : { title: scene.pressure.title, copy: scene.pressure.detail };
+
+  const stepButtonLabel = story.beat === "surface"
+    ? `Deploy ${LEVER_META[cycle.lever].name} →`
+    : story.beat === "materialize"
+      ? "Apply operating change →"
+      : story.beat === "resolve"
+        ? "Reveal next constraint →"
         : storyComplete
           ? "Story complete"
-          : "Surface next pressure →";
+          : `Deploy ${LEVER_META[nextCycle?.lever ?? cycle.lever].name} →`;
 
   return (
     <section
       className="twin-shell bg-[var(--color-night)] text-white"
-      data-story-beat={storyBeat}
-      data-story-index={activeLevers.length}
-      data-story-lever={materializingLever ?? (storyBeat === "reveal" ? activeLevers.at(-1) : nextLever) ?? "complete"}
+      data-story-beat={story.beat}
+      data-story-index={stateIndex}
+      data-story-state-id={story.stateId}
+      data-story-cycle={cycle.id}
+      data-story-pressure={scene.pressure.id}
+      data-story-evidence-aligned={evidenceAligned ? "true" : "false"}
+      data-story-simulation={scenarioSignature(scene.simulation)}
+      data-story-lever={materializingLever ?? railFocusLever}
     >
       <div className="mx-auto max-w-[1440px] px-5 pb-20 pt-2 sm:px-8 lg:px-12 lg:pb-24 lg:pt-2">
         <div className="twin-command-deck mx-auto max-w-[1240px]">
@@ -447,52 +317,73 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
               Watch the constraint move.
             </h1>
           </div>
+
           <div className="twin-command-actions">
             <div className="flex flex-wrap items-center gap-2" aria-label="Simulation controls">
-              <button type="button" className="button-primary" onClick={toggleGuidedRun}>
-                {isPlaying
-                  ? "Pause guided demo"
-                  : activeLevers.length === LEVER_SEQUENCE.length
-                    ? "Replay guided demo"
-                    : guidedState && (activeLevers.length > 0 || storyBeat !== "surface")
-                      ? "Continue guided demo"
-                      : "Run guided demo"}
+              <button type="button" className="button-primary" data-testid="story-play" onClick={toggleGuidedRun}>
+                {isPlaying ? "Pause guided demo" : storyComplete ? "Replay guided demo" : "Run guided demo"}
               </button>
               <button
                 type="button"
                 className="button-small-ghost"
+                data-testid="story-back"
+                onClick={stepBack}
+                disabled={stateIndex <= 0}
+                aria-label="Go back one story beat"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                className="button-small-ghost"
+                data-testid="story-next"
                 onClick={stepForward}
                 disabled={storyComplete}
+                aria-label={stepButtonLabel.replace(/→/u, "").trim()}
               >
-                {stepButtonLabel}
+                <span className="story-next-label-wide">{stepButtonLabel}</span>
+                <span className="story-next-label-compact" aria-hidden="true">Next beat →</span>
+              </button>
+              <button type="button" className="button-small-ghost" data-testid="story-replay" onClick={replayCycle}>
+                Replay cycle
               </button>
               <button
                 type="button"
                 className="button-small-ghost"
-                onClick={reset}
-                disabled={activeLevers.length === 0 && storyBeat === "surface"}
+                data-testid="story-stage-mode"
+                onClick={() => setIsStageMode((current) => !current)}
+                aria-pressed={isStageMode}
               >
-                Reset baseline
+                {isStageMode ? "Exit stage" : "Stage view"}
+              </button>
+              <button type="button" className="button-small-ghost" data-testid="story-reset" onClick={reset} disabled={stateIndex <= 0}>
+                Reset
               </button>
             </div>
-            <div className="twin-step-count" aria-label={`${activeLevers.length} of 6 levers materialized. ${beatLabel}.`}>
-              <strong>{String(activeLevers.length).padStart(2, "0")}</strong>
-              <span>/ 06 levers live</span>
-              <em>{beatLabel.replace(/^\d+ · /, "")}</em>
+
+            <div className="twin-step-count" aria-label={`Story state ${stateIndex + 1} of 19. ${beatLabel[story.beat]}.`}>
+              <strong>{String(stateIndex + 1).padStart(2, "0")}</strong>
+              <span>/ 19 states</span>
+              <em>{beatLabel[story.beat].replace(/^\d+ · /, "")}</em>
             </div>
           </div>
         </div>
 
         <HospitalCutaway
-          simulation={current}
+          simulation={scene.simulation}
           baseline={baseline}
           activeLevers={activeLevers}
           isPlaying={isPlaying}
-          painPoints={scenePainPoints}
-          activePainPointId={activePainPointId}
-          constraintLabel={constraintLabel}
-          materializingLever={materializingLever}
-          storyBeat={storyBeat}
+          painPoints={[scene.callout]}
+          activePainPointId={scene.callout.id}
+          constraintLabel={scene.dashboardLabel}
+          materializingLever={scene.materializingLever}
+          storyBeat={story.beat}
+          focusStage={scene.focusStage}
+          focusAnchor={scene.focusAnchor}
+          cameraTarget={scene.focusAnchor}
+          dashboardStage={scene.focusStage}
+          focusLabel={story.beat === "materialize" ? "AI response" : story.beat === "resolve" ? "Operating impact" : scene.dashboardLabel}
           className="cutaway-embedded mt-2"
           title="Animated hospital and medical-center cutaway"
           showHeader={false}
@@ -500,35 +391,36 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
 
         <div className="twin-stage-caption mx-auto max-w-[1240px]">
           <div>
-            <span>{beatLabel}</span>
+            <span>{beatLabel[story.beat]}</span>
             <strong>{moment.title}</strong>
             <p>{moment.copy}</p>
           </div>
           <div className="twin-trust-line">
             <span className="status-dot status-dot-ready" aria-hidden="true" />
-            Clinical priority fixed · consequential actions remain human-approved
+            Same demand trace · metrics change only when the operating rule changes
           </div>
         </div>
 
-        <div className="twin-lever-rail twin-lever-rail-immersive mx-auto mt-4 max-w-[1240px]" aria-label="Transformation levers">
+        <div className="twin-lever-rail twin-lever-rail-immersive mx-auto mt-4 max-w-[1240px]" aria-label="Jump to a transformation lever">
           {LEVER_SEQUENCE.map((lever) => {
             const item = LEVER_META[lever];
             const active = activeSet.has(lever);
             const materializing = materializingLever === lever;
+            const focused = railFocusLever === lever;
             return (
               <button
                 key={lever}
                 type="button"
-                onClick={() => toggleLever(lever)}
-                className={`twin-lever ${active ? "twin-lever-active" : ""}${materializing ? " twin-lever-materializing" : ""}`}
+                onClick={() => jumpToLever(lever)}
+                className={`twin-lever ${active ? "twin-lever-active" : ""}${materializing ? " twin-lever-materializing" : ""}${focused ? " twin-lever-current" : ""}`}
                 style={{ "--lever-color": item.color } as CSSProperties}
-                aria-pressed={active}
-                aria-label={`${item.name}: ${active ? "materialized" : materializing ? "materializing" : "waiting"}`}
+                aria-current={focused ? "step" : undefined}
+                aria-label={`Jump to ${item.name}. ${active ? "Materialized" : materializing ? "Materializing" : "Waiting"}.`}
               >
                 <span className="twin-lever-monogram">{item.monogram}</span>
                 <span>
                   <strong>{item.name}</strong>
-                  <small>{active ? "Materialized" : materializing ? "Materializing" : "Waiting"}</small>
+                  <small>{active ? "Materialized" : materializing ? "Materializing" : focused ? "Next decision" : "Waiting"}</small>
                 </span>
                 <b aria-hidden="true">{active ? "✓" : materializing ? "•••" : item.number}</b>
               </button>
@@ -536,19 +428,20 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
           })}
         </div>
 
-        <div className="mx-auto mt-5 flex max-w-[1240px] flex-col gap-4 border-t border-white/10 pt-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="twin-meta-row mx-auto mt-5 flex max-w-[1240px] flex-col gap-4 border-t border-white/10 pt-5 lg:flex-row lg:items-center lg:justify-between">
           <details className="twin-assumptions">
             <summary>Model basis and assumptions</summary>
             <div>
               <p>
                 {SIMULATION_EPISODES} synthetic episodes across {SIMULATION_HORIZON_DAYS} days: 40% routine surgical,
-                25% precision-eligible surgical oncology, and 35% medical or chronic. Every scenario replays the
-                identical seeded demand trace.
+                25% precision-eligible surgical oncology, and 35% medical or chronic. Every state replays the identical seeded demand trace.
               </p>
               <p>
-                Stage capacity, service calendars, handoff delays, exception rates, and lever coefficients are
-                transparent demonstration assumptions—not observed AdventHealth results. No patient data, clinical
-                outcome claim, or financial forecast is used.
+                Constraint migration uses transparent demonstration assumptions: four staffed robotic rooms at 5.5 modeled service hours,
+                coordinated robotic flow at 3.2 hours, and fewer readiness exceptions when precision context arrives upstream.
+              </p>
+              <p>
+                These are illustrative operating coefficients—not observed AdventHealth results, clinical outcome claims, or financial forecasts.
               </p>
             </div>
           </details>
@@ -558,9 +451,8 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
         </div>
 
         <p className="sr-only" aria-live="polite">
-          {beatLabel}. {materializingLever ? `${LEVER_META[materializingLever].name} is materializing. ` : ""}
-          {activeLevers.length} levers active. {current.completed} episodes complete. Median journey{" "}
-          {current.medianJourneyDays} days. Current system constraint {current.stageResults[current.constraint].name}.
+          {beatLabel[story.beat]}. {moment.title} {scene.callout.value ? `${scene.callout.value}.` : ""} {activeLevers.length} levers active.
+          Current focus: {scene.pressure.title} Modeled system constraint: {scene.simulation.stageResults[scene.simulation.constraint].name}.
         </p>
       </div>
     </section>

@@ -80,7 +80,7 @@ export function ExecutiveStory({ onNavigate }: { onNavigate: (view: View) => voi
         </div>
       </section>
 
-      <section className="story-section bg-[var(--color-canvas)]">
+      <section className="story-section bg-[var(--color-night)] text-white">
         <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
           <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
             <div>
@@ -93,17 +93,17 @@ export function ExecutiveStory({ onNavigate }: { onNavigate: (view: View) => voi
             </p>
           </div>
 
-          <div className="mt-14 grid overflow-hidden rounded-[28px] border border-[var(--color-line)] bg-white lg:grid-cols-5">
+          <div className="mt-14 grid overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.035] lg:grid-cols-5">
             {HANDOFFS.map((handoff, index) => (
-              <div key={handoff.label} className="handoff-cell relative border-b border-[var(--color-line)] p-6 last:border-0 lg:border-b-0 lg:border-r">
+              <div key={handoff.label} className="handoff-cell relative border-b border-white/10 p-6 last:border-0 lg:border-b-0 lg:border-r">
                 <div className="mb-10 flex items-center justify-between">
                   <span className={`handoff-node handoff-node-${handoff.state}`} />
                   {index < HANDOFFS.length - 1 && <span className="handoff-line" aria-hidden="true" />}
-                  <span className="font-mono text-[10px] font-bold text-[var(--color-muted)]">{handoff.time}</span>
+                  <span className="font-mono text-[10px] font-bold text-white/50">{handoff.time}</span>
                 </div>
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-muted)]">0{index + 1}</p>
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/50">0{index + 1}</p>
                 <h3 className="mt-2 text-lg font-bold tracking-tight">{handoff.label}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">
+                <p className="mt-2 text-sm leading-relaxed text-white/60">
                   {handoff.state === "risk" && "A handoff can strand the case."}
                   {handoff.state === "ready" && "Evidence is present and current."}
                   {handoff.state === "watch" && "Capacity is changing in real time."}
@@ -149,7 +149,7 @@ export function ExecutiveStory({ onNavigate }: { onNavigate: (view: View) => voi
         </div>
       </section>
 
-      <section className="story-section bg-white">
+      <section className="story-section bg-[var(--color-deep)] text-white">
         <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
           <div className="mb-14 max-w-3xl">
             <p className="eyebrow">The technology shift</p>
@@ -166,12 +166,12 @@ export function ExecutiveStory({ onNavigate }: { onNavigate: (view: View) => voi
             <ProgressionStep number="04" title="Coordinate" copy="What should happen next?" detail="Governed agents" active />
           </div>
 
-          <div className="mt-12 grid gap-8 border-t border-[var(--color-line)] pt-10 lg:grid-cols-[1fr_1fr]">
-            <blockquote className="text-3xl font-semibold leading-tight tracking-[-0.035em] text-[var(--color-night)] sm:text-4xl">
+          <div className="mt-12 grid gap-8 border-t border-white/10 pt-10 lg:grid-cols-[1fr_1fr]">
+            <blockquote className="text-3xl font-semibold leading-tight tracking-[-0.035em] text-white sm:text-4xl">
               “Visibility without action rights is just a better view of the bottleneck.”
             </blockquote>
             <div className="max-w-xl lg:justify-self-end">
-              <p className="text-base leading-relaxed text-[var(--color-muted)]">
+              <p className="text-base leading-relaxed text-white/60">
                 A comparative NHS study found no significant, consistent patient-flow improvement after a hospital
                 command center. The lesson is not that technology fails. It is that information without redesigned
                 decisions, ownership, and action does not transform operations.
@@ -290,10 +290,10 @@ function ProgressionStep({
 }) {
   return (
     <div className={`progression-step ${active ? "progression-step-active" : ""}`}>
-      <span className="font-mono text-[10px] font-bold text-[var(--color-muted)]">{number}</span>
+      <span className="font-mono text-[10px] font-bold text-white/50">{number}</span>
       <h3 className="mt-8 text-3xl font-semibold tracking-[-0.04em]">{title}</h3>
       <p className="mt-3 text-base font-semibold">{copy}</p>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">{detail}</p>
+      <p className="mt-1 text-sm text-white/60">{detail}</p>
     </div>
   );
 }

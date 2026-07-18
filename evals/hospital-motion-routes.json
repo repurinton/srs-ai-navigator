@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "coordinateSystem": "cutaway-world container percentage",
+  "requiredActorCount": 28,
+  "routes": [
+    { "id": "car-arrival", "surface": "arrival loop and valet lane", "actors": 2, "xRange": [-6, 47], "yRange": [57, 71], "minimumTravel": 50 },
+    { "id": "car-departure", "surface": "valet exit and campus road", "actors": 2, "xRange": [47, 77], "yRange": [70, 101], "minimumTravel": 40 },
+    { "id": "car-parking", "surface": "parking aisle", "actors": 2, "xRange": [-5, 27], "yRange": [75, 92], "minimumTravel": 34 },
+    { "id": "ambulance", "surface": "EMS approach and bay", "actors": 2, "xRange": [-8, 12.5], "yRange": [40.5, 52], "minimumTravel": 23 },
+    { "id": "valet-curb", "surface": "valet curb", "actors": 2, "xRange": [43.5, 46], "yRange": [67.5, 68], "minimumTravel": 2 },
+    { "id": "valet-entry", "surface": "arrival doors", "actors": 2, "xRange": [40.8, 44.5], "yRange": [59.5, 69], "minimumTravel": 9 },
+    { "id": "patient-arrival", "surface": "arrival doors", "actors": 2, "xRange": [40.8, 43], "yRange": [59.5, 68], "minimumTravel": 8 },
+    { "id": "patient-ward", "surface": "inpatient corridor", "actors": 2, "xRange": [68, 82], "yRange": [62, 63], "minimumTravel": 14 },
+    { "id": "caregiver-prep", "surface": "pre-op corridor", "actors": 2, "xRange": [24, 36], "yRange": [42, 42.5], "minimumTravel": 12 },
+    { "id": "caregiver-or", "surface": "OR core corridor", "actors": 2, "xRange": [39, 48], "yRange": [44, 47], "minimumTravel": 9 },
+    { "id": "caregiver-recovery", "surface": "PACU corridor", "actors": 2, "xRange": [64, 84], "yRange": [48.5, 49.5], "minimumTravel": 20 },
+    { "id": "caregiver-ward", "surface": "inpatient corridor", "actors": 2, "xRange": [65, 84], "yRange": [62, 63], "minimumTravel": 19 },
+    { "id": "gurney-prep", "surface": "pre-op to OR transfer", "actors": 2, "xRange": [25, 43], "yRange": [41, 44], "minimumTravel": 18 },
+    { "id": "gurney-recovery", "surface": "OR to PACU transfer", "actors": 2, "xRange": [57, 74], "yRange": [45, 46], "minimumTravel": 17 }
+  ]
+}

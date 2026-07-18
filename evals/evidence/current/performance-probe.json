@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "capturedAt": "2026-07-16T01:41:55Z",
+  "candidate": "production-preview",
+  "url": "http://127.0.0.1:4173/?qa=performance#case",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "browserZoomPercent": 100
+  },
+  "measurementStatus": "calibrated-inconclusive",
+  "animatedRun": {
+    "storyWindow": "opening:surface through front-door:resolve",
+    "durationMs": 6000,
+    "sampleCount": 181,
+    "frameTimeP50Ms": 33.3,
+    "frameTimeP95Ms": 34.4,
+    "frameTimeP99Ms": 34.9,
+    "estimatedFpsP50": 30,
+    "estimatedFpsP5": 29.1,
+    "longTaskCount": 0,
+    "longTaskTotalMs": 0,
+    "longestLongTaskMs": 0,
+    "cumulativeLayoutShift": 0,
+    "largestContentfulPaintMs": 160,
+    "firstContentfulPaintMs": 160,
+    "resourceCount": 5,
+    "transferredKiB": 449.4,
+    "scriptResourceCount": 3,
+    "imageResourceCount": 1,
+    "runtimeErrorCount": 0
+  },
+  "reducedMotionCalibration": {
+    "url": "http://127.0.0.1:4173/?motion=reduced&qa=performance#case",
+    "durationMs": 6000,
+    "sampleCount": 181,
+    "frameTimeP50Ms": 33.3,
+    "frameTimeP95Ms": 34.4,
+    "estimatedFpsP50": 30,
+    "estimatedFpsP5": 29.1,
+    "cumulativeLayoutShift": 0,
+    "runtimeErrorCount": 0
+  },
+  "interpretation": {
+    "frameClock": "The animated and reduced-motion control runs both sampled at the browser harness's 30 Hz frame-clock ceiling, so this environment cannot adjudicate the 55 FPS release threshold.",
+    "positiveSignals": "The animated run recorded zero long tasks, zero layout shift, 160 ms LCP, zero runtime errors, and five successful resources.",
+    "remainingEvidence": "Repeat the production run in a native 60 Hz browser on the presentation laptop at baseline and 4x CPU slowdown before passing HG-PERF-01."
+  },
+  "baselineThresholdDecision": "pending-native-60hz-run",
+  "cpu4xThresholdDecision": "not-run",
+  "releaseGatePass": false
+}

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "World-space motion contract for the 3D hospital diorama. Corridors are axis-aligned bounds in meters that every waypoint of the route must stay inside; minimumTravelMeters is the shortest acceptable polyline length so a route reads as genuine movement.",
+  "requiredActorCount": 28,
+  "actorsPerRoute": 2,
+  "routes": [
+    { "id": "car-arrival", "kind": "car", "corridor": { "min": [-60, 0, 4], "max": [0, 1, 18] }, "minimumTravelMeters": 40 },
+    { "id": "car-departure", "kind": "car", "corridor": { "min": [-4, 0, 4], "max": [60, 1, 18] }, "minimumTravelMeters": 40 },
+    { "id": "car-parking", "kind": "car", "corridor": { "min": [-60, 0, 2], "max": [-34, 1, 18] }, "minimumTravelMeters": 20 },
+    { "id": "ambulance", "kind": "ambulance", "corridor": { "min": [-60, 0, -8], "max": [-30, 1, 16] }, "minimumTravelMeters": 30 },
+    { "id": "valet-curb", "kind": "person", "corridor": { "min": [-12, 0, 2], "max": [2, 1, 12] }, "minimumTravelMeters": 8 },
+    { "id": "valet-entry", "kind": "person", "corridor": { "min": [-12, 0, -6], "max": [2, 1, 12] }, "minimumTravelMeters": 9 },
+    { "id": "patient-arrival", "kind": "person", "corridor": { "min": [-14, 0, -16], "max": [2, 1, 12] }, "minimumTravelMeters": 10 },
+    { "id": "patient-ward", "kind": "person", "corridor": { "min": [10, 0, -16], "max": [52, 1, 20] }, "minimumTravelMeters": 25 },
+    { "id": "caregiver-prep", "kind": "person", "corridor": { "min": [-26, 4.5, -18], "max": [-10, 5.5, -2] }, "minimumTravelMeters": 15 },
+    { "id": "caregiver-or", "kind": "person", "corridor": { "min": [-10, 4.5, -18], "max": [8, 5.5, -2] }, "minimumTravelMeters": 15 },
+    { "id": "caregiver-recovery", "kind": "person", "corridor": { "min": [4, 4.5, -18], "max": [26, 5.5, -2] }, "minimumTravelMeters": 15 },
+    { "id": "caregiver-ward", "kind": "person", "corridor": { "min": [12, 4.5, -18], "max": [26, 5.5, -2] }, "minimumTravelMeters": 18 },
+    { "id": "gurney-prep", "kind": "gurney", "corridor": { "min": [-26, 4.5, -18], "max": [8, 5.5, -2] }, "minimumTravelMeters": 14 },
+    { "id": "gurney-recovery", "kind": "gurney", "corridor": { "min": [-6, 4.5, -18], "max": [26, 5.5, -2] }, "minimumTravelMeters": 12 }
+  ]
+}

@@ -5,10 +5,10 @@ import { SERVICE_LINE_COLOR } from "@/data/service-lines";
 import { priorityScore, recommendation } from "@/lib/scoring";
 
 const MATURITY_COLOR: Record<string, string> = {
-  "Standard of Care": "#2e9e6b",
-  "Best Practice": "#2bb3ff",
+  "Standard of Care": "#43c98d",
+  "Best Practice": "#4db8ff",
   Frontier: "#f2a33c",
-  "Emerging Research": "#7c5cff",
+  "Emerging Research": "#9d86b3",
 };
 
 export function UseCaseCard({
@@ -35,7 +35,7 @@ export function UseCaseCard({
 
   return (
     <article
-      className="group flex cursor-pointer flex-col rounded-[var(--radius-card)] border border-[var(--color-line)] bg-white p-4 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-lift)]"
+      className="group flex cursor-pointer flex-col rounded-[var(--radius-card)] border border-white/10 bg-white/[0.04] p-4 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-lift)]"
       style={{ borderTop: `3px solid ${accent}` }}
       onClick={() => onOpen?.(uc)}
       role={onOpen ? "button" : undefined}
@@ -49,34 +49,40 @@ export function UseCaseCard({
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <span
-          className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
-          style={{ background: accent }}
+          className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+          style={{
+            background: `color-mix(in srgb, ${accent} 18%, transparent)`,
+            color: `color-mix(in srgb, ${accent} 55%, white)`,
+          }}
         >
           {badge}
         </span>
-        <span className="font-mono text-[11px] text-[var(--color-steel)]">{uc.id}</span>
+        <span className="font-mono text-[11px] text-white/50">{uc.id}</span>
       </div>
 
-      <h3 className="mb-1.5 text-[15px] font-bold leading-snug text-[var(--color-ink)]">
+      <h3 className="mb-1.5 text-[15px] font-bold leading-snug text-white">
         {uc.name}
       </h3>
-      <p className="mb-3 line-clamp-4 text-[13px] leading-relaxed text-[var(--color-steel)]">
+      <p className="mb-3 line-clamp-4 text-[13px] leading-relaxed text-white/60">
         {uc.description}
       </p>
 
       <div className="mb-3 flex flex-wrap gap-1.5">
-        <Tag color={MATURITY_COLOR[uc.maturity] ?? "var(--color-steel)"}>{uc.maturity}</Tag>
-        {uc.fdaCleared && <Tag color="#2e9e6b">FDA Cleared</Tag>}
-        {uc.aiType && <Tag color="var(--color-steel)">{uc.aiType}</Tag>}
+        <Tag color={MATURITY_COLOR[uc.maturity] ?? "#9fb3bb"}>{uc.maturity}</Tag>
+        {uc.fdaCleared && <Tag color="#43c98d">FDA Cleared</Tag>}
+        {uc.aiType && <Tag color="#9fb3bb">{uc.aiType}</Tag>}
       </div>
 
-      <div className="mt-auto flex items-center justify-between border-t border-[var(--color-line)] pt-2.5">
-        <span className="truncate text-[11px] text-[var(--color-steel)]">
+      <div className="mt-auto flex items-center justify-between border-t border-white/10 pt-2.5">
+        <span className="truncate text-[11px] text-white/55">
           {uc.keyPlatforms?.[0] ?? uc.keyVendors[0] ?? "—"}
         </span>
         <span
           className="shrink-0 rounded px-2 py-0.5 text-[11px] font-bold"
-          style={{ color: rec.color, background: `${rec.color}1a` }}
+          style={{
+            color: `color-mix(in srgb, ${rec.color} 55%, white)`,
+            background: `color-mix(in srgb, ${rec.color} 15%, transparent)`,
+          }}
         >
           {rec.label}
         </span>
@@ -89,7 +95,10 @@ function Tag({ color, children }: { color: string; children: ReactNode }) {
   return (
     <span
       className="rounded px-1.5 py-0.5 text-[10px] font-semibold"
-      style={{ color, background: `color-mix(in srgb, ${color} 12%, white)` }}
+      style={{
+        color: `color-mix(in srgb, ${color} 55%, white)`,
+        background: `color-mix(in srgb, ${color} 16%, transparent)`,
+      }}
     >
       {children}
     </span>

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0.0",
+  "candidateSourceDigest": "cc7943c63790053d0e5db2fc373445851eb80a8f6b2156abb417aad33b7fc823",
+  "generatedAt": "2026-07-18T14:56:13.903Z",
+  "canonicalStates": 19,
+  "requiredViewports": 6,
+  "stateViewportObservations": 114,
+  "reducedMotionStatesReviewed": 19,
+  "verdict": "pass",
+  "summaries": [
+    {
+      "id": "stage-1080p",
+      "statesReviewed": 19,
+      "pass": true,
+      "minimumPrimaryFontPx": 16,
+      "minimumControlHeightPx": 44,
+      "maximumCaptionBottomPx": 1031.75,
+      "maximumForegroundInfiniteAnimations": 1
+    },
+    {
+      "id": "presentation-laptop",
+      "statesReviewed": 19,
+      "pass": true,
+      "minimumPrimaryFontPx": 15.04,
+      "minimumControlHeightPx": 44,
+      "maximumCaptionBottomPx": 859.71875,
+      "maximumForegroundInfiniteAnimations": 1
+    },
+    {
+      "id": "projector-safe",
+      "statesReviewed": 19,
+      "pass": true,
+      "minimumPrimaryFontPx": 15.04,
+      "minimumControlHeightPx": 44,
+      "maximumCaptionBottomPx": 694.3125,
+      "maximumForegroundInfiniteAnimations": 1
+    },
+    {
+      "id": "tablet-landscape",
+      "statesReviewed": 19,
+      "pass": true,
+      "minimumPrimaryFontPx": 14.72,
+      "minimumControlHeightPx": 44,
+      "maximumCaptionBottomPx": 1114.3359375,
+      "maximumForegroundInfiniteAnimations": 1
+    },
+    {
+      "id": "phone-standard",
+      "statesReviewed": 19,
+      "pass": true,
+      "minimumPrimaryFontPx": 13.12,
+      "minimumControlHeightPx": 44,
+      "maximumCaptionBottomPx": 1404.9296875,
+      "maximumForegroundInfiniteAnimations": 1
+    },
+    {
+      "id": "phone-narrow",
+      "statesReviewed": 19,
+      "pass": true,
+      "minimumPrimaryFontPx": 13.12,
+      "minimumControlHeightPx": 44,
+      "maximumCaptionBottomPx": 1390.828125,
+      "maximumForegroundInfiniteAnimations": 1
+    }
+  ]
+}

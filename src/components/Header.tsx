@@ -11,7 +11,7 @@ const NAV: { key: View; label: string }[] = [
 
 export function Header({ view, onNavigate }: { view: View; onNavigate: (view: View) => void }) {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[rgba(5,18,27,0.94)] text-white backdrop-blur-xl">
+    <header className="app-header sticky top-0 z-50 border-b border-white/10 bg-[rgba(5,18,27,0.94)] text-white backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-6 px-5 py-3 sm:px-8 lg:px-12">
         <button
           type="button"

@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "1.0.0",
+  "templateId": "srs-hospital-twin-release-scorecard",
+  "standardId": "srs-hospital-twin-release-standard",
+  "candidate": {
+    "candidateId": null,
+    "commit": null,
+    "buildUrl": null,
+    "evaluatedAt": null,
+    "releaseOwner": null,
+    "technicalEvaluator": null,
+    "designEvaluator": null,
+    "narrativeEvaluator": null
+  },
+  "automatedChecks": {
+    "evalHarnessSelfCheck": null,
+    "typecheck": null,
+    "simulationCheck": null,
+    "storyStateCheck": null,
+    "productionBuild": null,
+    "consoleErrors": null,
+    "failedAssetRequests": null,
+    "notes": null
+  },
+  "hardGateResults": [
+    { "id": "HG-NAR-01", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-NAR-02", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-NAR-03", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-NAR-04", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-NAR-05", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-NAR-06", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-NAR-07", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-NAR-08", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-LAY-01", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-LAY-02", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-MOT-01", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-MOT-02", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-PERF-01", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-A11Y-01", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-A11Y-02", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-REL-01", "pass": null, "measuredValue": null, "evidence": [], "notes": null },
+    { "id": "HG-REL-02", "pass": null, "measuredValue": null, "evidence": [], "notes": null }
+  ],
+  "rubricResults": [
+    { "id": "NC-01", "score": null, "maximum": 8, "evidence": [], "notes": null },
+    { "id": "NC-02", "score": null, "maximum": 7, "evidence": [], "notes": null },
+    { "id": "NC-03", "score": null, "maximum": 5, "evidence": [], "notes": null },
+    { "id": "NC-04", "score": null, "maximum": 5, "evidence": [], "notes": null },
+    { "id": "EC-01", "score": null, "maximum": 6, "evidence": [], "notes": null },
+    { "id": "EC-02", "score": null, "maximum": 5, "evidence": [], "notes": null },
+    { "id": "EC-03", "score": null, "maximum": 5, "evidence": [], "notes": null },
+    { "id": "EC-04", "score": null, "maximum": 4, "evidence": [], "notes": null },
+    { "id": "VC-01", "score": null, "maximum": 6, "evidence": [], "notes": null },
+    { "id": "VC-02", "score": null, "maximum": 5, "evidence": [], "notes": null },
+    { "id": "VC-03", "score": null, "maximum": 5, "evidence": [], "notes": null },
+    { "id": "VC-04", "score": null, "maximum": 4, "evidence": [], "notes": null },
+    { "id": "MC-01", "score": null, "maximum": 5, "evidence": [], "notes": null },
+    { "id": "MC-02", "score": null, "maximum": 4, "evidence": [], "notes": null },
+    { "id": "MC-03", "score": null, "maximum": 3, "evidence": [], "notes": null },
+    { "id": "MC-04", "score": null, "maximum": 3, "evidence": [], "notes": null },
+    { "id": "ED-01", "score": null, "maximum": 4, "evidence": [], "notes": null },
+    { "id": "ED-02", "score": null, "maximum": 3, "evidence": [], "notes": null },
+    { "id": "ED-03", "score": null, "maximum": 3, "evidence": [], "notes": null },
+    { "id": "TR-01", "score": null, "maximum": 3, "evidence": [], "notes": null },
+    { "id": "TR-02", "score": null, "maximum": 3, "evidence": [], "notes": null },
+    { "id": "TR-03", "score": null, "maximum": 2, "evidence": [], "notes": null },
+    { "id": "TR-04", "score": null, "maximum": 2, "evidence": [], "notes": null }
+  ],
+  "domainResults": [
+    { "id": "narrative-causality", "score": null, "maximum": 25, "percent": null, "pass": null },
+    { "id": "executive-comprehension", "score": null, "maximum": 20, "percent": null, "pass": null },
+    { "id": "visual-composition", "score": null, "maximum": 20, "percent": null, "pass": null },
+    { "id": "motion-choreography", "score": null, "maximum": 15, "percent": null, "pass": null },
+    { "id": "evidence-decision-utility", "score": null, "maximum": 10, "percent": null, "pass": null },
+    { "id": "technical-readiness", "score": null, "maximum": 10, "percent": null, "pass": null }
+  ],
+  "viewportResults": [
+    { "id": "stage-1080p", "statesReviewed": 0, "statesRequired": 19, "pass": null, "evidence": [], "notes": null },
+    { "id": "presentation-laptop", "statesReviewed": 0, "statesRequired": 19, "pass": null, "evidence": [], "notes": null },
+    { "id": "projector-safe", "statesReviewed": 0, "statesRequired": 19, "pass": null, "evidence": [], "notes": null },
+    { "id": "tablet-landscape", "statesReviewed": 0, "statesRequired": 19, "pass": null, "evidence": [], "notes": null },
+    { "id": "phone-standard", "statesReviewed": 0, "statesRequired": 19, "pass": null, "evidence": [], "notes": null },
+    { "id": "phone-narrow", "statesReviewed": 0, "statesRequired": 19, "pass": null, "evidence": [], "notes": null }
+  ],
+  "humanAudienceSummary": {
+    "sessionsCompleted": 0,
+    "executiveSessionsCompleted": 0,
+    "medianRating": null,
+    "mainThesisRecallPercent": null,
+    "finalConstraintRecallPercent": null,
+    "actionableNextDecisionPercent": null,
+    "repeatedConfusionPoints": [],
+    "pass": null,
+    "evidence": []
+  },
+  "findings": {
+    "critical": [],
+    "high": [],
+    "medium": [],
+    "low": []
+  },
+  "releaseDecision": {
+    "weightedScore": null,
+    "allHardGatesPass": null,
+    "allDomainsPass": null,
+    "humanAudiencePass": null,
+    "decision": null,
+    "allowedDecisions": ["release", "hold"],
+    "decisionRationale": null,
+    "approvedBy": null,
+    "approvedAt": null
+  }
+}

@@ -83,10 +83,10 @@ export function computeProximityScore(uc: UseCase): number {
 }
 
 export const RADAR_MATURITY_COLOR: Record<string, string> = {
-  "Standard of Care": "#2E7D32",
-  "Best Practice": "#0078C8",
+  "Standard of Care": "#43c98d",
+  "Best Practice": "#4db8ff",
   Frontier: "#E87722",
-  "Emerging Research": "#6C5B7B",
+  "Emerging Research": "#9d86b3",
 };
 
 export interface RadarGeom {

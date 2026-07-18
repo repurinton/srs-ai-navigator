@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0.0",
+  "capturedAt": "2026-07-16T01:53:46Z",
+  "candidate": "production-preview",
+  "url": "http://127.0.0.1:4173/?qa=accessibility#case",
+  "viewport": {
+    "id": "stage-1080p",
+    "width": 1920,
+    "height": 1080
+  },
+  "storyStateId": "front-door:materialize",
+  "pass": true,
+  "operablePass": true,
+  "perceivablePass": true,
+  "interactiveCount": 6,
+  "keyboardReachabilityPercent": 100,
+  "minimumTargetPx": 44,
+  "unnamedControlCount": 0,
+  "duplicateAccessibleNameCount": 0,
+  "visibleFocusFailureCount": 0,
+  "minimumFocusContrast": 14.39,
+  "normalTextContrastMinimum": 6.18,
+  "largeTextContrastMinimum": 16.67,
+  "minimumNormalTextContrast": 6.18,
+  "minimumLargeTextContrast": 16.67,
+  "contrastFailureCount": 0,
+  "colorIndependentMeaningPercent": 100,
+  "liveRegionCount": 1,
+  "autoplayUserInitiated": true,
+  "autoplayPausable": true,
+  "meaningChannels": [
+    "kicker text",
+    "plain-language proposition",
+    "dashboard constraint label",
+    "dashboard constraint value"
+  ],
+  "method": "Query-gated production probe focused every enabled stage control, inspected focus rendering and accessible names, calculated WCAG contrast from the computed style stack, and verified redundant text channels plus the polite live region."
+}

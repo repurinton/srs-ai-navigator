@@ -144,13 +144,13 @@ export function SixLevers({ onNavigate }: { onNavigate: (view: View) => void }) 
         </div>
       </section>
 
-      <section className="bg-white">
+      <section className="bg-[var(--color-deep)] text-white">
         <div className="mx-auto max-w-[1440px] px-5 py-16 sm:px-8 lg:px-12 lg:py-24">
           <div className="lever-detail-header" style={{ "--lever-color": selected.color } as CSSProperties}>
             <div className="flex items-center gap-4">
               <span className="lever-monogram lever-monogram-light">{selected.monogram}</span>
               <div>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.17em] text-[var(--color-muted)]">Lever {selected.number}</p>
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.17em] text-white/50">Lever {selected.number}</p>
                 <h2 className="mt-1 text-2xl font-bold tracking-[-0.03em]">{selected.name}</h2>
               </div>
             </div>
@@ -159,18 +159,18 @@ export function SixLevers({ onNavigate }: { onNavigate: (view: View) => void }) 
             </p>
           </div>
 
-          <div className="mt-12 grid gap-px overflow-hidden rounded-[26px] border border-[var(--color-line)] bg-[var(--color-line)] lg:grid-cols-3">
+          <div className="mt-12 grid gap-px overflow-hidden rounded-[26px] border border-white/10 bg-white/10 lg:grid-cols-3">
             <LeverDetail label="The shift" value={selected.shift} copy={selected.unlock} />
             <LeverDetail label="The executive bet" value={selected.decision} copy="Capital, ownership, and incentives should follow the end-to-end outcome—not the local technology." />
             <LeverDetail label="The trust boundary" value="Do not automate what you cannot audit." copy={selected.boundary} />
           </div>
 
-          <div className="mt-9 border-t border-[var(--color-line)] pt-8">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.17em] text-[var(--color-muted)]">Board scorecard</p>
+          <div className="mt-9 border-t border-white/10 pt-8">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.17em] text-white/50">Board scorecard</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {selected.measures.map((measure, index) => (
                 <div key={measure} className="measure-line" style={{ "--lever-color": selected.color } as CSSProperties}>
-                  <span className="font-mono text-[10px] text-[var(--color-muted)]">0{index + 1}</span>
+                  <span className="font-mono text-[10px] text-white/55">0{index + 1}</span>
                   <strong>{measure}</strong>
                 </div>
               ))}
@@ -179,7 +179,7 @@ export function SixLevers({ onNavigate }: { onNavigate: (view: View) => void }) 
         </div>
       </section>
 
-      <section className="bg-[var(--color-canvas)]">
+      <section className="bg-[var(--color-night)] text-white">
         <div className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
           <div className="grid gap-12 lg:grid-cols-[0.72fr_1.28fr] lg:items-start">
             <div>
@@ -220,10 +220,10 @@ export function SixLevers({ onNavigate }: { onNavigate: (view: View) => void }) 
 
 function LeverDetail({ label, value, copy }: { label: string; value: string; copy: string }) {
   return (
-    <div className="bg-white p-7 lg:p-8">
-      <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--color-muted)]">{label}</p>
+    <div className="bg-white/[0.035] p-7 lg:p-8">
+      <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/50">{label}</p>
       <h3 className="mt-6 text-2xl font-semibold leading-tight tracking-[-0.035em]">{value}</h3>
-      <p className="mt-4 text-sm leading-relaxed text-[var(--color-muted)]">{copy}</p>
+      <p className="mt-4 text-sm leading-relaxed text-white/60">{copy}</p>
     </div>
   );
 }

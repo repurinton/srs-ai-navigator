@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0.0",
+  "templateId": "srs-hospital-twin-human-audience-scorecard",
+  "instructions": "Complete immediately after one uninterrupted run. Ask unaided recall questions before showing the interface again. Use null for unanswered values, not zero.",
+  "session": {
+    "candidateId": null,
+    "dateTime": null,
+    "facilitator": null,
+    "evaluatorId": null,
+    "evaluatorRole": null,
+    "audienceSegment": null,
+    "viewportId": "presentation-laptop",
+    "deliveryMode": "speaker-led",
+    "storyCompletedWithoutInterruption": null
+  },
+  "allowedAudienceSegments": [
+    "hospital-ceo",
+    "hospital-operations-executive",
+    "medtech-founder",
+    "private-equity-partner",
+    "banking-executive",
+    "clinical-leader",
+    "design-or-communications-expert"
+  ],
+  "likertScale": {
+    "minimum": 1,
+    "maximum": 5,
+    "anchors": {
+      "1": "Strongly disagree",
+      "2": "Disagree",
+      "3": "Neither agree nor disagree",
+      "4": "Agree",
+      "5": "Strongly agree"
+    }
+  },
+  "ratings": [
+    { "id": "HA-01", "prompt": "Within three seconds of each beat, I understood where to look and what changed.", "score": null },
+    { "id": "HA-02", "prompt": "The sequence felt causal: each AI intervention exposed the next operating constraint.", "score": null },
+    { "id": "HA-03", "prompt": "I could distinguish a local pain point, a system constraint, and operating friction.", "score": null },
+    { "id": "HA-04", "prompt": "The evidence shown was sufficient to believe the operating impact without overclaiming.", "score": null },
+    { "id": "HA-05", "prompt": "The presentation reduced complexity rather than adding dashboard noise.", "score": null },
+    { "id": "HA-06", "prompt": "The motion helped me understand the operating model.", "score": null },
+    { "id": "HA-07", "prompt": "The pacing gave me enough time to absorb each idea without feeling slow.", "score": null },
+    { "id": "HA-08", "prompt": "The visual quality felt appropriate for a Fortune 100 executive audience.", "score": null },
+    { "id": "HA-09", "prompt": "The demo felt more useful than a conventional consulting slide sequence.", "score": null },
+    { "id": "HA-10", "prompt": "The final recovery-capacity decision felt inevitable rather than persuasive.", "score": null },
+    { "id": "HA-11", "prompt": "I could explain the main thesis to a colleague without seeing the demo again.", "score": null },
+    { "id": "HA-12", "prompt": "This demo would change or sharpen an investment, operating-model, or partnership decision.", "score": null }
+  ],
+  "unaidedRecall": {
+    "oneSentenceExplanation": null,
+    "firstPressureNamed": null,
+    "leversRecalledInOrder": [],
+    "finalConstraintNamed": null,
+    "recommendedNextDecision": null,
+    "scoring": {
+      "mainThesisAccurate": null,
+      "firstPressureAccurate": null,
+      "leverOrderAccurateCount": null,
+      "finalConstraintAccurate": null,
+      "nextDecisionActionable": null
+    }
+  },
+  "openResponse": {
+    "strongestMoment": null,
+    "firstMomentOfConfusion": null,
+    "contentThatFeltUnnecessary": null,
+    "claimThatFeltUnproven": null,
+    "singleMostImportantImprovement": null
+  },
+  "observations": {
+    "lookedAwayOrLostFocusAtStateIds": [],
+    "askedForClarificationAtStateIds": [],
+    "spontaneousDecisionLanguage": [],
+    "facilitatorNotes": null
+  },
+  "sessionResult": {
+    "medianRating": null,
+    "minimumRating": null,
+    "mainThesisAccurate": null,
+    "finalConstraintAccurate": null,
+    "nextDecisionActionable": null,
+    "pass": null
+  },
+  "successThresholds": {
+    "minimumMedianRating": 4.6,
+    "minimumIndividualRating": 4,
+    "mainThesisRecallPercent": 90,
+    "minimumLeversRecalledInOrder": 5,
+    "finalConstraintRecallPercent": 90,
+    "actionableNextDecisionPercent": 85,
+    "maximumRepeatedConfusionPointPercent": 20
+  }
+}

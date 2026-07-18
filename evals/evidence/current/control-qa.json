@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0.0",
+  "capturedAt": "2026-07-16T01:49:44Z",
+  "candidate": "production-preview",
+  "url": "http://127.0.0.1:4173/#case",
+  "viewport": { "width": 1440, "height": 900 },
+  "pass": true,
+  "sequenceMismatches": 0,
+  "checks": [
+    { "control": "Replay guided demo", "expected": "opening:surface + playing", "observed": "opening:surface + Pause guided demo", "pass": true },
+    { "control": "Pause", "expected": "state remains opening:surface for longer than its 7.2 second dwell", "observed": "opening:surface after 7.6 seconds", "pass": true },
+    { "control": "Resume", "expected": "advance to front-door:materialize", "observed": "front-door:materialize after 7.4 seconds", "pass": true },
+    { "control": "Reset", "expected": "opening:surface + stopped", "observed": "opening:surface + Run guided demo", "pass": true },
+    { "control": "Next", "expected": "front-door:materialize", "observed": "front-door:materialize", "pass": true },
+    { "control": "Back", "expected": "opening:surface", "observed": "opening:surface", "pass": true },
+    { "control": "Replay cycle", "expected": "opening:surface for cycle zero", "observed": "opening:surface", "pass": true }
+  ]
+}

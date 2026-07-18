@@ -1,0 +1,586 @@
+{
+  "schemaVersion": "1.0.0",
+  "templateId": "srs-hospital-twin-release-scorecard",
+  "standardId": "srs-hospital-twin-release-standard",
+  "candidate": {
+    "candidateId": "source-5a5259b6bb86",
+    "commit": "e834138d180b446cf05a4a07c50084292accb3b7",
+    "buildUrl": null,
+    "evaluatedAt": "2026-07-16T01:56:47.617Z",
+    "releaseOwner": null,
+    "technicalEvaluator": "deterministic-release-scorecard",
+    "designEvaluator": null,
+    "narrativeEvaluator": null,
+    "sourceDigest": "5a5259b6bb860a4c9a8da409d9d53215fe00b21c2a582c8d259dc2d339c7a771",
+    "browserEvidenceFresh": true,
+    "worktreeDirty": true
+  },
+  "automatedChecks": {
+    "evalHarnessSelfCheck": true,
+    "typecheck": true,
+    "simulationCheck": true,
+    "storyStateCheck": true,
+    "productionBuild": true,
+    "consoleErrors": 0,
+    "failedAssetRequests": 0,
+    "notes": "Repository checks and production build pass. Runtime diagnostics are reported separately and remain pending until captured."
+  },
+  "hardGateResults": [
+    {
+      "id": "HG-NAR-01",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": 19,
+      "evidence": [
+        "evals/canonical-story-states.json",
+        "scripts/check-hospital-story.ts"
+      ],
+      "notes": "Exactly 19 canonical states in authored order."
+    },
+    {
+      "id": "HG-NAR-02",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": 1,
+      "evidence": [
+        "evals/evidence/current/browser-qa.json",
+        "scripts/check-hospital-browser-evidence.mjs"
+      ],
+      "notes": "114 state/viewport observations reviewed."
+    },
+    {
+      "id": "HG-NAR-03",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": 1,
+      "evidence": [
+        "evals/canonical-story-states.json",
+        "scripts/check-hospital-story.ts"
+      ],
+      "notes": "Only the opening pressure uses an explicit surface beat."
+    },
+    {
+      "id": "HG-NAR-04",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": "100%",
+      "evidence": [
+        "evals/evidence/current/browser-qa.json",
+        "scripts/check-hospital-browser-evidence.mjs"
+      ],
+      "notes": "Callout, caption, dashboard focus, and camera focus align."
+    },
+    {
+      "id": "HG-NAR-05",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": "100%",
+      "evidence": [
+        "scripts/check-hospital-sim.ts",
+        "src/lib/hospital-sim.ts",
+        "src/lib/hospital-storyboard.ts"
+      ],
+      "notes": "Simulation check verifies every system-constraint label against the model-selected constraint."
+    },
+    {
+      "id": "HG-NAR-06",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": 0,
+      "evidence": [
+        "evals/canonical-story-states.json",
+        "scripts/check-hospital-story.ts",
+        "scripts/check-hospital-sim.ts",
+        "src/lib/hospital-sim.ts",
+        "src/lib/hospital-storyboard.ts"
+      ],
+      "notes": "Metrics hold through materialize and commit once on resolve."
+    },
+    {
+      "id": "HG-NAR-07",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": 0,
+      "evidence": [
+        "evals/evidence/current/browser-qa.json",
+        "scripts/check-hospital-browser-evidence.mjs"
+      ],
+      "notes": "Camera movement occurs only on reveal across all required viewports."
+    },
+    {
+      "id": "HG-NAR-08",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": 0,
+      "evidence": [
+        "evals/canonical-story-states.json",
+        "scripts/check-hospital-story.ts"
+      ],
+      "notes": "Materializing, resolved, and pressure states are mutually exclusive."
+    },
+    {
+      "id": "HG-LAY-01",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": "0px2",
+      "evidence": [
+        "evals/evidence/current/browser-qa.json",
+        "scripts/check-hospital-browser-evidence.mjs"
+      ],
+      "notes": "Protected-region overlap is zero in every observation."
+    },
+    {
+      "id": "HG-LAY-02",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": 0,
+      "evidence": [
+        "evals/evidence/current/browser-qa.json",
+        "scripts/check-hospital-browser-evidence.mjs"
+      ],
+      "notes": "No horizontal overflow, clipped cards, or clipped primary text."
+    },
+    {
+      "id": "HG-MOT-01",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": "123742.3ms; settle 800ms",
+      "evidence": [
+        "evals/evidence/current/autoplay-runtime.json",
+        "src/lib/hospital-story.ts",
+        "scripts/check-hospital-story.ts"
+      ],
+      "notes": "Measured uninterrupted autoplay evidence evaluated."
+    },
+    {
+      "id": "HG-MOT-02",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": "19/19 states; 0 infinite animations",
+      "evidence": [
+        "evals/evidence/current/reduced-motion.json",
+        "scripts/browser-hospital-evaluator.mjs"
+      ],
+      "notes": "Reduced-motion semantics and state coverage are complete."
+    },
+    {
+      "id": "HG-PERF-01",
+      "status": "pending",
+      "pass": false,
+      "measuredValue": {
+        "measurementStatus": "calibrated-inconclusive",
+        "animatedHarnessFpsP50": 30,
+        "reducedMotionHarnessFpsP50": 30,
+        "longTasks": 0,
+        "cumulativeLayoutShift": 0,
+        "largestContentfulPaintMs": 160,
+        "runtimeErrors": 0,
+        "baselineThresholdDecision": "pending-native-60hz-run",
+        "cpu4xThresholdDecision": "not-run"
+      },
+      "evidence": [
+        "evals/evidence/current/performance-qa.json",
+        "evals/evidence/current/performance-probe.json",
+        "evals/hospital-release-standard.json"
+      ],
+      "notes": "Partial production evidence is clean for long tasks, layout shift, LCP, and runtime errors. Animated and reduced-motion controls share the harness's 30 Hz ceiling, so FPS is inconclusive; native 60 Hz baseline and 4x CPU runs remain required."
+    },
+    {
+      "id": "HG-A11Y-01",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": "touch 44px; keyboard 100%",
+      "evidence": [
+        "evals/evidence/current/accessibility-qa.json",
+        "evals/evidence/current/browser-qa.json"
+      ],
+      "notes": "Keyboard, focus, accessible-name, and target evidence evaluated."
+    },
+    {
+      "id": "HG-A11Y-02",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": "normal 6.18:1; large 16.67:1",
+      "evidence": [
+        "evals/evidence/current/accessibility-qa.json",
+        "evals/hospital-release-standard.json"
+      ],
+      "notes": "Contrast and color-independent meaning evidence evaluated."
+    },
+    {
+      "id": "HG-REL-01",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": 0,
+      "evidence": [
+        "evals/evidence/current/control-qa.json",
+        "scripts/check-hospital-story.ts"
+      ],
+      "notes": "Autoplay and manual control sequences evaluated."
+    },
+    {
+      "id": "HG-REL-02",
+      "status": "passed",
+      "pass": true,
+      "measuredValue": "0 console errors; 0 failed assets",
+      "evidence": [
+        "evals/evidence/current/production-runtime.json",
+        "dist/"
+      ],
+      "notes": "Production runtime diagnostics evaluated."
+    }
+  ],
+  "rubricResults": [
+    {
+      "id": "NC-01",
+      "score": null,
+      "maximum": 8,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "NC-02",
+      "score": null,
+      "maximum": 7,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "NC-03",
+      "score": null,
+      "maximum": 5,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "NC-04",
+      "score": null,
+      "maximum": 5,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "EC-01",
+      "score": null,
+      "maximum": 6,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "EC-02",
+      "score": null,
+      "maximum": 5,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "EC-03",
+      "score": null,
+      "maximum": 5,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "EC-04",
+      "score": null,
+      "maximum": 4,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "VC-01",
+      "score": null,
+      "maximum": 6,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "VC-02",
+      "score": null,
+      "maximum": 5,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "VC-03",
+      "score": null,
+      "maximum": 5,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "VC-04",
+      "score": null,
+      "maximum": 4,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "MC-01",
+      "score": null,
+      "maximum": 5,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "MC-02",
+      "score": null,
+      "maximum": 4,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "MC-03",
+      "score": null,
+      "maximum": 3,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "MC-04",
+      "score": null,
+      "maximum": 3,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "ED-01",
+      "score": null,
+      "maximum": 4,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "ED-02",
+      "score": null,
+      "maximum": 3,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "ED-03",
+      "score": null,
+      "maximum": 3,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "TR-01",
+      "score": null,
+      "maximum": 3,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "TR-02",
+      "score": null,
+      "maximum": 3,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "TR-03",
+      "score": null,
+      "maximum": 2,
+      "evidence": [],
+      "notes": null
+    },
+    {
+      "id": "TR-04",
+      "score": null,
+      "maximum": 2,
+      "evidence": [],
+      "notes": null
+    }
+  ],
+  "domainResults": [
+    {
+      "id": "narrative-causality",
+      "score": null,
+      "maximum": 25,
+      "percent": null,
+      "pass": null
+    },
+    {
+      "id": "executive-comprehension",
+      "score": null,
+      "maximum": 20,
+      "percent": null,
+      "pass": null
+    },
+    {
+      "id": "visual-composition",
+      "score": null,
+      "maximum": 20,
+      "percent": null,
+      "pass": null
+    },
+    {
+      "id": "motion-choreography",
+      "score": null,
+      "maximum": 15,
+      "percent": null,
+      "pass": null
+    },
+    {
+      "id": "evidence-decision-utility",
+      "score": null,
+      "maximum": 10,
+      "percent": null,
+      "pass": null
+    },
+    {
+      "id": "technical-readiness",
+      "score": null,
+      "maximum": 10,
+      "percent": null,
+      "pass": null
+    }
+  ],
+  "viewportResults": [
+    {
+      "id": "stage-1080p",
+      "statesReviewed": 19,
+      "statesRequired": 19,
+      "pass": true,
+      "evidence": [
+        "evals/evidence/current/stage-1080p.json"
+      ],
+      "notes": "All canonical states satisfy composition, type, target, and safe-area thresholds."
+    },
+    {
+      "id": "presentation-laptop",
+      "statesReviewed": 19,
+      "statesRequired": 19,
+      "pass": true,
+      "evidence": [
+        "evals/evidence/current/presentation-laptop.json"
+      ],
+      "notes": "All canonical states satisfy composition, type, target, and safe-area thresholds."
+    },
+    {
+      "id": "projector-safe",
+      "statesReviewed": 19,
+      "statesRequired": 19,
+      "pass": true,
+      "evidence": [
+        "evals/evidence/current/projector-safe.json"
+      ],
+      "notes": "All canonical states satisfy composition, type, target, and safe-area thresholds."
+    },
+    {
+      "id": "tablet-landscape",
+      "statesReviewed": 19,
+      "statesRequired": 19,
+      "pass": true,
+      "evidence": [
+        "evals/evidence/current/tablet-landscape.json"
+      ],
+      "notes": "All canonical states satisfy composition, type, target, and safe-area thresholds."
+    },
+    {
+      "id": "phone-standard",
+      "statesReviewed": 19,
+      "statesRequired": 19,
+      "pass": true,
+      "evidence": [
+        "evals/evidence/current/phone-standard.json"
+      ],
+      "notes": "All canonical states satisfy composition, type, target, and safe-area thresholds."
+    },
+    {
+      "id": "phone-narrow",
+      "statesReviewed": 19,
+      "statesRequired": 19,
+      "pass": true,
+      "evidence": [
+        "evals/evidence/current/phone-narrow.json"
+      ],
+      "notes": "All canonical states satisfy composition, type, target, and safe-area thresholds."
+    }
+  ],
+  "humanAudienceSummary": {
+    "sessionsCompleted": 0,
+    "executiveSessionsCompleted": 0,
+    "medianRating": null,
+    "mainThesisRecallPercent": null,
+    "finalConstraintRecallPercent": null,
+    "actionableNextDecisionPercent": null,
+    "repeatedConfusionPoints": [],
+    "status": "pending",
+    "pass": false,
+    "evidence": [
+      "evals/evidence/current/human-audience-summary.json",
+      "evals/human-audience-scorecard.template.json"
+    ]
+  },
+  "findings": {
+    "critical": [],
+    "high": [
+      "Complete the production performance run at baseline and 4x CPU slowdown.",
+      "Complete keyboard, focus, accessible-name, WCAG contrast, and color-independence audits.",
+      "Complete the uninterrupted autoplay, runtime-control, console, and failed-asset checks.",
+      "Complete at least 9 audience sessions, including 4 executive sessions."
+    ],
+    "medium": [],
+    "low": []
+  },
+  "releaseDecision": {
+    "weightedScore": null,
+    "allHardGatesPass": false,
+    "allDomainsPass": false,
+    "humanAudiencePass": false,
+    "decision": "hold",
+    "allowedDecisions": [
+      "release",
+      "hold"
+    ],
+    "decisionRationale": "16/17 hard gates pass. Pending gates: HG-PERF-01. Qualitative rubric scoring and required audience sessions are incomplete; an automated score cannot substitute for executive comprehension evidence.",
+    "approvedBy": null,
+    "approvedAt": null
+  },
+  "automatedCheckResults": [
+    {
+      "id": "evalHarnessSelfCheck",
+      "status": "passed",
+      "pass": true,
+      "command": "/Users/repurinton/.nvm/versions/node/v24.12.0/bin/node scripts/check-hospital-evals.mjs",
+      "exitCode": 0
+    },
+    {
+      "id": "typecheck",
+      "status": "passed",
+      "pass": true,
+      "command": "npm run typecheck",
+      "exitCode": 0
+    },
+    {
+      "id": "simulationCheck",
+      "status": "passed",
+      "pass": true,
+      "command": "/Users/repurinton/.nvm/versions/node/v24.12.0/bin/node scripts/check-hospital-sim.ts",
+      "exitCode": 0
+    },
+    {
+      "id": "storyStateCheck",
+      "status": "passed",
+      "pass": true,
+      "command": "/Users/repurinton/.nvm/versions/node/v24.12.0/bin/node scripts/check-hospital-story.ts",
+      "exitCode": 0
+    },
+    {
+      "id": "motionCheck",
+      "status": "passed",
+      "pass": true,
+      "command": "/Users/repurinton/.nvm/versions/node/v24.12.0/bin/node scripts/check-hospital-motion.mjs",
+      "exitCode": 0
+    },
+    {
+      "id": "productionBuild",
+      "status": "passed",
+      "pass": true,
+      "command": "npm run build",
+      "exitCode": 0
+    }
+  ]
+}

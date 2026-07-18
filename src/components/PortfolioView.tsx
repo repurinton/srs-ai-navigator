@@ -131,26 +131,26 @@ export function PortfolioView() {
             operating outcome they can prove.
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[24px] border border-[var(--color-line)] bg-[var(--color-line)] lg:justify-self-end lg:min-w-[560px]">
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[24px] border border-white/10 bg-white/10 lg:justify-self-end lg:min-w-[560px]">
           {[
-            [plays["Adopt Now"], "Adopt now", "#2e9e6b"],
-            [plays["Pilot & Scale"], "Pilot + scale", "#cf7b19"],
-            [plays["Watch & Partner"], "Watch + partner", "#735de8"],
+            [plays["Adopt Now"], "Adopt now", "#43c98d"],
+            [plays["Pilot & Scale"], "Pilot + scale", "#f2a33c"],
+            [plays["Watch & Partner"], "Watch + partner", "#9c8bf0"],
           ].map(([count, label, color]) => (
-            <div key={String(label)} className="bg-white p-5">
+            <div key={String(label)} className="bg-[var(--color-night)] p-5">
               <strong className="block text-3xl font-semibold tracking-[-0.04em]" style={{ color: String(color) }}>{count}</strong>
-              <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-[0.12em] text-[var(--color-muted)]">{label}</span>
+              <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/55">{label}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="mt-10 rounded-[26px] border border-[var(--color-line)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
+      <div className="mt-10 rounded-[26px] border border-white/10 bg-white/[0.035] p-5 shadow-[var(--shadow-soft)] sm:p-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Portfolio lens and scope">
             <ToggleButton active={lens === "service-line"} onClick={() => changeLens("service-line")}>Service lines</ToggleButton>
             <ToggleButton active={lens === "track"} onClick={() => changeLens("track")}>Robotics categories</ToggleButton>
-            <span className="mx-1 hidden w-px bg-[var(--color-line)] sm:block" />
+            <span className="mx-1 hidden w-px bg-white/15 sm:block" />
             <ToggleButton active={operationsOnly} onClick={() => setOperationsOnly((value) => !value)}>Hospital operations</ToggleButton>
           </div>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Portfolio view">
@@ -160,7 +160,7 @@ export function PortfolioView() {
         </div>
 
         <div
-          className="mt-5 flex flex-wrap gap-2 border-t border-[var(--color-line)] pt-5"
+          className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-5"
           role="group"
           aria-label={lens === "service-line" ? "Service line filter" : "Robotics category filter"}
         >
@@ -187,7 +187,7 @@ export function PortfolioView() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search workflow, vendor, specialty, or outcome…"
-              className="w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-canvas)] px-4 py-3 text-sm outline-none transition focus:border-[var(--color-mint-dark)] focus:ring-2 focus:ring-[var(--color-mint)]/20"
+              className="w-full rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/40 focus:border-[var(--color-mint)] focus:ring-2 focus:ring-[var(--color-mint)]/20"
             />
           </div>
           <select value={maturity} onChange={(event) => setMaturity(event.target.value)} aria-label="Maturity" className="filter-select">
@@ -202,10 +202,10 @@ export function PortfolioView() {
       </div>
 
       <div className="mt-6 flex items-center justify-between">
-        <p className="text-sm font-semibold text-[var(--color-muted)]">
+        <p className="text-sm font-semibold text-white/60">
           {filtered.length} use case{filtered.length === 1 ? "" : "s"}{operationsOnly ? " in the operations lens" : ""}
         </p>
-        <p className="hidden text-[11px] text-[var(--color-muted)] sm:block">Heuristic readiness score · directional, not a financial recommendation</p>
+        <p className="hidden text-[11px] text-white/50 sm:block">Heuristic readiness score · directional, not a financial recommendation</p>
       </div>
 
       {mode === "cards" ? (
@@ -213,13 +213,13 @@ export function PortfolioView() {
           {filtered.map((useCase) => <UseCaseCard key={useCase.id} uc={useCase} lens={lens} onOpen={setModalUc} />)}
         </div>
       ) : (
-        <div className="mt-5 rounded-[26px] border border-[var(--color-line)] bg-white p-4 shadow-[var(--shadow-soft)] sm:p-6">
+        <div className="mt-5 rounded-[26px] border border-white/10 bg-white/[0.035] p-4 shadow-[var(--shadow-soft)] sm:p-6">
           <RadarView ucs={filtered} onSelect={setModalUc} />
         </div>
       )}
 
       {filtered.length === 0 && (
-        <div className="mt-8 rounded-[26px] border border-dashed border-[var(--color-line)] bg-white px-6 py-16 text-center text-sm text-[var(--color-muted)]">
+        <div className="mt-8 rounded-[26px] border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center text-sm text-white/60">
           No use cases match this portfolio lens.
         </div>
       )}
@@ -231,16 +231,36 @@ export function PortfolioView() {
 
 function ToggleButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" aria-pressed={active} onClick={onClick} className="rounded-full border px-4 py-2 text-[11px] font-bold transition-colors" style={{ borderColor: active ? "var(--color-night)" : "var(--color-line)", background: active ? "var(--color-night)" : "white", color: active ? "white" : "var(--color-muted)" }}>
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className="rounded-full border px-4 py-2 text-[11px] font-bold transition-colors"
+      style={{
+        borderColor: active ? "rgba(91,240,195,0.4)" : "rgba(255,255,255,0.16)",
+        background: active ? "rgba(91,240,195,0.14)" : "transparent",
+        color: active ? "var(--color-mint)" : "rgba(255,255,255,0.6)",
+      }}
+    >
       {children}
     </button>
   );
 }
 
 function FilterButton({ active, onClick, children, color }: { active: boolean; onClick: () => void; children: ReactNode; color?: string }) {
-  const activeColor = color ?? "var(--color-night)";
+  const activeColor = color ?? "var(--color-mint)";
   return (
-    <button type="button" aria-pressed={active} onClick={onClick} className="rounded-full border px-3 py-1.5 text-[10px] font-bold transition-colors" style={{ borderColor: active ? activeColor : "var(--color-line)", background: active ? activeColor : "white", color: active ? "white" : "var(--color-muted)" }}>
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className="rounded-full border px-3 py-1.5 text-[10px] font-bold transition-colors"
+      style={{
+        borderColor: active ? `color-mix(in srgb, ${activeColor} 45%, transparent)` : "rgba(255,255,255,0.16)",
+        background: active ? `color-mix(in srgb, ${activeColor} 18%, transparent)` : "transparent",
+        color: active ? `color-mix(in srgb, ${activeColor} 55%, white)` : "rgba(255,255,255,0.6)",
+      }}
+    >
       {children}
     </button>
   );

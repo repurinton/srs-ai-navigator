@@ -1,0 +1,301 @@
+{
+  "schemaVersion": "0.1.0-draft",
+  "standardId": "srs-hospital-twin-v2-3d-release-standard",
+  "title": "Hospital Operating Twin V2 True-3D Release Standard",
+  "status": "planning-draft",
+  "inherits": "evals/hospital-release-standard.json",
+  "intent": "Extend the current non-compensable narrative and presentation standard with spatial, route, camera, GPU, fallback, and claim-safety gates required by a real-time 3D operating diorama.",
+  "releasePolicy": {
+    "retainAllInheritedHardGates": true,
+    "requireAllV2HardGates": true,
+    "weightedScoreCannotOffsetFailedGate": true,
+    "missingOrStaleEvidenceDecision": "HOLD",
+    "minimumHumanSessions": 12,
+    "minimumExecutiveSessions": 6,
+    "minimumPrimaryAudienceSessions": 6,
+    "minimumAudienceMedian": 4.6,
+    "maximumCriticalFindings": 0,
+    "maximumHighFindings": 0
+  },
+  "operationalInventory": [
+    "campus-shell",
+    "open-floor-plates",
+    "campus-roads",
+    "parking-stalls",
+    "arrival-loop",
+    "valet-curb-and-doors",
+    "ems-approach",
+    "ambulance-bay",
+    "access-intake",
+    "ct-room",
+    "mri-room",
+    "precision-planning",
+    "preop-readiness",
+    "robotic-or-core",
+    "two-visible-robotic-ors",
+    "sterile-instrument-flow",
+    "pacu-recovery",
+    "inpatient-rooms-and-beds",
+    "discharge-exit",
+    "longitudinal-home-care-node",
+    "cars",
+    "ambulance",
+    "valets",
+    "ems-staff",
+    "patients",
+    "caregivers",
+    "gurneys",
+    "beds",
+    "imaging-equipment",
+    "robotic-system",
+    "instrument-carts",
+    "six-ai-lever-mechanisms",
+    "visible-system-flow-layer"
+  ],
+  "hardGates": [
+    {
+      "id": "HG-3D-01",
+      "name": "Operational parity",
+      "requirement": "Every required operational component exists, is recognizable, is visible from at least one canonical camera, appears in the DOM semantic layer, and connects to a route or operating-state change.",
+      "measure": "operational-inventory-coverage-percent",
+      "pass": 100,
+      "evidence": ["operational-scene-manifest", "automated-node-inventory", "expert-review"]
+    },
+    {
+      "id": "HG-3D-02",
+      "name": "Spatial topology",
+      "requirement": "One scene unit equals one authored meter; required rooms, corridors, doors, roads, and portals match the topology manifest; every required zone is reachable.",
+      "measure": "topology-errors-or-unreachable-zones",
+      "pass": 0,
+      "evidence": ["asset-validation", "topology-graph", "route-reachability-test"]
+    },
+    {
+      "id": "HG-3D-03",
+      "name": "Canonical world-state parity",
+      "requirement": "Across all 19 states, active lever, pressure zone, queue direction, room status, dashboard, and callout describe the same model state with no unrelated scene change.",
+      "measure": "canonical-world-state-mismatches",
+      "pass": 0,
+      "evidence": ["canonical-world-deltas", "state-hashes", "114-state-captures"]
+    },
+    {
+      "id": "HG-3D-04",
+      "name": "Projection fidelity",
+      "requirement": "The active callout tether terminates at its world anchor with no offscreen or occluded active target.",
+      "measure": "projection-and-visibility-thresholds",
+      "pass": "desktop-error<=8px; mobile-error<=12px; active-target-visible>=85%; offscreen-anchors=0",
+      "evidence": ["world-to-screen-trace", "depth-aware-visibility-samples"]
+    },
+    {
+      "id": "HG-PATH-01",
+      "name": "Route adherence",
+      "requirement": "Actors remain on their authored road, sidewalk, corridor, or portal route and reach every required endpoint.",
+      "measure": "route-trace-thresholds",
+      "pass": "people-and-gurneys-p95-error<=0.15m; vehicles-p95-error<=0.30m; endpoint-completion=100%; wall-crossings=0",
+      "evidence": ["10hz-transform-trace", "ten-known-seed-replays"]
+    },
+    {
+      "id": "HG-PATH-02",
+      "name": "Spatial collision safety",
+      "requirement": "Moving actors do not penetrate walls or fixtures and preserve authored vehicle-pedestrian separation.",
+      "measure": "penetration-or-clearance-failures",
+      "pass": "wall-or-fixture-penetration>0.02m=0; actor-interpenetrations=0; vehicle-pedestrian-clearance<0.75m=0",
+      "evidence": ["collider-trace", "replay-visualization"]
+    },
+    {
+      "id": "HG-PATH-03",
+      "name": "Motion continuity",
+      "requirement": "There are no teleports, unexplained reversals, or deadlocks; spawns and despawns occur only at named portals.",
+      "measure": "motion-continuity-thresholds",
+      "pass": "teleports=0; unexplained-reversals=0; deadlocks-over-2s=0; speed-range-samples>=99.5%; invalid-portals=0",
+      "evidence": ["fixed-step-motion-telemetry"]
+    },
+    {
+      "id": "HG-CAM-01",
+      "name": "Authored camera timing",
+      "requirement": "The camera moves exactly once on each reveal, never on materialize or resolve, and lands inside the authored safe rectangle without overlapping tweens.",
+      "measure": "camera-plan-mismatches",
+      "pass": 0,
+      "evidence": ["camera-pose-manifest", "camera-timeline-trace"]
+    },
+    {
+      "id": "HG-CAM-02",
+      "name": "Camera comfort and visibility",
+      "requirement": "The guided camera never clips geometry, rolls, or loses the target during movement; the callout appears only after settlement.",
+      "measure": "camera-comfort-thresholds",
+      "pass": "geometry-clips=0; roll<=1deg; angular-velocity<=30deg-per-sec; target-visible>=95%-of-transition-frames; pre-settle-callouts=0",
+      "evidence": ["camera-trace", "human-vestibular-review"]
+    },
+    {
+      "id": "HG-COMP-3D-01",
+      "name": "Depth-aware executive composition",
+      "requirement": "One active beacon and proposition dominate; the target remains legible and ambient motion does not cross the active callout or target during the opening three seconds of a beat.",
+      "measure": "depth-aware-composition-failures",
+      "pass": 0,
+      "evidence": ["114-state-depth-aware-captures", "motion-occlusion-traces"]
+    },
+    {
+      "id": "HG-ASSET-01",
+      "name": "Asset readiness",
+      "requirement": "All story-critical models, textures, decoders, and shader variants are valid and ready before Run; there is no story-time pop-in.",
+      "measure": "asset-readiness-failures",
+      "pass": 0,
+      "evidence": ["asset-manifest", "network-trace", "shader-prewarm-trace"]
+    },
+    {
+      "id": "HG-GPU-01",
+      "name": "Presentation GPU performance",
+      "requirement": "The exact presentation system meets the real-time scene, loading, interaction, and render-budget thresholds in a production build.",
+      "measure": "desktop-performance-threshold-breaches",
+      "pass": 0,
+      "evidence": ["native-raf-frame-trace", "renderer-info-trace", "browser-performance-trace"]
+    },
+    {
+      "id": "HG-GPU-02",
+      "name": "Mobile endurance",
+      "requirement": "A ten-minute physical-device run remains stable without crash, context loss, serious thermal state, or material late-run degradation.",
+      "measure": "mobile-endurance-threshold-breaches",
+      "pass": 0,
+      "evidence": ["ios-instruments-trace", "android-gpu-and-thermal-trace"]
+    },
+    {
+      "id": "HG-DET-01",
+      "name": "Render determinism",
+      "requirement": "Canonical logical hashes match across frame rates, autoplay and manual control, reloads, and pause-background-resume; checkpoint actor positions remain within tolerance.",
+      "measure": "determinism-mismatches",
+      "pass": "logical-hash-mismatches=0; checkpoint-position-error<=0.01m",
+      "evidence": ["30-60-120hz-replay-suite", "five-reload-suite", "background-resume-suite"]
+    },
+    {
+      "id": "HG-RES-01",
+      "name": "Failure recovery",
+      "requirement": "Graphics or asset failure restores the same state or enters the accessible 2D fallback within three seconds; offline-after-ready completes the story.",
+      "measure": "failure-recovery-thresholds",
+      "pass": "state-loss=0; recovery-or-fallback<=3s; offline-story-completion=100%",
+      "evidence": ["fault-injection-suite"]
+    },
+    {
+      "id": "HG-A11Y-3D-01",
+      "name": "Parallel semantic scene",
+      "requirement": "Every canonical canvas state has one equivalent DOM summary covering pressure, zone, visible change, metric, and operating implication; the canvas creates no keyboard trap.",
+      "measure": "semantic-state-coverage-and-keyboard-failures",
+      "pass": "semantic-coverage=100%; keyboard-traps=0; live-region-events-per-state=1",
+      "evidence": ["19-state-screen-reader-trace", "keyboard-audit"]
+    },
+    {
+      "id": "HG-CLAIM-01",
+      "name": "Illustrative-twin claim safety",
+      "requirement": "The experience identifies itself as illustrative, distinguishes visual tokens from literal census, ties every metric to its evidence basis, and makes no unsupported clinical, staffing, safety, or autonomy claim.",
+      "measure": "claim-manifest-failures",
+      "pass": 0,
+      "evidence": ["claim-manifest", "clinical-review", "hospital-operations-review"]
+    },
+    {
+      "id": "HG-LIVE-01",
+      "name": "Exact-stage rehearsal",
+      "requirement": "The exact presentation system completes consecutive live runs, cold starts, offline operation, and practiced recovery without narrative, visual, control, or asset failure.",
+      "measure": "rehearsal-failures",
+      "pass": "clean-full-runs=5; cold-starts=3; offline-runs=1; fallback-drills>=1; failures=0",
+      "evidence": ["signed-rehearsal-log", "recordings"]
+    }
+  ],
+  "performanceBudgets": {
+    "presentationLaptop": {
+      "maximumP95FrameTimeMs": 18.2,
+      "maximumP99FrameTimeMs": 25,
+      "maximumDroppedFrameRatio": 0.01,
+      "maximumLongTasksOver50Ms": 1,
+      "maximumTotalBlockingTimeMs": 100,
+      "maximumInteractionToNextPaintMs": 200,
+      "maximumLargestContentfulPaintMs": 2000,
+      "maximumVisibleTriangles": 350000,
+      "maximumDrawCalls": 150,
+      "maximumEstimatedSceneGpuMemoryMiB": 256,
+      "maximumRuntimeErrors": 0,
+      "maximumFailedAssets": 0,
+      "maximumWebglWarnings": 0
+    },
+    "cpu4x": {
+      "maximumP95FrameTimeMs": 34,
+      "minimumMedianFps": 30,
+      "maximumInteractionToNextPaintMs": 250,
+      "maximumMissedOrDoubleTransitions": 0
+    },
+    "mobile": {
+      "minimumFlagshipFinalTwoMinuteMedianFps": 45,
+      "minimumFallbackTierFinalTwoMinuteMedianFps": 30,
+      "maximumP95FrameTimeMs": 33.3,
+      "maximumTenMinuteDegradationPercent": 15,
+      "maximumVisibleTriangles": 200000,
+      "maximumEstimatedSceneGpuMemoryMiB": 128,
+      "maximumContextLosses": 0
+    },
+    "loading": {
+      "maximumCriticalDesktopTransferMiB": 5,
+      "maximumTotalSceneTransferMiB": 12,
+      "maximumCriticalMobileTransferMiB": 3.5,
+      "maximumDesktopTextureDimensionPx": 2048,
+      "maximumMobileTextureDimensionPx": 1024,
+      "maximumFirstMeaningfulSceneMsBroadband": 2000,
+      "maximumFirstMeaningfulSceneMsFast4g": 4000,
+      "maximumRunReadyMsFast4g": 5000,
+      "maximumStoryTimeShaderCompileTaskMs": 50
+    }
+  },
+  "compositionThresholds": {
+    "maximumForegroundPropositions": 1,
+    "maximumActiveVisualBeacons": 1,
+    "maximumProtectedRegionOverlapPx2": 0,
+    "minimumActiveZoneProjectedFramePercent": 12,
+    "maximumActiveZoneProjectedFramePercent": 35,
+    "minimumActiveTargetVisiblePercent": 85,
+    "minimumImportantEntitySizePxAt1280x720": 24,
+    "minimumPrimaryLabelSizePxAt1280x720": 14,
+    "maximumAmbientMotionCrossingsDuringOpeningThreeSeconds": 0
+  },
+  "humanEvaluation": {
+    "minimumIdentifyActiveZoneWithinThreeSecondsPercent": 90,
+    "minimumCentralThesisAccuracyPercent": 90,
+    "minimumRecallFiveOfSixLeversInOrderPercent": 85,
+    "minimumFinalRecoveryConstraintAccuracyPercent": 90,
+    "minimumActionableNextDecisionPercent": 85,
+    "maximumRepeatedConfusionPercent": 20,
+    "v1V2Comparison": {
+      "minimumThesisRecallNoninferiorityMarginPoints": -3,
+      "minimumSpatialUnderstandingImprovementPoints": 10,
+      "minimumSpatialUnderstandingRatingImprovement": 0.5,
+      "maximumCognitiveLoadRatingIncrease": 0.2,
+      "minimumBlindPreferenceForV2Percent": 70
+    }
+  },
+  "requiredEvidenceArtifacts": [
+    "operational-scene-manifest.json",
+    "spatial-topology.json",
+    "entity-route-contract.v2.json",
+    "camera-plan.json",
+    "canonical-world-deltas.json",
+    "asset-and-render-budget.json",
+    "claim-manifest.json",
+    "device-profile-manifest.json",
+    "failure-injection-plan.json",
+    "v2-release-scorecard.current.json"
+  ],
+  "evidenceMetadata": [
+    "source-hash",
+    "asset-hash",
+    "engine-version",
+    "browser-and-gpu-identity",
+    "model-seed",
+    "canonical-state",
+    "viewport",
+    "timestamp"
+  ],
+  "releaseSequence": [
+    "contract-freeze",
+    "spatial-and-behavioral-alpha",
+    "114-state-composition-beta",
+    "physical-gpu-and-failure-candidate",
+    "human-validation",
+    "exact-stage-rehearsal",
+    "release"
+  ]
+}

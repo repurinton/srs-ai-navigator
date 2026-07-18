@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0.0",
+  "capturedAt": "2026-07-16T01:50:18Z",
+  "candidate": "production-preview",
+  "url": "http://127.0.0.1:4173/#case",
+  "pass": true,
+  "consoleErrors": 0,
+  "consoleWarnings": 0,
+  "failedAssetRequests": 0,
+  "requestsAudited": 8,
+  "buildWarnings": 0,
+  "assets": [
+    { "path": "/", "status": 200, "bytes": 1562 },
+    { "path": "/assets/index-BJ1J7s2R.css", "status": 200, "bytes": 115421 },
+    { "path": "/assets/index-B2ZdW-sI.js", "status": 200, "bytes": 300861 },
+    { "path": "/assets/TelesurgeryMap-Bob_m5as.js", "status": 200, "bytes": 101352 },
+    { "path": "/assets/PortfolioView-SkD4SR-O.js", "status": 200, "bytes": 499138 },
+    { "path": "/assets/hospital-cutaway-v1-1280.webp", "status": 200, "bytes": 199470 },
+    { "path": "/assets/hospital-cutaway-v1.webp", "status": 200, "bytes": 320050 },
+    { "path": "/assets/og.png", "status": 200, "bytes": 2199464 }
+  ]
+}

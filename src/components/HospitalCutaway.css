@@ -2,8 +2,16 @@
   --cutaway-night: #06131c;
   --cutaway-panel: rgba(6, 19, 28, 0.92);
   --cutaway-mint: #5bf0c3;
+  --cutaway-resolve-hold: 5380ms;
+  --cutaway-callout-exit: 620ms;
+  --cutaway-scene-exhale: 800ms;
+  --cutaway-reveal-delay: var(--cutaway-callout-exit);
   color: #fff;
   container-type: inline-size;
+}
+
+.hospital-cutaway[data-resolved-handoff="true"] {
+  --cutaway-reveal-delay: calc(var(--cutaway-callout-exit) + var(--cutaway-scene-exhale));
 }
 
 .hospital-cutaway.cutaway-embedded {
@@ -77,6 +85,42 @@
   position: absolute;
   inset: 0;
   z-index: 0;
+  transform: translate3d(var(--camera-pan-x), var(--camera-pan-y), 0) scale(1.03);
+  transform-origin: center;
+  transition: transform 620ms cubic-bezier(0.2, 0.75, 0.2, 1);
+  will-change: transform;
+  container-type: size;
+}
+
+/* In 3D mode the camera rig lives in the renderer: no CSS parallax scale on
+   desktop and no world-strip shift on mobile (portrait poses frame instead). */
+.hospital-cutaway[data-renderer="3d"] .cutaway-world,
+.hospital-cutaway[data-renderer="3d-low"] .cutaway-world {
+  transform: none;
+}
+
+@container (max-width: 560px) {
+  .hospital-cutaway[data-renderer="3d"] .cutaway-world,
+  .hospital-cutaway[data-renderer="3d-low"] .cutaway-world {
+    inset: 0;
+    width: auto;
+    aspect-ratio: auto;
+    transform: none;
+  }
+}
+
+/* WebGL canvas base layer for the 3D renderer; sits where the raster does so
+   the shared DOM overlays composite identically over either scene. */
+.cutaway-canvas3d {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+}
+
+.cutaway-canvas3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .cutaway-raster {
@@ -86,12 +130,17 @@
   background-color: #102e38;
   background-image:
     linear-gradient(180deg, rgba(6, 19, 28, 0.06), rgba(6, 19, 28, 0.34)),
-    image-set(
-      url("/assets/hospital-cutaway-v1-1280.webp") 1x,
-      url("/assets/hospital-cutaway-v1.webp") 2x
-    );
+    url("/assets/hospital-cutaway-v1-1280.webp");
   background-position: center;
   background-size: cover;
+}
+
+@media (min-resolution: 1.5dppx) {
+  .cutaway-raster {
+    background-image:
+      linear-gradient(180deg, rgba(6, 19, 28, 0.06), rgba(6, 19, 28, 0.34)),
+      url("/assets/hospital-cutaway-v1.webp");
+  }
 }
 
 .cutaway-constraint-zone {
@@ -123,6 +172,11 @@
   box-shadow: 0 0 32px rgba(255, 180, 84, 0.16);
 }
 
+.hospital-cutaway[data-focus-kind="solution"] .cutaway-constraint-zone,
+.hospital-cutaway[data-focus-kind="resolved"] .cutaway-constraint-zone {
+  animation: none;
+}
+
 .hospital-cutaway[data-focus-kind="pain"] .cutaway-constraint-zone i { border-color: rgba(255, 180, 84, 0.74); }
 
 .hospital-cutaway[data-focus-kind="solution"] .cutaway-constraint-zone {
@@ -133,6 +187,16 @@
 
 .hospital-cutaway[data-focus-kind="solution"] .cutaway-constraint-zone i {
   border-color: color-mix(in srgb, var(--story-color) 72%, #fff);
+}
+
+.hospital-cutaway[data-focus-kind="resolved"] .cutaway-constraint-zone {
+  border-color: rgba(91, 240, 195, 0.74);
+  background: radial-gradient(circle, rgba(91, 240, 195, 0.16), transparent 64%);
+  box-shadow: 0 0 34px rgba(91, 240, 195, 0.2);
+}
+
+.hospital-cutaway[data-focus-kind="resolved"] .cutaway-constraint-zone i {
+  border-color: rgba(91, 240, 195, 0.7);
 }
 
 .cutaway-network {
@@ -427,12 +491,15 @@
 
 .cutaway-lever-beacon.is-live i { border-color: var(--lever-color); animation: cutaway-beacon 2.5s ease-out infinite; }
 
+/* Committed capabilities stay visible without competing with the one current beat. */
+.cutaway-lever-beacon.is-live:not(.is-materializing) i { animation: none; }
+
 .cutaway-lever-beacon.is-materializing {
   border-color: var(--lever-color);
   background: color-mix(in srgb, var(--lever-color) 14%, rgba(6, 19, 28, 0.9));
   color: #fff;
   box-shadow: 0 0 30px color-mix(in srgb, var(--lever-color) 50%, transparent);
-  animation: cutaway-materialize-beacon 1.25s ease-in-out infinite;
+  animation: none;
 }
 
 .cutaway-lever-beacon.is-materializing i {
@@ -447,7 +514,7 @@
   position: absolute;
   left: var(--card-x);
   top: var(--card-y);
-  width: clamp(145px, 16vw, 225px);
+  width: clamp(190px, 18vw, 270px);
   margin: 0;
   padding: clamp(0.55rem, 0.85vw, 0.85rem);
   border: 1px solid rgba(255, 180, 84, 0.4);
@@ -459,41 +526,52 @@
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(12px);
   pointer-events: auto;
-  transition: opacity 250ms ease, transform 250ms ease, border-color 250ms ease;
+  transition: opacity 320ms ease, transform 320ms ease, border-color 320ms ease, background 320ms ease, box-shadow 320ms ease;
   animation: cutaway-callout-arrive 420ms cubic-bezier(.2,.8,.2,1) both;
 }
 
 button.cutaway-callout-card { cursor: pointer; }
 button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: rgba(255, 180, 84, 0.78); }
-.cutaway-callout-card.is-active { outline: 2px solid #fff; outline-offset: 2px; }
-.cutaway-callout-card.is-active:not(.is-resolved) {
-  box-shadow: 0 14px 34px rgba(255, 113, 109, 0.2);
+.cutaway-callout-card.is-active {
+  outline: 1px solid rgba(255, 255, 255, 0.78);
+  outline-offset: 2px;
 }
-.cutaway-callout-card.is-materializing {
+
+.cutaway-callout-card[data-state="pressure"] {
+  border-color: rgba(255, 180, 84, 0.62);
+  background: linear-gradient(145deg, rgba(36, 27, 18, 0.94), rgba(6, 19, 28, 0.94));
+  box-shadow: 0 14px 34px rgba(255, 180, 84, 0.12), 0 14px 30px rgba(0, 0, 0, 0.26);
+}
+
+.cutaway-callout-card[data-state="constraint"] {
+  border-color: rgba(255, 113, 109, 0.82);
+  background: linear-gradient(145deg, rgba(42, 21, 24, 0.96), rgba(6, 19, 28, 0.95));
+  box-shadow: 0 0 0 1px rgba(255, 113, 109, 0.12), 0 16px 38px rgba(255, 113, 109, 0.16);
+}
+
+.cutaway-callout-card[data-state="solution"] {
   border-color: color-mix(in srgb, var(--story-color) 78%, #fff);
   background: color-mix(in srgb, var(--story-color) 11%, rgba(6, 19, 28, 0.94));
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--story-color) 26%, transparent), 0 14px 38px color-mix(in srgb, var(--story-color) 22%, transparent);
-  animation: cutaway-solution-breathe 1.8s ease-in-out infinite;
+  animation: cutaway-callout-arrive 520ms cubic-bezier(.2,.8,.2,1) both;
 }
-.cutaway-callout-card.is-resolved {
-  opacity: 0.74;
-  border-color: rgba(91, 240, 195, 0.32);
-  background: rgba(6, 31, 32, 0.78);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
-}
-.cutaway-severity-critical:not(.is-resolved) { border-color: rgba(255, 113, 109, 0.74); }
-.cutaway-severity-critical:not(.is-resolved) .cutaway-callout-kicker,
-.cutaway-severity-critical:not(.is-resolved) b { color: #ff716d; }
-.cutaway-severity-watch:not(.is-resolved) { border-color: rgba(94, 143, 255, 0.48); }
-.cutaway-severity-watch:not(.is-resolved) .cutaway-callout-kicker,
-.cutaway-severity-watch:not(.is-resolved) b { color: #8db0ff; }
-.cutaway-callout-card.is-materializing .cutaway-callout-kicker,
-.cutaway-callout-card.is-materializing b { color: color-mix(in srgb, var(--story-color) 82%, #fff); }
 
-.cutaway-callout-kicker { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.25rem; color: #ffb454; font-size: clamp(0.42rem, 0.52vw, 0.56rem); font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
-.cutaway-callout-kicker i { width: 0.38rem; height: 0.38rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 rgba(255, 180, 84, 0.5); animation: cutaway-alert 2s ease-out infinite; }
-.cutaway-callout-card.is-resolved .cutaway-callout-kicker { color: var(--cutaway-mint); }
-.cutaway-callout-card.is-resolved .cutaway-callout-kicker i {
+.cutaway-callout-card[data-state="resolved"] {
+  opacity: 0.96;
+  border-color: rgba(91, 240, 195, 0.58);
+  background: linear-gradient(145deg, rgba(7, 43, 40, 0.94), rgba(6, 25, 30, 0.94));
+  box-shadow: 0 0 0 1px rgba(91, 240, 195, 0.1), 0 12px 26px rgba(0, 0, 0, 0.22);
+}
+
+.cutaway-callout-kicker { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.25rem; color: #ffb454; font-size: clamp(0.58rem, 0.64vw, 0.68rem); font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+.cutaway-callout-kicker i { width: 0.42rem; height: 0.42rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent); animation: none; }
+.cutaway-callout-card[data-state="constraint"] .cutaway-callout-kicker,
+.cutaway-callout-card[data-state="constraint"] b { color: #ff8f8b; }
+.cutaway-callout-card[data-state="solution"] .cutaway-callout-kicker,
+.cutaway-callout-card[data-state="solution"] b { color: color-mix(in srgb, var(--story-color) 82%, #fff); }
+.cutaway-callout-card[data-state="resolved"] .cutaway-callout-kicker,
+.cutaway-callout-card[data-state="resolved"] b { color: var(--cutaway-mint); }
+.cutaway-callout-card[data-state="resolved"] .cutaway-callout-kicker i {
   display: grid;
   width: 0.72rem;
   height: 0.72rem;
@@ -503,38 +581,51 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   color: var(--cutaway-night);
   animation: none;
 }
-.cutaway-callout-card.is-resolved .cutaway-callout-kicker i::after {
+.cutaway-callout-card[data-state="resolved"] .cutaway-callout-kicker i::after {
   content: "✓";
   font-size: 0.5rem;
   font-weight: 950;
   line-height: 1;
 }
-.cutaway-callout-card strong { display: block; font-size: clamp(0.67rem, 0.82vw, 0.9rem); line-height: 1.16; }
-.cutaway-callout-detail { display: block; margin-top: 0.26rem; color: rgba(255, 255, 255, 0.58); font-size: clamp(0.55rem, 0.65vw, 0.7rem); line-height: 1.32; }
-.cutaway-callout-card.is-resolved .cutaway-callout-detail { display: none; }
-.cutaway-callout-card b { display: block; margin-top: 0.35rem; color: #ffb454; font-size: clamp(0.55rem, 0.65vw, 0.7rem); }
-.cutaway-callout-card.is-resolved b { color: var(--cutaway-mint); }
+.cutaway-callout-card strong { display: block; font-size: clamp(1rem, 1vw, 1.125rem); line-height: 1.16; }
+.cutaway-callout-detail { display: block; margin-top: 0.3rem; color: rgba(255, 255, 255, 0.82); font-size: clamp(0.94rem, 0.84vw, 1rem); line-height: 1.38; }
+.cutaway-callout-card[data-state="resolved"] .cutaway-callout-detail { color: rgba(226, 255, 247, 0.8); }
+.cutaway-callout-card b { display: block; margin-top: 0.4rem; color: #ffb454; font-size: clamp(0.88rem, 0.8vw, 0.96rem); }
 
-.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout-card.is-resolved {
+/* Resolution is a receipt, not another alert. It holds long enough to read,
+   exits completely, then leaves a deliberate 800ms visual exhale. */
+.hospital-cutaway[data-story-beat="resolve"] .cutaway-callout[data-state="resolved"] .cutaway-callout-card {
   pointer-events: none;
-  animation: cutaway-resolution-fade 2.55s ease both;
+  animation: cutaway-resolution-exit var(--cutaway-callout-exit) var(--cutaway-resolve-hold) ease both;
 }
 
-.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout:not(.is-active-callout) .cutaway-anchor.is-resolved {
-  animation: cutaway-resolution-anchor-fade 2.55s ease both;
+.hospital-cutaway[data-story-beat="resolve"] .cutaway-callout[data-state="resolved"] .cutaway-anchor {
+  animation: cutaway-resolution-anchor-exit var(--cutaway-callout-exit) var(--cutaway-resolve-hold) ease both;
 }
 
-.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout.is-active-callout .cutaway-callout-card:not(.is-resolved) {
-  animation-delay: 2.05s;
+/* Backwards-compatible handoff: if an older caller supplies the resolved
+   receipt and next constraint together, they are still temporally exclusive. */
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout[data-state="resolved"] .cutaway-callout-card {
+  pointer-events: none;
+  animation: cutaway-resolution-exit var(--cutaway-callout-exit) ease both;
 }
 
-.hospital-cutaway[data-story-beat="reveal"] .cutaway-mobile-callouts .cutaway-callout-card.is-active:not(.is-resolved) {
-  animation-delay: 2.05s;
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout[data-state="resolved"] .cutaway-anchor {
+  animation: cutaway-resolution-anchor-exit var(--cutaway-callout-exit) ease both;
 }
 
-.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout.is-active-callout .cutaway-anchor:not(.is-resolved) {
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout[data-state="constraint"] .cutaway-callout-card,
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-mobile-callouts .cutaway-callout-card[data-state="constraint"] {
+  animation: cutaway-callout-arrive 420ms var(--cutaway-reveal-delay) cubic-bezier(.2,.8,.2,1) both;
+}
+
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-callout[data-state="constraint"] .cutaway-anchor {
   opacity: 0;
-  animation: cutaway-anchor-arrive 420ms 2.05s ease both;
+  animation: cutaway-anchor-arrive 420ms var(--cutaway-reveal-delay) ease both;
+}
+
+.hospital-cutaway[data-story-beat="reveal"] .cutaway-constraint-zone {
+  animation: cutaway-focus-arrive 420ms var(--cutaway-reveal-delay) ease both;
 }
 
 .cutaway-anchor {
@@ -561,7 +652,13 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   content: "";
 }
 
-.cutaway-anchor.is-resolved { border-color: var(--cutaway-mint); box-shadow: 0 0 0 5px rgba(91, 240, 195, 0.13); }
+.cutaway-anchor[data-state="pressure"] { border-color: #ffb454; box-shadow: 0 0 0 5px rgba(255, 180, 84, 0.14); }
+.cutaway-anchor[data-state="constraint"] { border-color: #ff716d; box-shadow: 0 0 0 5px rgba(255, 113, 109, 0.15); }
+.cutaway-anchor[data-state="solution"] { border-color: var(--story-color); box-shadow: 0 0 0 5px color-mix(in srgb, var(--story-color) 16%, transparent); }
+.cutaway-anchor[data-state="resolved"] { border-color: var(--cutaway-mint); box-shadow: 0 0 0 5px rgba(91, 240, 195, 0.13); }
+.cutaway-anchor[data-state="constraint"]::after { border-color: rgba(255, 113, 109, 0.64); }
+.cutaway-anchor[data-state="solution"]::after { border-color: color-mix(in srgb, var(--story-color) 62%, transparent); }
+.cutaway-anchor[data-state="resolved"]::after { border-color: rgba(91, 240, 195, 0.52); }
 
 .cutaway-mobile-callouts,
 .cutaway-mobile-focus { display: none; }
@@ -571,7 +668,7 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   display: grid;
   width: min(100%, 940px);
   overflow: hidden;
-  grid-template-columns: minmax(230px, 0.95fr) minmax(0, 2fr);
+  grid-template-columns: minmax(380px, 1.3fr) minmax(0, 1.9fr);
   grid-template-rows: auto 4px;
   grid-template-areas:
     "header metrics"
@@ -594,15 +691,15 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
 }
 
 .cutaway-flow-dashboard-header > div:first-child { min-width: 0; }
-.cutaway-flow-dashboard-header > div:first-child > strong { display: block; margin-top: 0.14rem; font-size: clamp(0.7rem, 0.82cqi, 0.84rem); line-height: 1.12; white-space: nowrap; }
-.cutaway-flow-dashboard-header > div:first-child > small { display: block; margin-top: 0.14rem; font-size: clamp(0.48rem, 0.55cqi, 0.58rem); }
+.cutaway-flow-dashboard-header > div:first-child > strong { display: block; margin-top: 0.14rem; font-size: 1rem; line-height: 1.12; white-space: nowrap; }
+.cutaway-flow-dashboard-header > div:first-child > small { display: block; margin-top: 0.14rem; color: rgba(255, 255, 255, 0.68); font-size: clamp(0.64rem, 0.7cqi, 0.74rem); }
 
 .cutaway-flow-kicker {
   display: flex;
   align-items: center;
   gap: 0.32rem;
-  color: rgba(255, 255, 255, 0.52);
-  font-size: clamp(0.48rem, 0.54cqi, 0.57rem);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: clamp(0.62rem, 0.66cqi, 0.7rem);
   font-weight: 850;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -617,8 +714,8 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   text-align: right;
 }
 
-.cutaway-flow-constraint span { display: block; color: #ff9894; font-size: clamp(0.43rem, 0.5cqi, 0.53rem); font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
-.cutaway-flow-constraint strong { display: block; margin-top: 0.08rem; font-size: clamp(0.7rem, 0.82cqi, 0.85rem); }
+.cutaway-flow-constraint span { display: block; color: #ff9894; font-size: clamp(0.62rem, 0.66cqi, 0.7rem); font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
+.cutaway-flow-constraint strong { display: block; margin-top: 0.08rem; font-size: clamp(0.84rem, 0.9cqi, 0.95rem); }
 
 .cutaway-flow-progress { grid-area: progress; overflow: hidden; background: rgba(255, 255, 255, 0.07); }
 .cutaway-flow-progress i { display: block; width: var(--flow-progress); height: 100%; border-radius: 0 999px 999px 0; background: linear-gradient(90deg, #4caee6, var(--cutaway-mint)); transition: width 620ms cubic-bezier(0.2, 0.75, 0.2, 1); }
@@ -633,12 +730,12 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
 
 .cutaway-flow-metrics > div { min-width: 0; padding: 0.66rem 0.72rem; border-left: 1px solid rgba(255, 255, 255, 0.08); }
 .cutaway-flow-metrics > div:first-child { border-left: 0; }
-.cutaway-flow-metrics dt { overflow: hidden; color: rgba(255, 255, 255, 0.48); font-size: clamp(0.45rem, 0.51cqi, 0.54rem); font-weight: 850; letter-spacing: 0.08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.cutaway-flow-metrics dt { overflow: hidden; color: rgba(255, 255, 255, 0.72); font-size: clamp(0.58rem, 0.62cqi, 0.66rem); font-weight: 850; letter-spacing: 0.08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 .cutaway-flow-metrics dd { margin: 0.1rem 0 0; color: #fff; font-size: clamp(0.9rem, 1.15cqi, 1.15rem); font-weight: 720; letter-spacing: -0.03em; }
-.cutaway-flow-metrics small { display: block; overflow: hidden; margin-top: 0.04rem; color: rgba(255, 255, 255, 0.4); font-size: clamp(0.43rem, 0.49cqi, 0.52rem); text-overflow: ellipsis; white-space: nowrap; }
+.cutaway-flow-metrics small { display: block; overflow: hidden; margin-top: 0.04rem; color: rgba(255, 255, 255, 0.68); font-size: clamp(0.58rem, 0.62cqi, 0.66rem); text-overflow: ellipsis; white-space: nowrap; }
 .cutaway-flow-dashboard .is-improving { color: var(--cutaway-mint); }
 .cutaway-flow-dashboard .is-worsening { color: #ff9894; }
-.cutaway-flow-dashboard .is-neutral { color: rgba(255, 255, 255, 0.4); }
+.cutaway-flow-dashboard .is-neutral { color: rgba(255, 255, 255, 0.68); }
 
 .cutaway-mobile-focus {
   position: absolute;
@@ -657,110 +754,116 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
 
 .cutaway-mobile-focus span { color: #ff8f8b; font-size: 0.52rem; font-weight: 850; letter-spacing: 0.1em; text-transform: uppercase; }
 .cutaway-mobile-focus strong { font-size: 0.68rem; }
+.cutaway-mobile-focus[data-state="pressure"] { border-color: rgba(255, 180, 84, 0.56); }
+.cutaway-mobile-focus[data-state="pressure"] span { color: #ffc774; }
+.cutaway-mobile-focus[data-state="solution"] { border-color: color-mix(in srgb, var(--story-color) 65%, #fff); }
+.cutaway-mobile-focus[data-state="solution"] span { color: color-mix(in srgb, var(--story-color) 80%, #fff); }
+.cutaway-mobile-focus[data-state="resolved"] { border-color: rgba(91, 240, 195, 0.6); }
+.cutaway-mobile-focus[data-state="resolved"] span { color: var(--cutaway-mint); }
 .cutaway-sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
 
 @keyframes cutaway-car-arrival-route {
-  0% { transform: translate3d(-6%, 58%, 0); opacity: 0; }
+  0% { transform: translate3d(-6cqi, 58cqb, 0) rotate(-4deg); opacity: 0; }
   8% { opacity: 1; }
-  18% { transform: translate3d(8%, 57%, 0); }
-  38% { transform: translate3d(20%, 60%, 0); }
-  56% { transform: translate3d(29%, 64%, 0); }
-  72% { transform: translate3d(35%, 69%, 0); }
-  84%, 92% { transform: translate3d(41%, 71%, 0); opacity: 1; }
-  100% { transform: translate3d(47%, 70%, 0); opacity: 0; }
+  18% { transform: translate3d(8cqi, 57cqb, 0) rotate(-2deg); }
+  38% { transform: translate3d(20cqi, 60cqb, 0) rotate(5deg); }
+  56% { transform: translate3d(29cqi, 64cqb, 0) rotate(9deg); }
+  72% { transform: translate3d(35cqi, 69cqb, 0) rotate(12deg); }
+  84%, 92% { transform: translate3d(41cqi, 71cqb, 0) rotate(6deg); opacity: 1; }
+  100% { transform: translate3d(47cqi, 70cqb, 0) rotate(-2deg); opacity: 0; }
 }
 
 @keyframes cutaway-car-departure-route {
-  0% { transform: translate3d(47%, 70%, 0); opacity: 0; }
+  0% { transform: translate3d(47cqi, 70cqb, 0) rotate(5deg); opacity: 0; }
   8% { opacity: 1; }
-  20% { transform: translate3d(55%, 73%, 0); }
-  40% { transform: translate3d(66%, 77%, 0); }
-  58% { transform: translate3d(71%, 82%, 0); }
-  74% { transform: translate3d(71%, 88%, 0); }
-  88% { transform: translate3d(74%, 95%, 0); opacity: 1; }
-  100% { transform: translate3d(77%, 101%, 0); opacity: 0; }
+  20% { transform: translate3d(55cqi, 73cqb, 0) rotate(10deg); }
+  40% { transform: translate3d(66cqi, 77cqb, 0) rotate(13deg); }
+  58% { transform: translate3d(71cqi, 82cqb, 0) rotate(25deg); }
+  74% { transform: translate3d(71cqi, 88cqb, 0) rotate(31deg); }
+  88% { transform: translate3d(74cqi, 95cqb, 0) rotate(26deg); opacity: 1; }
+  100% { transform: translate3d(77cqi, 101cqb, 0) rotate(24deg); opacity: 0; }
 }
 
 @keyframes cutaway-car-parking-route {
-  0% { transform: translate3d(-5%, 92%, 0); opacity: 0; }
+  0% { transform: translate3d(-5cqi, 92cqb, 0) rotate(-14deg); opacity: 0; }
   10% { opacity: 1; }
-  24% { transform: translate3d(5%, 88%, 0); }
-  46% { transform: translate3d(13%, 83%, 0); }
-  68%, 82% { transform: translate3d(20%, 82%, 0); opacity: 1; }
-  100% { transform: translate3d(27%, 75%, 0); opacity: 0; }
+  24% { transform: translate3d(5cqi, 88cqb, 0) rotate(-17deg); }
+  46% { transform: translate3d(13cqi, 83cqb, 0) rotate(-18deg); }
+  68%, 82% { transform: translate3d(20cqi, 82cqb, 0) rotate(-5deg); opacity: 1; }
+  100% { transform: translate3d(27cqi, 75cqb, 0) rotate(-20deg); opacity: 0; }
 }
 
 @keyframes cutaway-ambulance-route {
-  0% { transform: translate3d(-8%, 52%, 0); opacity: 0; }
+  0% { transform: translate3d(-8cqi, 52cqb, 0) rotate(-15deg); opacity: 0; }
   10% { opacity: 1; }
-  24% { transform: translate3d(1%, 49%, 0); }
-  44% { transform: translate3d(7%, 44%, 0); }
-  60% { transform: translate3d(11.5%, 41%, 0); }
-  68%, 88% { transform: translate3d(12.5%, 40.5%, 0); opacity: 1; }
-  100% { transform: translate3d(12.5%, 40.5%, 0); opacity: 0; }
+  24% { transform: translate3d(1cqi, 49cqb, 0) rotate(-17deg); }
+  44% { transform: translate3d(7cqi, 44cqb, 0) rotate(-22deg); }
+  60% { transform: translate3d(11.5cqi, 41cqb, 0) rotate(-21deg); }
+  68%, 88% { transform: translate3d(12.5cqi, 40.5cqb, 0) rotate(-8deg); opacity: 1; }
+  100% { transform: translate3d(12.5cqi, 40.5cqb, 0) rotate(-8deg); opacity: 0; }
 }
 
 @keyframes cutaway-valet-curb-route {
-  0%, 100% { transform: translate3d(43.5%, 67.5%, 0); }
-  50% { transform: translate3d(46%, 68%, 0); }
+  0%, 100% { transform: translate3d(43.5cqi, 67.5cqb, 0); }
+  50% { transform: translate3d(46cqi, 68cqb, 0); }
 }
 
 @keyframes cutaway-valet-entry-route {
-  0% { transform: translate3d(44.5%, 69%, 0); }
-  55% { transform: translate3d(42.5%, 64%, 0); }
-  100% { transform: translate3d(40.8%, 59.5%, 0); }
+  0% { transform: translate3d(44.5cqi, 69cqb, 0); }
+  55% { transform: translate3d(42.5cqi, 64cqb, 0); }
+  100% { transform: translate3d(40.8cqi, 59.5cqb, 0); }
 }
 
 @keyframes cutaway-patient-arrival-route {
-  0% { transform: translate3d(43%, 68%, 0); opacity: 0; }
+  0% { transform: translate3d(43cqi, 68cqb, 0); opacity: 0; }
   12% { opacity: 1; }
-  54% { transform: translate3d(42%, 64%, 0); opacity: 1; }
-  86% { transform: translate3d(40.8%, 59.5%, 0); opacity: 1; }
-  100% { transform: translate3d(40.8%, 59.5%, 0); opacity: 0; }
+  54% { transform: translate3d(42cqi, 64cqb, 0); opacity: 1; }
+  86% { transform: translate3d(40.8cqi, 59.5cqb, 0); opacity: 1; }
+  100% { transform: translate3d(40.8cqi, 59.5cqb, 0); opacity: 0; }
 }
 
 @keyframes cutaway-patient-ward-route {
-  0% { transform: translate3d(68%, 62%, 0); }
-  50% { transform: translate3d(75%, 63%, 0); }
-  100% { transform: translate3d(82%, 62%, 0); }
+  0% { transform: translate3d(68cqi, 62cqb, 0); }
+  50% { transform: translate3d(75cqi, 63cqb, 0); }
+  100% { transform: translate3d(82cqi, 62cqb, 0); }
 }
 
 @keyframes cutaway-caregiver-prep-route {
-  0% { transform: translate3d(24%, 42%, 0); }
-  52% { transform: translate3d(30%, 42.5%, 0); }
-  100% { transform: translate3d(36%, 42%, 0); }
+  0% { transform: translate3d(24cqi, 42cqb, 0); }
+  52% { transform: translate3d(30cqi, 42.5cqb, 0); }
+  100% { transform: translate3d(36cqi, 42cqb, 0); }
 }
 
 @keyframes cutaway-caregiver-or-route {
-  0% { transform: translate3d(39%, 45%, 0); }
-  52% { transform: translate3d(44%, 47%, 0); }
-  100% { transform: translate3d(48%, 44%, 0); }
+  0% { transform: translate3d(39cqi, 45cqb, 0); }
+  52% { transform: translate3d(44cqi, 47cqb, 0); }
+  100% { transform: translate3d(48cqi, 44cqb, 0); }
 }
 
 @keyframes cutaway-caregiver-recovery-route {
-  0% { transform: translate3d(64%, 48.5%, 0); }
-  52% { transform: translate3d(75%, 49.5%, 0); }
-  100% { transform: translate3d(84%, 48.5%, 0); }
+  0% { transform: translate3d(64cqi, 48.5cqb, 0); }
+  52% { transform: translate3d(75cqi, 49.5cqb, 0); }
+  100% { transform: translate3d(84cqi, 48.5cqb, 0); }
 }
 
 @keyframes cutaway-caregiver-ward-route {
-  0% { transform: translate3d(65%, 62%, 0); }
-  52% { transform: translate3d(75%, 63%, 0); }
-  100% { transform: translate3d(84%, 62%, 0); }
+  0% { transform: translate3d(65cqi, 62cqb, 0); }
+  52% { transform: translate3d(75cqi, 63cqb, 0); }
+  100% { transform: translate3d(84cqi, 62cqb, 0); }
 }
 
 @keyframes cutaway-gurney-prep-route {
-  0% { transform: translate3d(25%, 41%, 0); }
-  36% { transform: translate3d(34%, 41%, 0); }
-  68% { transform: translate3d(38%, 43%, 0); }
-  100% { transform: translate3d(43%, 44%, 0); }
+  0% { transform: translate3d(25cqi, 41cqb, 0); }
+  36% { transform: translate3d(34cqi, 41cqb, 0); }
+  68% { transform: translate3d(38cqi, 43cqb, 0); }
+  100% { transform: translate3d(43cqi, 44cqb, 0); }
 }
 
 @keyframes cutaway-gurney-recovery-route {
-  0% { transform: translate3d(57%, 45%, 0); }
-  36% { transform: translate3d(62%, 46%, 0); }
-  68% { transform: translate3d(68%, 45%, 0); }
-  100% { transform: translate3d(74%, 46%, 0); }
+  0% { transform: translate3d(57cqi, 45cqb, 0); }
+  36% { transform: translate3d(62cqi, 46cqb, 0); }
+  68% { transform: translate3d(68cqi, 45cqb, 0); }
+  100% { transform: translate3d(74cqi, 46cqb, 0); }
 }
 @keyframes cutaway-room-pulse { 50% { opacity: 0.35; box-shadow: 0 0 12px var(--cutaway-mint); } }
 @keyframes cutaway-scan { 50% { transform: scale(0.32); opacity: 0.35; } }
@@ -775,20 +878,37 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); box-shadow: 0 0 0 1px color-mix(in srgb, var(--story-color) 36%, transparent), 0 16px 42px color-mix(in srgb, var(--story-color) 32%, transparent); }
 }
-@keyframes cutaway-resolution-fade {
-  0%, 28% { opacity: 0.78; transform: translateY(0) scale(1); }
-  100% { opacity: 0.16; transform: translateY(-5px) scale(0.97); }
+@keyframes cutaway-resolution-exit {
+  from { opacity: 0.96; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-6px) scale(0.97); visibility: hidden; }
 }
-@keyframes cutaway-resolution-anchor-fade {
-  0%, 28% { opacity: 1; }
-  100% { opacity: 0.12; }
+@keyframes cutaway-resolution-anchor-exit {
+  from { opacity: 1; }
+  to { opacity: 0; visibility: hidden; }
 }
 @keyframes cutaway-anchor-arrive {
   from { opacity: 0; transform: translate(-50%, -50%) scale(0.72); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
+@keyframes cutaway-focus-arrive {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
 .hospital-cutaway.is-paused .cutaway-motion-layer * { animation-play-state: paused; }
+.hospital-cutaway.is-paused .cutaway-constraint-zone,
+.hospital-cutaway.is-paused .cutaway-or-status i,
+.hospital-cutaway.is-paused .cutaway-imaging-scan i,
+.hospital-cutaway.is-paused .cutaway-bed,
+.hospital-cutaway.is-paused .cutaway-lever-beacon,
+.hospital-cutaway.is-paused .cutaway-lever-beacon i,
+.hospital-cutaway.is-paused .cutaway-status-pulse {
+  animation-play-state: paused !important;
+}
+.hospital-cutaway.is-paused[data-story-beat="resolve"] .cutaway-callout[data-state="resolved"] .cutaway-callout-card,
+.hospital-cutaway.is-paused[data-story-beat="resolve"] .cutaway-callout[data-state="resolved"] .cutaway-anchor {
+  animation-play-state: paused;
+}
 
 @media (max-width: 1099px) {
   .hospital-cutaway.cutaway-embedded { width: 100%; }
@@ -798,8 +918,21 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   .cutaway-scene { aspect-ratio: 16 / 9; }
   .cutaway-raster { background-position: center; }
   .cutaway-callout-layer { display: none; }
-  .cutaway-mobile-callouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; margin-top: 0.65rem; }
-  .cutaway-mobile-callouts .cutaway-callout-card { position: static; width: auto; }
+  .cutaway-mobile-callouts {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 0.65rem;
+    margin-bottom: 0.75rem;
+    isolation: isolate;
+  }
+  .cutaway-mobile-callouts .cutaway-callout-card {
+    position: relative;
+    left: auto;
+    top: auto;
+    grid-area: 1 / 1;
+    width: auto;
+  }
   .cutaway-flow-dashboard {
     width: 100%;
     grid-template-columns: 1fr;
@@ -847,33 +980,81 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   .hospital-cutaway[data-focus="care"] .cutaway-lever-diagnosis,
   .hospital-cutaway[data-focus="longitudinal"] .cutaway-lever-diagnosis { opacity: 0; }
   .cutaway-mobile-focus { display: flex; }
+  .cutaway-mobile-focus span { font-size: 0.58rem; }
+  .cutaway-mobile-focus strong { font-size: 0.82rem; }
+  .cutaway-mobile-callouts .cutaway-callout-card { padding: 0.82rem; }
+  .cutaway-mobile-callouts .cutaway-callout-kicker { font-size: 0.66rem; }
+  .cutaway-mobile-callouts .cutaway-callout-card strong { font-size: 0.94rem; }
+  .cutaway-mobile-callouts .cutaway-callout-detail,
+  .cutaway-mobile-callouts .cutaway-callout-card b { font-size: 0.82rem; }
   .cutaway-flow-dashboard { margin-top: 0.58rem; border-radius: 14px; }
   .cutaway-flow-dashboard-header { gap: 0.55rem; padding: 0.68rem 0.72rem 0.64rem; }
-  .cutaway-flow-dashboard-header > div:first-child > strong { font-size: 0.76rem; white-space: normal; }
-  .cutaway-flow-dashboard-header > div:first-child > small { font-size: 0.54rem; }
-  .cutaway-flow-kicker { font-size: 0.52rem; }
+  .cutaway-flow-dashboard-header > div:first-child > strong { font-size: 0.88rem; white-space: normal; }
+  .cutaway-flow-dashboard-header > div:first-child > small { font-size: 0.6rem; }
+  .cutaway-flow-kicker { font-size: 0.6rem; }
   .cutaway-flow-constraint { padding-left: 0.55rem; }
-  .cutaway-flow-constraint span { font-size: 0.45rem; }
-  .cutaway-flow-constraint strong { font-size: 0.74rem; }
+  .cutaway-flow-constraint span { font-size: 0.56rem; }
+  .cutaway-flow-constraint strong { font-size: 0.88rem; }
   .cutaway-flow-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cutaway-flow-metrics > div { padding: 0.66rem 0.72rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
   .cutaway-flow-metrics > div:nth-child(odd) { border-left: 0; }
   .cutaway-flow-metrics > div:nth-last-child(-n + 2) { border-bottom: 0; }
-  .cutaway-flow-metrics dt { font-size: 0.5rem; }
-  .cutaway-flow-metrics dd { font-size: 1rem; }
-  .cutaway-flow-metrics small { font-size: 0.5rem; }
-  .cutaway-mobile-callouts { grid-template-columns: 1fr; }
+  .cutaway-flow-metrics dt { font-size: 0.6rem; }
+  .cutaway-flow-metrics dd { font-size: 1.05rem; }
+  .cutaway-flow-metrics small { font-size: 0.58rem; }
   .cutaway-mobile-callouts .cutaway-callout-card { min-height: 44px; padding: 0.78rem 0.82rem; backdrop-filter: none; box-shadow: 0 9px 22px rgba(0, 0, 0, 0.2); }
-  .cutaway-mobile-callouts .cutaway-callout-card strong { font-size: 0.85rem; line-height: 1.2; }
-  .cutaway-mobile-callouts .cutaway-callout-detail { margin-top: 0.34rem; font-size: 0.75rem; line-height: 1.42; }
-  .cutaway-mobile-callouts .cutaway-callout-kicker { font-size: 0.58rem; }
-  .cutaway-mobile-callouts .cutaway-callout-card b { font-size: 0.72rem; }
-  .cutaway-mobile-callouts .cutaway-callout-card.is-resolved .cutaway-callout-detail { display: none; }
-  .cutaway-callout-card.is-resolved { background: rgba(6, 31, 32, 0.9); }
+  .cutaway-mobile-callouts .cutaway-callout-card strong { font-size: 0.94rem; line-height: 1.2; }
+  .cutaway-mobile-callouts .cutaway-callout-detail { margin-top: 0.34rem; font-size: 0.82rem; line-height: 1.42; }
+  .cutaway-mobile-callouts .cutaway-callout-kicker { font-size: 0.66rem; }
+  .cutaway-mobile-callouts .cutaway-callout-card b { font-size: 0.82rem; }
+  .cutaway-mobile-callouts .cutaway-callout-card[data-state="resolved"] { background: rgba(6, 31, 32, 0.94); }
   .cutaway-network span { filter: none; }
   .cutaway-vehicle,
   .cutaway-person { filter: none; }
 }
+
+html[data-reduced-motion="true"] .hospital-cutaway *,
+html[data-reduced-motion="true"] .hospital-cutaway *::before,
+html[data-reduced-motion="true"] .hospital-cutaway *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+html[data-reduced-motion="true"] .cutaway-world { transition: none !important; }
+html[data-reduced-motion="true"] .cutaway-callout-card,
+html[data-reduced-motion="true"] .cutaway-anchor { animation-delay: 0ms !important; }
+html[data-reduced-motion="true"] .hospital-cutaway[data-story-beat="resolve"] .cutaway-callout[data-state="resolved"] .cutaway-callout-card,
+html[data-reduced-motion="true"] .hospital-cutaway[data-story-beat="resolve"] .cutaway-callout[data-state="resolved"] .cutaway-anchor {
+  visibility: visible !important;
+  opacity: 1 !important;
+  animation: none !important;
+}
+html[data-reduced-motion="true"] .hospital-cutaway[data-story-beat="reveal"] .cutaway-callout[data-state="resolved"],
+html[data-reduced-motion="true"] .hospital-cutaway[data-story-beat="reveal"] .cutaway-mobile-callouts .cutaway-callout-card[data-state="resolved"] { display: none !important; }
+html[data-reduced-motion="true"] .hospital-cutaway[data-story-beat="reveal"] .cutaway-callout[data-state="constraint"] .cutaway-callout-card,
+html[data-reduced-motion="true"] .hospital-cutaway[data-story-beat="reveal"] .cutaway-callout[data-state="constraint"] .cutaway-anchor,
+html[data-reduced-motion="true"] .hospital-cutaway[data-story-beat="reveal"] .cutaway-mobile-callouts .cutaway-callout-card[data-state="constraint"],
+html[data-reduced-motion="true"] .hospital-cutaway[data-story-beat="reveal"] .cutaway-constraint-zone {
+  visibility: visible !important;
+  opacity: 1 !important;
+  animation: none !important;
+}
+html[data-reduced-motion="true"] .cutaway-motion-track { animation: none !important; opacity: 1 !important; }
+html[data-reduced-motion="true"] .cutaway-route-car-arrival { transform: translate3d(41cqi, 71cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-car-departure { transform: translate3d(58cqi, 74cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-car-parking { transform: translate3d(20cqi, 82cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-ambulance { transform: translate3d(12.5cqi, 40.5cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-valet-curb { transform: translate3d(43.5cqi, 67.5cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-valet-entry { transform: translate3d(42.5cqi, 64cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-patient-arrival { transform: translate3d(42cqi, 64cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-patient-ward { transform: translate3d(75cqi, 63cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-caregiver-prep { transform: translate3d(30cqi, 42.5cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-caregiver-or { transform: translate3d(44cqi, 47cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-caregiver-recovery { transform: translate3d(75cqi, 49.5cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-caregiver-ward { transform: translate3d(75cqi, 63cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-gurney-prep { transform: translate3d(34cqi, 41cqb, 0); }
+html[data-reduced-motion="true"] .cutaway-route-gurney-recovery { transform: translate3d(68cqi, 45cqb, 0); }
 
 @media (prefers-reduced-motion: reduce) {
   .hospital-cutaway *,
@@ -888,19 +1069,37 @@ button.cutaway-callout-card:hover { transform: translateY(-2px); border-color: r
   .cutaway-world { transition: none !important; }
   .cutaway-callout-card,
   .cutaway-anchor { animation-delay: 0ms !important; }
+  .hospital-cutaway[data-story-beat="resolve"] .cutaway-callout[data-state="resolved"] .cutaway-callout-card,
+  .hospital-cutaway[data-story-beat="resolve"] .cutaway-callout[data-state="resolved"] .cutaway-anchor {
+    visibility: visible !important;
+    opacity: 1 !important;
+    animation: none !important;
+  }
+  .hospital-cutaway[data-story-beat="reveal"] .cutaway-callout[data-state="resolved"],
+  .hospital-cutaway[data-story-beat="reveal"] .cutaway-mobile-callouts .cutaway-callout-card[data-state="resolved"] {
+    display: none !important;
+  }
+  .hospital-cutaway[data-story-beat="reveal"] .cutaway-callout[data-state="constraint"] .cutaway-callout-card,
+  .hospital-cutaway[data-story-beat="reveal"] .cutaway-callout[data-state="constraint"] .cutaway-anchor,
+  .hospital-cutaway[data-story-beat="reveal"] .cutaway-mobile-callouts .cutaway-callout-card[data-state="constraint"],
+  .hospital-cutaway[data-story-beat="reveal"] .cutaway-constraint-zone {
+    visibility: visible !important;
+    opacity: 1 !important;
+    animation: none !important;
+  }
   .cutaway-motion-track { animation: none !important; opacity: 1 !important; }
-  .cutaway-route-car-arrival { transform: translate3d(41%, 71%, 0); }
-  .cutaway-route-car-departure { transform: translate3d(58%, 74%, 0); }
-  .cutaway-route-car-parking { transform: translate3d(20%, 82%, 0); }
-  .cutaway-route-ambulance { transform: translate3d(12.5%, 40.5%, 0); }
-  .cutaway-route-valet-curb { transform: translate3d(43.5%, 67.5%, 0); }
-  .cutaway-route-valet-entry { transform: translate3d(42.5%, 64%, 0); }
-  .cutaway-route-patient-arrival { transform: translate3d(42%, 64%, 0); }
-  .cutaway-route-patient-ward { transform: translate3d(75%, 63%, 0); }
-  .cutaway-route-caregiver-prep { transform: translate3d(30%, 42.5%, 0); }
-  .cutaway-route-caregiver-or { transform: translate3d(44%, 47%, 0); }
-  .cutaway-route-caregiver-recovery { transform: translate3d(75%, 49.5%, 0); }
-  .cutaway-route-caregiver-ward { transform: translate3d(75%, 63%, 0); }
-  .cutaway-route-gurney-prep { transform: translate3d(34%, 41%, 0); }
-  .cutaway-route-gurney-recovery { transform: translate3d(68%, 45%, 0); }
+  .cutaway-route-car-arrival { transform: translate3d(41cqi, 71cqb, 0); }
+  .cutaway-route-car-departure { transform: translate3d(58cqi, 74cqb, 0); }
+  .cutaway-route-car-parking { transform: translate3d(20cqi, 82cqb, 0); }
+  .cutaway-route-ambulance { transform: translate3d(12.5cqi, 40.5cqb, 0); }
+  .cutaway-route-valet-curb { transform: translate3d(43.5cqi, 67.5cqb, 0); }
+  .cutaway-route-valet-entry { transform: translate3d(42.5cqi, 64cqb, 0); }
+  .cutaway-route-patient-arrival { transform: translate3d(42cqi, 64cqb, 0); }
+  .cutaway-route-patient-ward { transform: translate3d(75cqi, 63cqb, 0); }
+  .cutaway-route-caregiver-prep { transform: translate3d(30cqi, 42.5cqb, 0); }
+  .cutaway-route-caregiver-or { transform: translate3d(44cqi, 47cqb, 0); }
+  .cutaway-route-caregiver-recovery { transform: translate3d(75cqi, 49.5cqb, 0); }
+  .cutaway-route-caregiver-ward { transform: translate3d(75cqi, 63cqb, 0); }
+  .cutaway-route-gurney-prep { transform: translate3d(34cqi, 41cqb, 0); }
+  .cutaway-route-gurney-recovery { transform: translate3d(68cqi, 45cqb, 0); }
 }
