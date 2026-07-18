@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useCases } from "@/data/use-cases";
 import { SERVICE_LINES, TRACKS, MATURITY_LEVELS } from "@/data/schema";
 import { TRACK_META } from "@/data/tracks";
+import { OPS_CATEGORIES, OPS_CATEGORY_COLOR, opsCategoriesFor } from "@/data/operations";
 import { priorityScore, recommendation } from "@/lib/scoring";
 import { SERVICE_LINE_COLOR } from "@/data/service-lines";
 import { UseCaseCard } from "@/components/UseCaseCard";
@@ -10,38 +11,28 @@ import { RadarView } from "@/components/RadarView";
 import { UseCaseModal } from "@/components/UseCaseModal";
 import type { UseCase } from "@/data/schema";
 
-type Lens = "service-line" | "track";
+type Area = "service-lines" | "robotics" | "operations";
 type Mode = "cards" | "radar";
 
-const OPERATIONS_TERMS = [
-  "operating room",
-  "scheduling",
-  "capacity",
-  "staff",
-  "workforce",
-  "bed",
-  "supply chain",
-  "prior authorization",
-  "revenue cycle",
-  "patient flow",
-  "logistics",
-  "discharge",
-  "sterile",
-];
+const AREA_META: Record<Area, { label: string; subLabel: string }> = {
+  "service-lines": { label: "Service lines", subLabel: "Clinical systems" },
+  robotics: { label: "Robotics", subLabel: "Robot categories" },
+  operations: { label: "Hospital operations", subLabel: "Operations functions" },
+};
+
+const AREA_ORDER: Area[] = ["service-lines", "robotics", "operations"];
+
+function inArea(useCase: UseCase, area: Area): boolean {
+  if (area === "service-lines") return useCase.serviceLines.length > 0;
+  if (area === "robotics") return useCase.track !== undefined;
+  return opsCategoriesFor(useCase).length > 0;
+}
 
 function autonomyBucket(value: string | null | undefined): string {
   const normalized = (value ?? "").toLowerCase();
   if (normalized.includes("semi-autonom") || normalized.includes("augment")) return "Augmentation";
   if (normalized.includes("autonom") || normalized === "automation") return "Autonomous";
   return "Decision Support";
-}
-
-function isOperationsCase(useCase: UseCase): boolean {
-  const haystack = [useCase.name, useCase.description, useCase.subSpecialty, useCase.aiType]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return OPERATIONS_TERMS.some((term) => haystack.includes(term));
 }
 
 function matchesSearchQuery(useCase: UseCase, query: string): boolean {
@@ -69,6 +60,7 @@ function matchesSearchQuery(useCase: UseCase, query: string): boolean {
     ...useCase.metricsImpacted,
     ...useCase.keyVendors,
     ...useCase.deployedAt,
+    ...opsCategoriesFor(useCase),
     ...(useCase.specialties ?? []),
     ...(useCase.keyPlatforms ?? []),
   ];
@@ -79,14 +71,22 @@ function matchesSearchQuery(useCase: UseCase, query: string): boolean {
 }
 
 export function PortfolioView() {
-  const [lens, setLens] = useState<Lens>("service-line");
+  const [areas, setAreas] = useState<Area[]>(["operations"]);
   const [mode, setMode] = useState<Mode>("cards");
-  const [filter, setFilter] = useState("all");
+  const [subFilter, setSubFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [maturity, setMaturity] = useState("all");
   const [autonomy, setAutonomy] = useState("all");
-  const [operationsOnly, setOperationsOnly] = useState(true);
   const [modalUc, setModalUc] = useState<UseCase | null>(null);
+
+  // Exactly one focus area selected → its own second row of sub-filters.
+  const soloArea = areas.length === 1 ? areas[0] : null;
+  const lens = areas.includes("robotics") ? "track" : "service-line";
+
+  function toggleArea(area: Area) {
+    setAreas((previous) => (previous.includes(area) ? previous.filter((a) => a !== area) : [...previous, area]));
+    setSubFilter("all");
+  }
 
   const plays = useMemo(() => {
     const counts = { "Adopt Now": 0, "Pilot & Scale": 0, "Watch & Partner": 0 };
@@ -98,27 +98,23 @@ export function PortfolioView() {
     const normalizedQuery = query.trim().toLowerCase();
     return useCases
       .filter((useCase) => {
-        if (lens === "service-line") {
-          if (filter !== "all" && !useCase.serviceLines.includes(filter as never)) return false;
-        } else if (filter === "all") {
-          if (!useCase.track) return false;
-        } else if (useCase.track !== filter) return false;
-        if (operationsOnly && !isOperationsCase(useCase)) return false;
+        for (const area of areas) if (!inArea(useCase, area)) return false;
+        if (soloArea && subFilter !== "all") {
+          if (soloArea === "service-lines" && !useCase.serviceLines.includes(subFilter as never)) return false;
+          if (soloArea === "robotics" && useCase.track !== subFilter) return false;
+          if (soloArea === "operations" && !(opsCategoriesFor(useCase) as string[]).includes(subFilter)) return false;
+        }
         if (maturity !== "all" && useCase.maturity !== maturity) return false;
         if (autonomy !== "all" && autonomyBucket(useCase.autonomyLevel) !== autonomy) return false;
         if (!normalizedQuery) return true;
         return matchesSearchQuery(useCase, normalizedQuery);
       })
       .sort((a, b) => priorityScore(b) - priorityScore(a));
-  }, [lens, filter, query, maturity, autonomy, operationsOnly]);
+  }, [areas, soloArea, subFilter, query, maturity, autonomy]);
 
-  const categories = lens === "service-line" ? SERVICE_LINES : TRACKS;
-
-  function changeLens(next: Lens) {
-    setLens(next);
-    setFilter("all");
-    if (next === "track") setOperationsOnly(false);
-  }
+  const scopeLabel = areas.length === 0
+    ? "across the full catalog"
+    : `in ${areas.map((area) => AREA_META[area].label.toLowerCase()) .join(" × ")}`;
 
   return (
     <div className="mx-auto max-w-[1440px] px-5 pb-20 pt-12 sm:px-8 lg:px-12">
@@ -147,11 +143,13 @@ export function PortfolioView() {
 
       <div className="mt-10 rounded-[26px] border border-white/10 bg-white/[0.035] p-5 shadow-[var(--shadow-soft)] sm:p-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Portfolio lens and scope">
-            <ToggleButton active={lens === "service-line"} onClick={() => changeLens("service-line")}>Service lines</ToggleButton>
-            <ToggleButton active={lens === "track"} onClick={() => changeLens("track")}>Robotics categories</ToggleButton>
-            <span className="mx-1 hidden w-px bg-white/15 sm:block" />
-            <ToggleButton active={operationsOnly} onClick={() => setOperationsOnly((value) => !value)}>Hospital operations</ToggleButton>
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Areas of focus">
+            <span className="mr-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/40">Focus</span>
+            {AREA_ORDER.map((area) => (
+              <ToggleButton key={area} active={areas.includes(area)} onClick={() => toggleArea(area)}>
+                {AREA_META[area].label}
+              </ToggleButton>
+            ))}
           </div>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Portfolio view">
             <ToggleButton active={mode === "cards"} onClick={() => setMode("cards")}>Evidence cards</ToggleButton>
@@ -159,23 +157,33 @@ export function PortfolioView() {
           </div>
         </div>
 
-        <div
-          className="mt-5 flex flex-wrap gap-2 border-t border-white/10 pt-5"
-          role="group"
-          aria-label={lens === "service-line" ? "Service line filter" : "Robotics category filter"}
-        >
-          <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>All</FilterButton>
-          {categories.map((category) => (
-            <FilterButton
-              key={category}
-              active={filter === category}
-              onClick={() => setFilter(category)}
-              color={lens === "service-line" ? SERVICE_LINE_COLOR[category as keyof typeof SERVICE_LINE_COLOR] : `var(${TRACK_META[category as keyof typeof TRACK_META].colorVar})`}
-            >
-              {lens === "track" ? TRACK_META[category as keyof typeof TRACK_META].label : category}
-            </FilterButton>
-          ))}
-        </div>
+        {soloArea && (
+          <div
+            className="mt-5 flex flex-wrap items-center gap-2 border-t border-white/10 pt-5"
+            role="group"
+            aria-label={`${AREA_META[soloArea].subLabel} filter`}
+          >
+            <span className="mr-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/40">
+              {AREA_META[soloArea].subLabel}
+            </span>
+            <FilterButton active={subFilter === "all"} onClick={() => setSubFilter("all")}>All</FilterButton>
+            {soloArea === "service-lines" && SERVICE_LINES.map((line) => (
+              <FilterButton key={line} active={subFilter === line} onClick={() => setSubFilter(line)} color={SERVICE_LINE_COLOR[line]}>
+                {line}
+              </FilterButton>
+            ))}
+            {soloArea === "robotics" && TRACKS.map((track) => (
+              <FilterButton key={track} active={subFilter === track} onClick={() => setSubFilter(track)} color={`var(${TRACK_META[track].colorVar})`}>
+                {TRACK_META[track].label}
+              </FilterButton>
+            ))}
+            {soloArea === "operations" && OPS_CATEGORIES.map((category) => (
+              <FilterButton key={category} active={subFilter === category} onClick={() => setSubFilter(category)} color={OPS_CATEGORY_COLOR[category]}>
+                {category}
+              </FilterButton>
+            ))}
+          </div>
+        )}
 
         <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]">
           <div>
@@ -203,7 +211,7 @@ export function PortfolioView() {
 
       <div className="mt-6 flex items-center justify-between">
         <p className="text-sm font-semibold text-white/60">
-          {filtered.length} use case{filtered.length === 1 ? "" : "s"}{operationsOnly ? " in the operations lens" : ""}
+          {filtered.length} use case{filtered.length === 1 ? "" : "s"} {scopeLabel}
         </p>
         <p className="hidden text-[11px] text-white/50 sm:block">Heuristic readiness score · directional, not a financial recommendation</p>
       </div>
@@ -220,7 +228,7 @@ export function PortfolioView() {
 
       {filtered.length === 0 && (
         <div className="mt-8 rounded-[26px] border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center text-sm text-white/60">
-          No use cases match this portfolio lens.
+          No use cases match this combination of focus areas and filters.
         </div>
       )}
 

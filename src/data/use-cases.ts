@@ -12,6 +12,29 @@ function withAugmentedDeployments(uc: unknown): unknown {
   return { ...rec, deployedAt: Array.from(new Set([...existing, ...extra])) };
 }
 
+// Robotic use cases inside the migrated clinical dataset, tagged with the
+// robotics-category lens so they surface when browsing by robot architecture.
+const ROBOTICS_TRACK_BY_ID: Record<string, string> = {
+  "ORT-03": "Orthopedic & Spine Robotics", // robotic joint replacement
+  "ORT-07": "Orthopedic & Spine Robotics", // spine planning + navigation
+  "ORT-08": "Orthopedic & Spine Robotics", // autonomous spinal decompression
+  "NEU-06": "Orthopedic & Spine Robotics", // spine surgical navigation
+  "GI-07": "Soft-Tissue Surgical Robotics", // robotic colorectal surgery
+  "GI-08": "Soft-Tissue Surgical Robotics", // robotic bariatric surgery
+  "GI-21": "Surgical Intelligence", // surgical video analysis
+  "WH-11": "Surgical Intelligence", // robotic gyn surgery planning + guidance
+  "AUTO-09": "Surgical Intelligence", // autonomous surgical robot research
+  "HLV-05": "Surgical Intelligence", // cardiac pre-surgical planning
+};
+
+function withRoboticsTrack(uc: unknown): unknown {
+  const rec = uc as { id?: unknown; track?: unknown };
+  const id = typeof rec.id === "string" ? rec.id : "";
+  const track = ROBOTICS_TRACK_BY_ID[id];
+  if (!track || rec.track) return uc;
+  return { ...rec, track };
+}
+
 /**
  * Hand-authored robotic-surgery use cases (the meeting-track lens), written from
  * public sources. Authored in a robotics-native shape and transformed below into
@@ -566,15 +589,18 @@ const AUTONOMY_MAP: Record<string, string> = {
 };
 // Best-fit service-line tag(s) for robotics cases (default Cross-Cutting)
 const SERVICE_LINE_BY_ID: Record<string, string[]> = {
-  "PLT-03": ["Heart, Lung & Vascular"],
+  "PLT-01": ["Cancer", "Women’s Health", "Gastrointestinal"],
+  "PLT-02": ["Cancer", "Gastrointestinal"],
+  "PLT-03": ["Heart, Lung & Vascular", "Cancer"],
   "PLT-04": ["Cancer"],
-  "PLT-05": ["Heart, Lung & Vascular"],
+  "PLT-05": ["Heart, Lung & Vascular", "Cancer"],
   "URO-01": ["Cancer"],
   "URO-02": ["Cancer"],
   "URO-03": ["Cancer"],
   "ORT-01": ["Orthopedics"],
   "ORT-02": ["Orthopedics"],
   "ORT-03": ["Orthopedics", "Neurosciences"],
+  "SAI-02": ["Gastrointestinal"],
   "DIG-02": ["Orthopedics"],
 };
 const AI_TYPE_BY_ID: Record<string, string> = {
@@ -660,6 +686,6 @@ const roboticsCanonical: unknown[] = roboticsNative.map((uc) => {
 });
 
 export const useCases: UseCase[] = parseUseCases(
-  [...serviceLineUseCasesRaw, ...roboticsCanonical].map(withAugmentedDeployments),
+  [...serviceLineUseCasesRaw, ...roboticsCanonical].map(withAugmentedDeployments).map(withRoboticsTrack),
 );
 

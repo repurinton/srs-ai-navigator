@@ -5,29 +5,29 @@ const LEVELS = [
   {
     level: "01",
     title: "Observe",
-    subtitle: "Read-only",
-    copy: "Detect risk, reconcile data, and explain uncertainty.",
+    subtitle: "AI watches",
+    copy: "AI reads the operation, reconciles data, and flags risk. It changes nothing.",
     actions: ["Read status", "Compare policy", "Surface exception"],
   },
   {
     level: "02",
     title: "Recommend",
     subtitle: "Human decides",
-    copy: "Assemble one decision packet with options and tradeoffs.",
+    copy: "AI assembles one decision packet—options, tradeoffs, and a named approver.",
     actions: ["Draft plan", "Estimate effect", "Name approver"],
   },
   {
     level: "03",
-    title: "Execute reversible",
-    subtitle: "Bounded action",
-    copy: "Take low-risk actions with expiry, audit, and rollback.",
+    title: "Act, reversibly",
+    subtitle: "AI does the undoable",
+    copy: "AI takes low-stakes actions it can undo—each one logged, expiring, reversible.",
     actions: ["Hold slot", "Create task", "Retrieve evidence"],
   },
   {
     level: "04",
     title: "Orchestrate",
-    subtitle: "Exception governed",
-    copy: "Coordinate multiple systems while escalating consequence.",
+    subtitle: "Humans keep the veto",
+    copy: "AI coordinates work across systems and hands anything consequential to a person.",
     actions: ["Sequence agents", "Verify completion", "Stop on threshold"],
   },
 ] as const;
@@ -105,7 +105,7 @@ export function OperatingModel({ onNavigate }: { onNavigate: (view: View) => voi
                   <span className="font-mono text-[10px] text-white/28">0{index + 1}</span>
                   <p className="mt-5 text-base font-bold">{action}</p>
                   <p className="mt-2 text-xs leading-relaxed text-white/38">
-                    {selected < 2 ? "No external write." : selected === 2 ? "Logged and reversible." : "Escalates on policy threshold."}
+                    {selected < 2 ? "Nothing is changed—read and report only." : selected === 2 ? "Logged, expiring, and undoable." : "Escalates to a human at policy thresholds."}
                   </p>
                 </div>
               ))}
@@ -162,41 +162,6 @@ export function OperatingModel({ onNavigate }: { onNavigate: (view: View) => voi
               <div key={label}>
                 <p className="text-sm font-bold">{label}</p>
                 <p className="mt-1 text-xs text-white/60">{metric}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[var(--color-deep)] text-white">
-        <div className="mx-auto grid max-w-[1440px] gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.78fr_1.22fr] lg:px-12 lg:py-28">
-          <div>
-            <p className="eyebrow text-[var(--color-mint)]">The medium is the message</p>
-            <h2 className="section-title mt-4 text-white">This experience is itself a preview of agentic work.</h2>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/52">
-              GPT-5.6 Sol is OpenAI’s flagship model for complex, open-ended work. In Codex, it can coordinate
-              specialists, work across code and visual artifacts, use tools, verify rendered results, and persist toward
-              a measurable goal.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-4">
-              <a className="source-link text-[var(--color-mint)]" href="https://openai.com/index/gpt-5-6/" target="_blank" rel="noreferrer">GPT-5.6 ↗</a>
-              <a className="source-link text-[var(--color-mint)]" href="https://learn.chatgpt.com/docs/agent-configuration/subagents" target="_blank" rel="noreferrer">Codex subagents ↗</a>
-              <a className="source-link text-[var(--color-mint)]" href="https://learn.chatgpt.com/docs/sites" target="_blank" rel="noreferrer">Sites ↗</a>
-            </div>
-          </div>
-          <div className="codex-loop">
-            {[
-              ["01", "Audit", "Read the full codebase"],
-              ["02", "Delegate", "Parallel technical + strategy agents"],
-              ["03", "Research", "Current primary evidence"],
-              ["04", "Build", "App + editable presentation"],
-              ["05", "Verify", "Browser and rendered-slide QA"],
-              ["06", "Package", "A reusable executive experience"],
-            ].map(([number, title, copy]) => (
-              <div key={number}>
-                <span>{number}</span>
-                <strong>{title}</strong>
-                <p>{copy}</p>
               </div>
             ))}
           </div>

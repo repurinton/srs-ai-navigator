@@ -1,25 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import type { View } from "@/App";
 
+// Ordered to match the hospital twin: the sequence in which the simulation
+// materializes each lever as the constraint moves through the building.
 const LEVERS = [
   {
-    id: "diagnosis",
-    number: "01",
-    monogram: "DX",
-    name: "Clinical Diagnosis",
-    seed: "AI-first impressions · intelligent pathways",
-    color: "#5e8fff",
-    thesis: "Diagnosis moves from an episodic interpretation to a continuously updated routing decision.",
-    shift: "Point model → pathway intelligence",
-    unlock: "AI can connect the first impression to the next best test, specialist, site of care, and follow-up—reducing diagnostic delay, duplication, and drift.",
-    decision: "Build the intelligent pathway, not the isolated algorithm.",
-    measures: ["Time to diagnosis", "Avoidable testing", "Referral completion", "Outcome variance"],
-    boundary: "Clinicians remain accountable; every model exposes provenance, confidence, and subgroup performance.",
-  },
-  {
     id: "front-door",
-    number: "02",
+    number: "01",
     monogram: "FD",
     name: "Digital Front Door",
     seed: "One functional channel · voice, chat, text",
@@ -32,8 +20,36 @@ const LEVERS = [
     boundary: "Identity, consent, accessibility, language access, and human handoff are designed in from the start.",
   },
   {
-    id: "robotics",
+    id: "diagnosis",
+    number: "02",
+    monogram: "DX",
+    name: "Clinical Diagnosis",
+    seed: "AI-first impressions · intelligent pathways",
+    color: "#5e8fff",
+    thesis: "Diagnosis moves from an episodic interpretation to a continuously updated routing decision.",
+    shift: "Point model → pathway intelligence",
+    unlock: "AI can connect the first impression to the next best test, specialist, site of care, and follow-up—reducing diagnostic delay, duplication, and drift.",
+    decision: "Build the intelligent pathway, not the isolated algorithm.",
+    measures: ["Time to diagnosis", "Avoidable testing", "Referral completion", "Outcome variance"],
+    boundary: "Clinicians remain accountable; every model exposes provenance, confidence, and subgroup performance.",
+  },
+  {
+    id: "precision",
     number: "03",
+    monogram: "PM",
+    name: "Precision Medicine",
+    seed: "Genomics · pharma · microbiome",
+    color: "#7fcf5a",
+    thesis: "Personalization becomes an operating model, not a specialist report.",
+    shift: "One-time test → learning care system",
+    unlock: "Genomic, pharmacologic, and microbiome insight can route therapy, trial matching, formulary choices, procurement, and monitoring—then learn from response.",
+    decision: "Design how the insight changes care and learns from the result.",
+    measures: ["Time to therapy", "Match rate", "Adverse events", "Cost per response"],
+    boundary: "Evidence thresholds, bias, explainability, reimbursement, privacy, and incidental findings stay visible.",
+  },
+  {
+    id: "robotics",
+    number: "04",
     monogram: "RX",
     name: "Robotics",
     seed: "Surgical assist · telesurgery · automation · humanoids",
@@ -47,7 +63,7 @@ const LEVERS = [
   },
   {
     id: "longitudinal",
-    number: "04",
+    number: "05",
     monogram: "LC",
     name: "Longitudinal Care",
     seed: "Wellness · disease management · care gaps · referrals",
@@ -61,7 +77,7 @@ const LEVERS = [
   },
   {
     id: "automation",
-    number: "05",
+    number: "06",
     monogram: "TA",
     name: "Task Automation",
     seed: "GenAI · agents · RPA · workflow redesign",
@@ -73,25 +89,33 @@ const LEVERS = [
     measures: ["Manual touches", "Cycle time", "Exceptions + rework", "Cost per outcome"],
     boundary: "Least-privilege access, audit, rollback, uncertainty, and human approval are the architecture—not afterthoughts.",
   },
-  {
-    id: "precision",
-    number: "06",
-    monogram: "PM",
-    name: "Precision Medicine",
-    seed: "Genomics · pharma · microbiome",
-    color: "#7fcf5a",
-    thesis: "Personalization becomes an operating model, not a specialist report.",
-    shift: "One-time test → learning care system",
-    unlock: "Genomic, pharmacologic, and microbiome insight can route therapy, trial matching, formulary choices, procurement, and monitoring—then learn from response.",
-    decision: "Design how the insight changes care and learns from the result.",
-    measures: ["Time to therapy", "Match rate", "Adverse events", "Cost per response"],
-    boundary: "Evidence thresholds, bias, explainability, reimbursement, privacy, and incidental findings stay visible.",
-  },
+] as const;
+
+const LEVER_COLOR: Record<string, string> = Object.fromEntries(LEVERS.map((lever) => [lever.monogram, lever.color]));
+
+// One shared loop, told with the levers that participate at each step.
+const LOOP_STEPS = [
+  { number: "01", title: "Sense", copy: "The front door, diagnosis, precision medicine, and longitudinal care detect need as it appears.", levers: ["FD", "DX", "PM", "LC"] },
+  { number: "02", title: "Decide", copy: "Agents assemble the evidence, constraints, options, and tradeoffs into one decision.", levers: ["DX", "TA"] },
+  { number: "03", title: "Act", copy: "People, workflows, and robotics execute within explicit permission.", levers: ["RX", "TA"] },
+  { number: "04", title: "Learn", copy: "Outcomes update pathways, operating rules, and investment priorities—then the loop repeats.", levers: ["FD", "DX", "PM", "RX", "LC", "TA"] },
 ] as const;
 
 export function SixLevers({ onNavigate }: { onNavigate: (view: View) => void }) {
-  const [selectedId, setSelectedId] = useState<(typeof LEVERS)[number]["id"]>("automation");
+  const [selectedId, setSelectedId] = useState<(typeof LEVERS)[number]["id"]>("front-door");
   const selected = LEVERS.find((lever) => lever.id === selectedId) ?? LEVERS[0];
+
+  // The compounding loop highlights each step in turn so it reads as a cycle,
+  // not a static list. Respect reduced motion by holding on "Learn".
+  const [loopStep, setLoopStep] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setLoopStep(LOOP_STEPS.length - 1);
+      return;
+    }
+    const timer = window.setInterval(() => setLoopStep((step) => (step + 1) % LOOP_STEPS.length), 2800);
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <>
@@ -186,14 +210,22 @@ export function SixLevers({ onNavigate }: { onNavigate: (view: View) => void }) 
               <p className="eyebrow">The compounding loop</p>
               <h2 className="section-title mt-4">The six levers become transformational only when the loop closes.</h2>
               <p className="lede mt-5">
-                A fragmented portfolio creates local gains. A shared operating layer creates enterprise learning.
+                Each lever plays a position in one repeating cycle—sense, decide, act, learn. A fragmented portfolio
+                creates local gains. A shared loop creates enterprise learning.
               </p>
             </div>
             <div className="compound-loop">
-              <LoopStep number="01" title="Sense" copy="Front door, diagnosis, longitudinal care, and precision medicine detect need." />
-              <LoopStep number="02" title="Decide" copy="Agents assemble evidence, constraints, options, and tradeoffs." />
-              <LoopStep number="03" title="Act" copy="People, workflows, and robotics execute within permission." />
-              <LoopStep number="04" title="Learn" copy="Outcomes update pathways, operating rules, and investment priorities." active />
+              {LOOP_STEPS.map((step, index) => (
+                <LoopStep
+                  key={step.number}
+                  number={step.number}
+                  title={step.title}
+                  copy={step.copy}
+                  levers={step.levers}
+                  active={loopStep === index}
+                  last={index === LOOP_STEPS.length - 1}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -228,15 +260,36 @@ function LeverDetail({ label, value, copy }: { label: string; value: string; cop
   );
 }
 
-function LoopStep({ number, title, copy, active }: { number: string; title: string; copy: string; active?: boolean }) {
+function LoopStep({ number, title, copy, levers, active, last }: {
+  number: string;
+  title: string;
+  copy: string;
+  levers: readonly string[];
+  active?: boolean;
+  last?: boolean;
+}) {
   return (
     <div className={`loop-step ${active ? "loop-step-active" : ""}`}>
       <span>{number}</span>
       <div>
         <h3>{title}</h3>
         <p>{copy}</p>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {levers.map((monogram) => (
+            <i
+              key={monogram}
+              className="rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold not-italic"
+              style={{
+                color: `color-mix(in srgb, ${LEVER_COLOR[monogram]} 70%, white)`,
+                background: `color-mix(in srgb, ${LEVER_COLOR[monogram]} 14%, transparent)`,
+              }}
+            >
+              {monogram}
+            </i>
+          ))}
+        </div>
       </div>
-      <b aria-hidden="true">→</b>
+      <b aria-hidden="true">{last ? "↺" : "↓"}</b>
     </div>
   );
 }
