@@ -25,6 +25,9 @@ export const LEVERS: Lever[] = [
 
 const LEVER_BY_ID = new Map(LEVERS.map((lever) => [lever.id, lever]));
 
+// The July 2026 Precision Medicine expansion (PM-*) is precision by construction.
+const PRECISION_EXPANSION = /^PM-\d+$/;
+
 // Curated overrides where the rules would misread the case.
 const LEVER_OVERRIDES: Record<string, Lever["id"]> = {
   "XC-02": "automation", // patient scheduling + capacity = ops orchestration
@@ -76,6 +79,7 @@ export function leverFor(uc: UseCase): Lever {
   if (cached) return cached;
 
   let id = LEVER_OVERRIDES[uc.id];
+  if (!id && PRECISION_EXPANSION.test(uc.id)) id = "precision";
   if (!id && uc.track) id = "robotics";
   if (!id) {
     const haystack = [uc.name, uc.description, uc.subSpecialty, uc.aiType].filter(Boolean).join(" ");

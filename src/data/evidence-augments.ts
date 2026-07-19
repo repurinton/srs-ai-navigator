@@ -122,6 +122,33 @@ export const evidenceAugments: Record<string, Record<string, unknown>> = {
       "Early market: only 15% of hospital leaders have fully deployed AI/ML for supply forecasting; 35% piloting (2026)",
     source: "Tecsys survey 2026 (industry analysis)",
   },
+
+  // ── Precision Medicine audit corrections (July 2026 sweep) ────────────────
+  "CAN-24": {
+    keyMetric:
+      "NHS-Galleri RCT (n=142,250) missed its primary stage-shift endpoint; secondary signals: ~4× detection over standard care, +16% stage I/II; PATHFINDER specificity 99.5%",
+    source:
+      "NHS-Galleri full results (ASCO 2026, primary endpoint not met); Annals of Oncology 2023 (PATHFINDER); GRAIL. Remains an LDT — not FDA-approved.",
+    keyVendors: ["GRAIL (Galleri)", "Exact Sciences (Cancerguard)", "Freenome", "Harbinger Health"],
+  },
+  "CAN-03": {
+    keyMetric:
+      "SERENA-6: ctDNA-guided therapy switch extended median PFS to 16.0 vs 9.2 months (HR 0.44, 56% risk reduction)",
+    source: "NEJM 2025 (SERENA-6); Natera Signatera (Medicare-covered MRD); Guardant Reveal",
+    keyVendors: ["Natera (Signatera)", "Guardant Health (Reveal)", "Foundation Medicine", "Tempus"],
+  },
+  "CAN-14": {
+    keyMetric:
+      "TrialGPT reached 87.3% criterion-level matching accuracy and cut screening time 42.6% in a clinician user study",
+    source: "Nature Communications 2024 (TrialGPT, NIH/NLM); Deep 6 AI acquired by Tempus 2024",
+    keyVendors: ["TrialGPT (NIH)", "Tempus AI", "Mendel", "Flatiron Health (Roche)", "Epic"],
+  },
+  "GI-18": {
+    keyMetric:
+      "Emerging: AI microbiome models predict IBD flares and therapy response; no FDA-cleared AI microbiome diagnostic exists yet",
+    source: "Research-stage literature; Nestlé Health Science (VOWST, acquired from Seres 2024)",
+    keyVendors: ["Nestlé Health Science (VOWST)", "Academic / research-stage"],
+  },
 };
 
 /** Shallow-merge evidence upgrades onto a raw use-case record. */

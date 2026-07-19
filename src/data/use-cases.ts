@@ -3,6 +3,7 @@ import { serviceLineUseCasesRaw } from "./service-line-use-cases.generated";
 import { deploymentAugments } from "./deployment-augments";
 import { withEvidenceAugments } from "./evidence-augments";
 import { expansion2026UseCasesRaw, roboticsExpansionNative } from "./expansion-2026";
+import { precisionExpansion2026Raw } from "./expansion-precision-2026";
 
 // Merge evidence-backed deployment additions into a raw use-case's deployedAt.
 function withAugmentedDeployments(uc: unknown): unknown {
@@ -722,7 +723,7 @@ const roboticsCanonical: unknown[] = [...roboticsNative, ...roboticsExpansionNat
 });
 
 export const useCases: UseCase[] = parseUseCases(
-  [...serviceLineUseCasesRaw, ...expansion2026UseCasesRaw, ...roboticsCanonical]
+  [...serviceLineUseCasesRaw, ...expansion2026UseCasesRaw, ...precisionExpansion2026Raw, ...roboticsCanonical]
     .map(withAugmentedDeployments)
     .map(withEvidenceAugments)
     .map(withRoboticsTrack)
