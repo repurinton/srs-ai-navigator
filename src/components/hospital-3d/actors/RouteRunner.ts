@@ -1,5 +1,6 @@
 import { CatmullRomCurve3, Vector3 } from "three";
 import { WORLD_ACTORS_PER_ROUTE, WORLD_ROUTES, type WorldRoute } from "@/lib/hospital-world";
+import { routeTimeRemap } from "@/lib/campus-props";
 
 export interface RouteActor {
   route: WorldRoute;
@@ -45,7 +46,8 @@ const scratchTangent = new Vector3();
 /** Pure pose-from-time: identical input always yields the identical pose. */
 export function poseOnRoute(actor: RouteActor, sceneTime: number, out: ActorPose): ActorPose {
   const { route } = actor;
-  const t = ((sceneTime / route.duration + actor.phase + (route.phaseOffset ?? 0)) % 1 + 1) % 1;
+  const base = ((sceneTime / route.duration + actor.phase + (route.phaseOffset ?? 0)) % 1 + 1) % 1;
+  const t = routeTimeRemap(route.id, base);
   const curve = curveFor(route);
   curve.getPointAt(t, out.position);
   curve.getTangentAt(t, scratchTangent);

@@ -243,7 +243,8 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     duration: 16,
     closed: true,
     phaseOffset: 0.85,
-    points: [[-6, 0.2, 9], [10, 0.2, 9], [9, 0.2, 5], [0, 0.2, 4], [-5, 0.2, 6]],
+    // A rounder loop — extra waypoints soften the entrance turns into arcs.
+    points: [[-6, 0.2, 8.6], [2, 0.2, 9.3], [9, 0.2, 8.6], [10, 0.2, 6], [6, 0.2, 4.4], [-1, 0.2, 4.4], [-6, 0.2, 6.2]],
   },
   // Cars circulating the south lot's two aisles (z 23.75 / 29.25); the turns
   // at x -57 / -12 sit clear of the parked-car x-extent (see campus-props).

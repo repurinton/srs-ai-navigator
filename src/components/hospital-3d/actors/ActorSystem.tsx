@@ -114,6 +114,41 @@ function gurneyGeometry() {
 
 /** Pools whose color lives in baked vertex colors, not per-instance color. */
 const VERTEX_COLORED_KINDS = new Set<WorldRouteKind>(["ambulance", "truck"]);
+const VEHICLE_KINDS = new Set<WorldRouteKind>(["car", "truck", "ambulance"]);
+
+// Per-instance size variety for the car pool — a mix of compacts, sedans, and
+// taller vans/SUVs (applied as a non-uniform scale on the shared sedan hull).
+const CAR_SIZES: Array<[number, number, number]> = [
+  [1, 1, 1],
+  [0.88, 0.95, 0.98],
+  [1.12, 1.36, 1.02],
+  [1.05, 1.12, 1.0],
+  [0.94, 1.0, 1.0],
+];
+
+const HEADLIGHT = "#fff4d0";
+const TAILLIGHT = "#ff3b30";
+
+/** Small emissive head/tail dots for a vehicle kind, modeled along +x. */
+function vehicleLightsGeometry(kind: WorldRouteKind) {
+  const spec = kind === "truck"
+    ? { fx: 2.3, rx: -2.05, y: 0.75, z: 0.58, s: [0.16, 0.16, 0.26] as [number, number, number] }
+    : kind === "ambulance"
+      ? { fx: 2.0, rx: -1.6, y: 0.78, z: 0.6, s: [0.16, 0.16, 0.26] as [number, number, number] }
+      : { fx: 1.15, rx: -1.15, y: 0.5, z: 0.38, s: [0.14, 0.12, 0.2] as [number, number, number] };
+  return mergeGeometries([
+    coloredBox(spec.s, [spec.fx, spec.y, spec.z], HEADLIGHT),
+    coloredBox(spec.s, [spec.fx, spec.y, -spec.z], HEADLIGHT),
+    coloredBox(spec.s, [spec.rx, spec.y, spec.z], TAILLIGHT),
+    coloredBox(spec.s, [spec.rx, spec.y, -spec.z], TAILLIGHT),
+  ]);
+}
+
+function ambulanceBeaconGeometry() {
+  const bar = new BoxGeometry(0.85, 0.24, 1.15);
+  bar.translate(-0.35, 1.99, 0);
+  return bar;
+}
 
 type Pool = {
   kind: WorldRouteKind;
@@ -136,8 +171,15 @@ const matrix = new Matrix4();
 const dummy = new Object3D();
 const pose: ActorPose = { position: new Vector3(), heading: 0, presence: 1 };
 
+const beaconRed = new Color("#ff2b2b");
+const beaconBlue = new Color("#2b6bff");
+
 function PoolMesh({ pool, timeRef, ceilingRef }: { pool: Pool; timeRef: { current: number }; ceilingRef: { current: number } }) {
   const meshRef = useRef<InstancedMesh>(null);
+  const lightsRef = useRef<InstancedMesh>(null);
+  const beaconRef = useRef<InstancedMesh>(null);
+  const isVehicle = VEHICLE_KINDS.has(pool.kind);
+  const isAmbulance = pool.kind === "ambulance";
   const geometry = useMemo(() => {
     if (pool.kind === "person") return personGeometry();
     if (pool.kind === "car") return carGeometry();
@@ -145,11 +187,23 @@ function PoolMesh({ pool, timeRef, ceilingRef }: { pool: Pool; timeRef: { curren
     if (pool.kind === "truck") return truckGeometry();
     return gurneyGeometry();
   }, [pool.kind]);
+  const lightsGeometry = useMemo(() => (isVehicle ? vehicleLightsGeometry(pool.kind) : null), [isVehicle, pool.kind]);
+  const beaconGeometry = useMemo(() => (isAmbulance ? ambulanceBeaconGeometry() : null), [isAmbulance]);
   const useVertexColors = VERTEX_COLORED_KINDS.has(pool.kind);
+  // Deterministic per-car size so the lot/road mixes compacts, sedans, vans.
+  const sizes = useMemo(
+    () => pool.actors.map((_, i) => (pool.kind === "car" ? CAR_SIZES[(i * 3 + 1) % CAR_SIZES.length] : [1, 1, 1] as [number, number, number])),
+    [pool.actors, pool.kind],
+  );
 
   useFrame(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
+    const lights = lightsRef.current;
+    const beacon = beaconRef.current;
+    // Beacon flashes ~3 Hz, alternating red/blue.
+    const flashBlue = Math.floor(timeRef.current * 3) % 2 === 0;
+    let beaconDirty = false;
     for (let index = 0; index < pool.actors.length; index += 1) {
       const actor = pool.actors[index];
       poseOnRoute(actor, timeRef.current, pose);
@@ -167,28 +221,64 @@ function PoolMesh({ pool, timeRef, ceilingRef }: { pool: Pool; timeRef: { curren
       }
       const hidden = pose.position.y >= ceilingRef.current - 0.01;
       const scale = hidden ? 0.0001 : Math.max(0.0001, pose.presence);
-      dummy.scale.set(scale, scale, scale);
+      const [sx, sy, sz] = sizes[index];
+      dummy.scale.set(scale * sx, scale * sy, scale * sz);
       dummy.updateMatrix();
       mesh.setMatrixAt(index, dummy.matrix);
+      if (lights) lights.setMatrixAt(index, dummy.matrix);
+      if (beacon) {
+        // Lights on only while the ambulance is on-campus near the ED bay.
+        const onCampus = !hidden && pose.position.z < 6;
+        dummy.scale.set(onCampus ? scale : 0.0001, onCampus ? scale : 0.0001, onCampus ? scale : 0.0001);
+        dummy.updateMatrix();
+        beacon.setMatrixAt(index, dummy.matrix);
+        beacon.setColorAt(index, flashBlue ? beaconBlue : beaconRed);
+        beaconDirty = true;
+      }
     }
     mesh.instanceMatrix.needsUpdate = true;
+    if (lights) lights.instanceMatrix.needsUpdate = true;
+    if (beacon) {
+      beacon.instanceMatrix.needsUpdate = true;
+      if (beaconDirty && beacon.instanceColor) beacon.instanceColor.needsUpdate = true;
+    }
   });
 
   return (
-    <instancedMesh
-      ref={(mesh) => {
-        meshRef.current = mesh;
-        if (!mesh) return;
-        for (let index = 0; index < pool.actors.length; index += 1) {
-          mesh.setMatrixAt(index, matrix.identity());
-          mesh.setColorAt(index, new Color(actorColor(pool.actors[index], index)));
-        }
-        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      }}
-      args={[geometry, undefined, pool.actors.length]}
-    >
-      <meshLambertMaterial vertexColors={useVertexColors} />
-    </instancedMesh>
+    <>
+      <instancedMesh
+        ref={(mesh) => {
+          meshRef.current = mesh;
+          if (!mesh) return;
+          for (let index = 0; index < pool.actors.length; index += 1) {
+            mesh.setMatrixAt(index, matrix.identity());
+            mesh.setColorAt(index, new Color(actorColor(pool.actors[index], index)));
+          }
+          if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        }}
+        args={[geometry, undefined, pool.actors.length]}
+      >
+        <meshLambertMaterial vertexColors={useVertexColors} />
+      </instancedMesh>
+      {lightsGeometry && (
+        <instancedMesh ref={lightsRef} args={[lightsGeometry, undefined, pool.actors.length]}>
+          <meshBasicMaterial vertexColors toneMapped={false} />
+        </instancedMesh>
+      )}
+      {beaconGeometry && (
+        <instancedMesh
+          ref={(mesh) => {
+            beaconRef.current = mesh;
+            if (!mesh) return;
+            for (let index = 0; index < pool.actors.length; index += 1) mesh.setColorAt(index, beaconRed);
+            if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+          }}
+          args={[beaconGeometry, undefined, pool.actors.length]}
+        >
+          <meshBasicMaterial toneMapped={false} />
+        </instancedMesh>
+      )}
+    </>
   );
 }
 

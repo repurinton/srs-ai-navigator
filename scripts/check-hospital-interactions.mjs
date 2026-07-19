@@ -8,6 +8,7 @@ import {
   BOAT_PERIOD,
   parkedCarSlots,
   inLake,
+  routeTimeRemap,
 } from "../src/lib/campus-props.ts";
 
 /**
@@ -28,7 +29,8 @@ function curveFor(route) {
 }
 const scratch = new Vector3();
 function poseOnRoute(route, phase, t) {
-  const u = (((t / route.duration + phase + (route.phaseOffset ?? 0)) % 1) + 1) % 1;
+  const base = (((t / route.duration + phase + (route.phaseOffset ?? 0)) % 1) + 1) % 1;
+  const u = routeTimeRemap(route.id, base);
   curveFor(route).getPointAt(u, scratch);
   let presence = 1;
   if (!route.closed) {

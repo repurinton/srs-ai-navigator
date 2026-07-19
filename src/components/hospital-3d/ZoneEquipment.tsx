@@ -775,6 +775,11 @@ function RoadMarkings() {
         parts.push(translatedBox([0.16, 0.03, 2.4], [x, 0.16, z]));
       }
     }
+    // Zebra crosswalk on the front apron between the drop-off and the entrance,
+    // where valet/patient walk paths cross the circulating cars.
+    for (let z = 5.4; z <= 8.4; z += 0.7) {
+      parts.push(translatedBox([1.8, 0.03, 0.24], [1, 0.17, z]));
+    }
     return mergeGeometries(parts);
   }, []);
 

@@ -82,6 +82,28 @@ function ease(v: number): number {
   return v * v * (3 - 2 * v);
 }
 
+// ── Route speed easing ───────────────────────────────────────────────────────
+/**
+ * Campus loops shouldn't glide at constant speed — vehicles should slow into
+ * turns/drop-offs and pick up on the straights. This monotonic time remap adds
+ * a slow-fast pulse to those loops (keeps derivative > 0 so motion never
+ * reverses). Shared by RouteRunner and the interaction QA so the check always
+ * matches what renders. Through-lanes/truck are left constant so the tuned
+ * far-west ambulance crossing stays predictable.
+ */
+const LOOP_EASE: Record<string, { n: number; amp: number }> = {
+  "car-dropoff": { n: 2, amp: 0.38 },
+  "car-parking": { n: 2, amp: 0.3 },
+  ambulance: { n: 1, amp: 0.22 },
+};
+
+export function routeTimeRemap(routeId: string, u: number): number {
+  const e = LOOP_EASE[routeId];
+  if (!e) return u;
+  const r = u - (e.amp * Math.sin(2 * Math.PI * e.n * u)) / (2 * Math.PI * e.n);
+  return ((r % 1) + 1) % 1;
+}
+
 export function boatState(elapsed: number): BoatState {
   const t = ((elapsed % BOAT_PERIOD) + BOAT_PERIOD) % BOAT_PERIOD;
   // heading is the yaw applied directly to a hull modeled along +x:
