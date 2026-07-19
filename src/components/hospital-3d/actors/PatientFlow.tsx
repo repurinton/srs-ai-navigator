@@ -32,6 +32,12 @@ const RELEASE_RECOVERY_SECONDS = 5;
 const RELEASE_STAGGER_SECONDS = 0.35;
 const SLOT_APPROACH_SPEED = 2.6;
 const WALK_FRAMES_PER_METER = 5;
+/** Minimum arc-length gap a patient keeps behind the one ahead on the path —
+ * prevents overlaps and lets a queue physically back up at bottlenecks. */
+const FOLLOW_GAP_WALK = 1.5;
+const FOLLOW_GAP_STRETCHER = 2.7;
+/** Fallback queue-grid capacity for stages with no equipment berths (F1). */
+const QUEUE_GRID_CAPACITY = 18;
 /** The stretcher parks this far south of a berth while the patient floats in. */
 const STATION_PARK_OFFSET = 1.15;
 /** Vertical clearance between a lying surface and the body's local origin. */
@@ -299,6 +305,25 @@ export function PatientFlow({
     const frames = walkerGeometry.getAttribute("frame") as InstancedBufferAttribute;
     const flips = walkerGeometry.getAttribute("flip") as InstancedBufferAttribute;
 
+    // Following model: order the walking (non-riding) patients along the path
+    // so each keeps a gap behind the one ahead. This both stops overlaps and
+    // lets a stalled front (a closed gate, a full berth bank, the elevator
+    // lobby) back a line up the corridor — visible bottleneck congestion.
+    const eligible: Array<{ i: number; s: number }> = [];
+    for (let i = 0; i < states.current.length; i += 1) {
+      const p = states.current[i];
+      if (p.mode === "walking" && p.cab < 0) eligible.push({ i, s: p.s });
+    }
+    eligible.sort((a, b) => a.s - b.s);
+    const aheadS = new Map<number, number>();
+    if (eligible.length > 1) {
+      for (let k = 0; k < eligible.length; k += 1) {
+        const ahead = eligible[(k + 1) % eligible.length];
+        // The last patient's leader is the first one, a lap ahead.
+        aheadS.set(eligible[k].i, k === eligible.length - 1 ? ahead.s + journey.total : ahead.s);
+      }
+    }
+
     for (let i = 0; i < states.current.length; i += 1) {
       const patient = states.current[i];
       const segment = segmentIndexAt(journey, patient.s);
@@ -306,8 +331,8 @@ export function PatientFlow({
       const speed = travel === "stretcher" ? PATIENT_STRETCHER_SPEED : PATIENT_FLOW_SPEED;
 
       if (patient.mode === "walking") {
-        patient.tint = Math.max(0, patient.tint - delta / RELEASE_RECOVERY_SECONDS);
         if (patient.cab >= 0) {
+          patient.tint = Math.max(0, patient.tint - delta / RELEASE_RECOVERY_SECONDS);
           // Riding: alight only when the cab dwells at the target floor
           // with its doors open.
           const state = elevatorCabState(elapsed.current, ELEVATOR_CABS[patient.cab]);
@@ -318,7 +343,8 @@ export function PatientFlow({
           }
         } else {
           const previousS = patient.s;
-          let nextS = patient.s + speed * delta;
+          const freeStep = speed * delta;
+          let nextS = patient.s + freeStep;
           // Vertical legs require a cab: hold at the lobby until one dwells
           // here with doors open, heading the right way.
           const segment2 = segmentIndexAt(journey, Math.min(nextS + 0.001, journey.total));
@@ -337,16 +363,37 @@ export function PatientFlow({
               }
             }
           }
-          patient.s = nextS;
-          if (gateStage && gateS !== undefined && previousS < gateS && patient.s >= gateS) {
-            patient.mode = "queued";
-            patient.queueStage = gateStage;
-            patient.slot = queueLength.current;
-            queueLength.current += 1;
-            patient.s = gateS;
-            patient.wait = 0;
+          // Follow the patient ahead — never close within the min gap.
+          const leaderS = aheadS.get(i);
+          if (leaderS !== undefined) {
+            const gap = travel === "stretcher" ? FOLLOW_GAP_STRETCHER : FOLLOW_GAP_WALK;
+            const cap = leaderS - gap;
+            if (nextS > cap) nextS = Math.max(previousS, cap);
+          }
+          // Gate: take an equipment berth if one is free, otherwise hold on the
+          // path so the line backs up (rather than piling into the equipment).
+          // `previousS <= gateS + eps` also re-catches an already-held patient.
+          if (gateStage && gateS !== undefined && previousS <= gateS + 0.05 && nextS >= gateS) {
             const stations = WORLD_PATIENT_STATIONS[gateStage];
-            patient.station = stations && patient.slot < stations.length ? stations[patient.slot] : undefined;
+            const capacity = stations ? stations.length : QUEUE_GRID_CAPACITY;
+            if (queueLength.current < capacity) {
+              patient.mode = "queued";
+              patient.queueStage = gateStage;
+              patient.slot = queueLength.current;
+              queueLength.current += 1;
+              patient.wait = 0;
+              patient.station = stations && patient.slot < stations.length ? stations[patient.slot] : undefined;
+            }
+            nextS = gateS; // queued patient leaves the path; held one waits here
+          }
+          patient.s = nextS;
+          // Congestion tint: a walker that can't advance heats up; a free one cools.
+          if (patient.mode === "walking") {
+            if (freeStep > 0.0001 && patient.s - previousS < freeStep * 0.5) {
+              patient.tint = Math.min(1, patient.tint + delta / PATIENT_WAIT_RED_SECONDS);
+            } else {
+              patient.tint = Math.max(0, patient.tint - delta / RELEASE_RECOVERY_SECONDS);
+            }
           }
           if (patient.s >= journey.total) {
             patient.s -= journey.total;
