@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { EdgesGeometry, BoxGeometry, type Group, type Mesh } from "three";
+import { BufferAttribute, Color, EdgesGeometry, BoxGeometry, type Group, type Mesh } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   WORLD_ANCHORS,
@@ -18,6 +18,27 @@ function translatedBox(size: [number, number, number], position: [number, number
   geometry.translate(...position);
   return geometry;
 }
+
+/** Translated box carrying a uniform vertex color, so a palette of parked
+ * cars merges into one vertex-colored draw call. */
+function coloredBox(size: [number, number, number], position: [number, number, number], hex: string) {
+  const geometry = translatedBox(size, position);
+  const c = new Color(hex);
+  const count = geometry.attributes.position.count;
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i += 1) {
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  }
+  geometry.setAttribute("color", new BufferAttribute(colors, 3));
+  return geometry;
+}
+
+const PARKED_CAR_COLORS = [
+  "#8fa2b3", "#c7cfd6", "#4f6f8f", "#b5493f", "#5e768a",
+  "#e6e9ec", "#3a4b57", "#c9b283", "#6d8a7d", "#7f6f9a",
+];
 
 const Z = WORLD_ZONES;
 
@@ -258,21 +279,30 @@ function ParkedCars() {
   const geometry = useMemo(() => {
     const parking = WORLD_SURFACES.parking;
     const parts = [];
-    const stallCount = Math.floor((parking.max[0] - parking.min[0] - 4) / 3.2);
-    for (let i = 0; i < stallCount; i += 1) {
-      if (i % 3 === 1) continue; // leave some stalls open for the animated cars
-      const x = parking.min[0] + 3.6 + i * 3.2;
-      const z = (parking.min[2] + parking.max[2]) / 2 + (i % 2 === 0 ? -1.6 : 1.6);
-      parts.push(
-        translatedBox([2.2, 0.55, 1.05], [x, 0.45, z]),
-        translatedBox([1.15, 0.42, 0.9], [x - 0.12, 0.93, z]),
-      );
+    // Three nose-in rows across the south lot; cars sit long-axis along z so
+    // they face the aisles. ~3× the prior car count, each a palette color.
+    const rowZ = [parking.min[2] + 2, (parking.min[2] + parking.max[2]) / 2, parking.max[2] - 2];
+    const stride = 3.1;
+    const stallCount = Math.floor((parking.max[0] - parking.min[0] - 4) / stride);
+    let paint = 0;
+    for (let row = 0; row < rowZ.length; row += 1) {
+      const z = rowZ[row];
+      for (let i = 0; i < stallCount; i += 1) {
+        if ((i + row) % 4 === 3) continue; // leave gaps for the animated flow
+        const x = parking.min[0] + 3 + i * stride;
+        const color = PARKED_CAR_COLORS[paint % PARKED_CAR_COLORS.length];
+        paint += 1;
+        parts.push(
+          coloredBox([1.05, 0.55, 2.2], [x, 0.45, z], color),
+          coloredBox([0.9, 0.42, 1.15], [x, 0.93, z + 0.12], color),
+        );
+      }
     }
     return mergeGeometries(parts);
   }, []);
   return (
     <mesh geometry={geometry}>
-      <meshLambertMaterial color="#6c8296" />
+      <meshLambertMaterial vertexColors />
     </mesh>
   );
 }
@@ -649,22 +679,22 @@ function ElevatorCore({ ceilingY }: { ceilingY: number }) {
   );
 }
 
-/** Dashed centerline plus parking stall dividers — one merged draw call. */
+/** Dashed lane divider plus parking stall lines — one merged draw call. */
 function RoadMarkings() {
   const geometry = useMemo(() => {
     const road = WORLD_SURFACES.mainRoad;
     const parking = WORLD_SURFACES.parking;
     const parts = [];
+    // Dashed centerline between the two highway lanes (z=15).
     for (let x = road.min[0] + 4; x < road.max[0] - 4; x += 6) {
-      parts.push(translatedBox([2.4, 0.03, 0.22], [x, 0.16, (road.min[2] + road.max[2]) / 2]));
+      parts.push(translatedBox([2.4, 0.03, 0.22], [x, 0.16, 15]));
     }
-    for (let x = parking.min[0] + 2; x <= parking.max[0] - 2; x += 3.2) {
-      parts.push(
-        translatedBox(
-          [0.18, 0.03, parking.max[2] - parking.min[2] - 1.5],
-          [x, 0.16, (parking.min[2] + parking.max[2]) / 2],
-        ),
-      );
+    // Stall lines for the three parking rows.
+    const rowZ = [parking.min[2] + 2, (parking.min[2] + parking.max[2]) / 2, parking.max[2] - 2];
+    for (const z of rowZ) {
+      for (let x = parking.min[0] + 1.5; x <= parking.max[0] - 1.5; x += 3.1) {
+        parts.push(translatedBox([0.16, 0.03, 2.4], [x, 0.16, z]));
+      }
     }
     return mergeGeometries(parts);
   }, []);

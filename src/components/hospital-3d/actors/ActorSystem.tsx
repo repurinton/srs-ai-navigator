@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
   BoxGeometry,
+  BufferAttribute,
   CapsuleGeometry,
   CircleGeometry,
   Color,
@@ -29,7 +30,29 @@ const PERSON_COLORS: Record<WorldPersonRole, string> = {
   valet: "#ffb454",
 };
 
-const CAR_COLORS = ["#7f95a8", "#a8b4be", "#5e768a", "#93a6b5"];
+// A lively but tasteful lot: silvers, blues, a red, a white, a dark, a tan.
+const CAR_COLORS = [
+  "#8fa2b3", "#c7cfd6", "#4f6f8f", "#b5493f",
+  "#5e768a", "#e6e9ec", "#3a4b57", "#c9b283",
+  "#6d8a7d", "#7f6f9a",
+];
+
+/** BoxGeometry carrying a uniform per-vertex color so several colored parts
+ * merge into one vertex-colored mesh (one draw call, multi-color shape). */
+function coloredBox(size: [number, number, number], pos: [number, number, number], hex: string) {
+  const geo = new BoxGeometry(size[0], size[1], size[2]);
+  geo.translate(pos[0], pos[1], pos[2]);
+  const c = new Color(hex);
+  const count = geo.attributes.position.count;
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i += 1) {
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute("color", new BufferAttribute(colors, 3));
+  return geo;
+}
 
 function personGeometry() {
   const body = new CapsuleGeometry(0.32, 0.72, 3, 8);
@@ -47,12 +70,38 @@ function carGeometry() {
   return mergeGeometries([hull, cabin]);
 }
 
+/**
+ * A box-body ambulance that reads unmistakably as one: tall white patient
+ * box, stepped-down cab with a dark windshield, a red horizontal stripe and
+ * side cross, and a red/blue roof light bar. Vertex-colored so the whole
+ * multi-color shape is a single instanced draw call. Modeled along +x (cab
+ * forward at +x).
+ */
 function ambulanceGeometry() {
-  const hull = new BoxGeometry(2.9, 1.15, 1.35);
-  hull.translate(0, 0.85, 0);
-  const cab = new BoxGeometry(0.85, 0.8, 1.25);
-  cab.translate(1.55, 0.6, 0);
-  return mergeGeometries([hull, cab]);
+  const white = "#eef2f5";
+  const red = "#d1362c";
+  const parts = [
+    coloredBox([2.5, 1.55, 1.5], [-0.35, 1.05, 0], white), // patient box
+    coloredBox([1.2, 1.0, 1.42], [1.45, 0.75, 0], white), // cab
+    coloredBox([0.5, 0.55, 1.3], [2.0, 1.05, 0], "#243542"), // windshield
+    coloredBox([2.6, 0.28, 1.53], [-0.3, 0.72, 0], red), // belt stripe
+    coloredBox([0.12, 0.7, 0.7], [-0.3, 1.15, 0.76], red), // side cross — vertical
+    coloredBox([0.12, 0.28, 1.1], [-0.3, 1.15, 0.76], red), // side cross — horizontal
+    coloredBox([0.9, 0.22, 1.2], [-0.35, 1.94, 0], "#c23a5a"), // roof light bar
+  ];
+  return mergeGeometries(parts);
+}
+
+/** A boxy delivery truck: colored cab + tall pale cargo box. Vertex-colored,
+ * modeled along +x (cab forward). */
+function truckGeometry() {
+  const parts = [
+    coloredBox([1.3, 1.2, 1.5], [1.7, 0.85, 0], "#3f6f9a"), // cab
+    coloredBox([0.45, 0.5, 1.35], [2.25, 1.1, 0], "#1f2e39"), // windshield
+    coloredBox([2.9, 1.9, 1.6], [-0.6, 1.2, 0], "#d9dde1"), // cargo box
+    coloredBox([2.9, 0.16, 1.62], [-0.6, 2.12, 0], "#aeb6bd"), // box roof trim
+  ];
+  return mergeGeometries(parts);
 }
 
 function gurneyGeometry() {
@@ -63,15 +112,23 @@ function gurneyGeometry() {
   return mergeGeometries([bed, frame]);
 }
 
+/** Pools whose color lives in baked vertex colors, not per-instance color. */
+const VERTEX_COLORED_KINDS = new Set<WorldRouteKind>(["ambulance", "truck"]);
+
 type Pool = {
   kind: WorldRouteKind;
   actors: RouteActor[];
 };
 
 function actorColor(actor: RouteActor, index: number): string {
+  // Vertex-colored kinds keep instanceColor white so the baked colors show.
+  if (VERTEX_COLORED_KINDS.has(actor.route.kind)) return "#ffffff";
   if (actor.route.kind === "person") return PERSON_COLORS[actor.route.role ?? "patient"];
-  if (actor.route.kind === "car") return CAR_COLORS[index % CAR_COLORS.length];
-  if (actor.route.kind === "ambulance") return "#e9edf0";
+  if (actor.route.kind === "car") {
+    // Vary by route + instance so the two actors on a route differ too.
+    const seed = (actor.route.id.length * 7 + index * 3) % CAR_COLORS.length;
+    return CAR_COLORS[seed];
+  }
   return "#b9c4cd";
 }
 
@@ -85,8 +142,10 @@ function PoolMesh({ pool, timeRef, ceilingRef }: { pool: Pool; timeRef: { curren
     if (pool.kind === "person") return personGeometry();
     if (pool.kind === "car") return carGeometry();
     if (pool.kind === "ambulance") return ambulanceGeometry();
+    if (pool.kind === "truck") return truckGeometry();
     return gurneyGeometry();
   }, [pool.kind]);
+  const useVertexColors = VERTEX_COLORED_KINDS.has(pool.kind);
 
   useFrame(() => {
     const mesh = meshRef.current;
@@ -128,7 +187,7 @@ function PoolMesh({ pool, timeRef, ceilingRef }: { pool: Pool; timeRef: { curren
       }}
       args={[geometry, undefined, pool.actors.length]}
     >
-      <meshLambertMaterial vertexColors={false} />
+      <meshLambertMaterial vertexColors={useVertexColors} />
     </instancedMesh>
   );
 }
@@ -187,7 +246,7 @@ export function ActorSystem({
 
   const pools = useMemo<Pool[]>(() => {
     const actors = buildRouteActors();
-    return (["person", "car", "ambulance", "gurney"] as const).map((kind) => ({
+    return (["person", "car", "truck", "ambulance", "gurney"] as const).map((kind) => ({
       kind,
       actors: actors.filter((actor) => actor.route.kind === kind),
     }));

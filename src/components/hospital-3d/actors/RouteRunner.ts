@@ -45,7 +45,7 @@ const scratchTangent = new Vector3();
 /** Pure pose-from-time: identical input always yields the identical pose. */
 export function poseOnRoute(actor: RouteActor, sceneTime: number, out: ActorPose): ActorPose {
   const { route } = actor;
-  const t = ((sceneTime / route.duration + actor.phase) % 1 + 1) % 1;
+  const t = ((sceneTime / route.duration + actor.phase + (route.phaseOffset ?? 0)) % 1 + 1) % 1;
   const curve = curveFor(route);
   curve.getPointAt(t, out.position);
   curve.getTangentAt(t, scratchTangent);

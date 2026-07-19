@@ -136,7 +136,12 @@ export const WORLD_SURFACES = {
   mainRoad: { min: [-60, 0, 12] as Vec3, max: [60, 0.1, 18] as Vec3 },
   arrivalLoop: { min: [-6, 0, 8] as Vec3, max: [10, 0.1, 12] as Vec3 },
   emsSpur: { min: [-46, 0, -8] as Vec3, max: [-24, 0.1, -2] as Vec3 },
-  parking: { min: [-56, 0, 2] as Vec3, max: [-32, 0.1, 11] as Vec3 },
+  // ~3× the prior footprint, relocated to the open apron south of the highway.
+  parking: { min: [-58, 0, 20] as Vec3, max: [-12, 0.1, 33] as Vec3 },
+  // Drive connecting the highway to the south lot.
+  parkingConnector: { min: [-40, 0, 17] as Vec3, max: [-30, 0.1, 21] as Vec3 },
+  // West service dock the delivery truck backs into.
+  serviceDock: { min: [-30, 0, 0] as Vec3, max: [-20, 0.1, 4] as Vec3 },
   dischargePlaza: { min: [12, 0, 4] as Vec3, max: [28, 0.1, 12] as Vec3 },
 } as const;
 
@@ -179,7 +184,7 @@ export const WORLD_ZONE_LABEL_ANCHORS: Record<string, Vec3> = {
   arrivals: [2, 0.4, 9],
 };
 
-export type WorldRouteKind = "car" | "ambulance" | "person" | "gurney";
+export type WorldRouteKind = "car" | "truck" | "ambulance" | "person" | "gurney";
 export type WorldPersonRole = "caregiver" | "patient" | "valet";
 
 export interface WorldRoute {
@@ -190,10 +195,17 @@ export interface WorldRoute {
   duration: number;
   /** Closed routes loop smoothly; open routes fade out and respawn. */
   closed: boolean;
+  /**
+   * Extra fraction (0..1) added to every actor's cycle phase. Routes that
+   * share an entry point (e.g. several lanes leaving the west highway edge)
+   * use distinct offsets so their actors never reach the shared node at the
+   * same instant — the deterministic anti-overlap mechanism.
+   */
+  phaseOffset?: number;
   points: readonly Vec3[];
 }
 
-/** Two independently phased actors per route family (28 total). */
+/** Two independently phased actors per route family. */
 export const WORLD_ACTORS_PER_ROUTE = 2;
 
 /**
@@ -203,33 +215,65 @@ export const WORLD_ACTORS_PER_ROUTE = 2;
  * y≈18.4/22.9).
  */
 export const WORLD_ROUTES: readonly WorldRoute[] = [
+  // Vehicle flows are spatially disjoint so lines never overlap: two through
+  // lanes (opposite directions), a self-contained drop-off loop, a parking
+  // loop, an ambulance loop, and the truck on the free middle lane. The only
+  // shared point is the ambulance crossing the west lane at the far west —
+  // phaseOffsets (tuned by scripts/optimize-vehicle-phases.mjs) keep it clear.
   {
-    id: "car-arrival",
+    id: "car-eastbound",
     kind: "car",
-    duration: 13,
+    duration: 24,
     closed: false,
-    points: [[-58, 0.2, 15], [-10, 0.2, 15], [-4, 0.2, 11], [1, 0.2, 9]],
+    phaseOffset: 0.4,
+    points: [[-58, 0.2, 17.7], [0, 0.2, 17.7], [58, 0.2, 17.7]],
   },
   {
-    id: "car-departure",
+    id: "car-westbound",
     kind: "car",
-    duration: 13,
+    duration: 23,
     closed: false,
-    points: [[3, 0.2, 9], [7, 0.2, 11], [13, 0.2, 15], [58, 0.2, 15]],
+    phaseOffset: 0.55,
+    points: [[58, 0.2, 12.1], [0, 0.2, 12.1], [-58, 0.2, 12.1]],
   },
+  // Self-contained drop-off loop on the front apron (south of the highway).
+  {
+    id: "car-dropoff",
+    kind: "car",
+    duration: 16,
+    closed: true,
+    phaseOffset: 0.85,
+    points: [[-6, 0.2, 9], [10, 0.2, 9], [9, 0.2, 5], [0, 0.2, 4], [-5, 0.2, 6]],
+  },
+  // Cars circulating the south lot's aisles between the parked rows.
   {
     id: "car-parking",
     kind: "car",
-    duration: 12,
-    closed: false,
-    points: [[-58, 0.2, 16], [-38, 0.2, 15], [-40, 0.2, 9], [-44, 0.2, 5]],
+    duration: 22,
+    closed: true,
+    phaseOffset: 0.6,
+    points: [[-52, 0.2, 24], [-16, 0.2, 24], [-16, 0.2, 29], [-52, 0.2, 29]],
   },
+  // Ambulance loop: dives south at the far-west edge (crossing the highway
+  // lanes only where through-cars are faded near their spawn/despawn), runs
+  // to the ED bay, and returns the same way.
   {
     id: "ambulance",
     kind: "ambulance",
-    duration: 15,
+    duration: 20,
+    closed: true,
+    phaseOffset: 0.75,
+    points: [[-57, 0.2, 16], [-55, 0.2, 2], [-40, 0.2, -4], [-27, 0.2, -4], [-40, 0.2, -6.5], [-55, 0.2, 0], [-57, 0.2, 14]],
+  },
+  // Delivery truck on the free middle lane (z15), then in to the west dock.
+  // Extra waypoints keep the turn gentle so the spline never bows into a lane.
+  {
+    id: "truck-delivery",
+    kind: "truck",
+    duration: 22,
     closed: false,
-    points: [[-58, 0.2, 14], [-45, 0.2, 12], [-40, 0.2, -4], [-27, 0.2, -4]],
+    phaseOffset: 0.4,
+    points: [[58, 0.2, 14.9], [-4, 0.2, 14.9], [-13, 0.2, 11], [-20, 0.2, 6], [-24, 0.2, 2.5]],
   },
   {
     id: "valet-curb",
