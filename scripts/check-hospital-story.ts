@@ -161,8 +161,8 @@ assert.ok(HOSPITAL_STORY_DWELL_MS.materialize >= 5_000, "Materialization must re
 assert.ok(HOSPITAL_STORY_DWELL_MS.resolve >= 6_000, "Resolution must show operating impact");
 assert.ok(HOSPITAL_STORY_DWELL_MS.reveal >= 7_000, "A revealed pressure needs a deliberate read");
 assert.ok(
-  HOSPITAL_STORY_AUTOPLAY_RUNTIME_MS >= 120_000 && HOSPITAL_STORY_AUTOPLAY_RUNTIME_MS <= 130_000,
-  `Complete autoplay, including the final reveal hold, must run 120-130s; received ${HOSPITAL_STORY_AUTOPLAY_RUNTIME_MS}ms`,
+  HOSPITAL_STORY_AUTOPLAY_RUNTIME_MS >= 235_000 && HOSPITAL_STORY_AUTOPLAY_RUNTIME_MS <= 245_000,
+  `Complete autoplay, including the final reveal hold, must run 235-245s; received ${HOSPITAL_STORY_AUTOPLAY_RUNTIME_MS}ms`,
 );
 assert.ok(
   HOSPITAL_STORY_VISUAL_EXHALE_MS >= 800 && HOSPITAL_STORY_VISUAL_EXHALE_MS <= 1_000,

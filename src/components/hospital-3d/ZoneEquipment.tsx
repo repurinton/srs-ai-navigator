@@ -283,46 +283,69 @@ function ParkedCars() {
  * door state always match the riders. Doors face east and slide open at
  * every dwell so patients visibly enter and exit.
  */
-function ElevatorCabs() {
+function ElevatorCabs({ ceilingY }: { ceilingY: number }) {
   return (
     <group>
       {ELEVATOR_CABS.map((cab, index) => (
-        <ElevatorCabUnit key={index} cab={cab} />
+        <ElevatorCabUnit key={index} cab={cab} ceilingY={ceilingY} />
       ))}
     </group>
   );
 }
 
-function ElevatorCabUnit({ cab }: { cab: ElevatorCabSpec }) {
+function ElevatorCabUnit({ cab, ceilingY }: { cab: ElevatorCabSpec; ceilingY: number }) {
   const cabRef = useRef<Group>(null);
   const doorNorthRef = useRef<Mesh>(null);
   const doorSouthRef = useRef<Mesh>(null);
   const clock = useRef(0);
+  // Fade toward whatever the floors are doing: a cab riding above the focused
+  // floor must not hang in the air as a solid box (matches FadeGroup behavior,
+  // but tracked per-frame because the cab moves).
+  const fade = useRef(1);
   const doorX = WORLD_ELEVATOR.max[0] - 0.12;
 
   useFrame((_, delta) => {
     clock.current += delta;
     const state = elevatorCabState(clock.current, cab);
-    if (cabRef.current) cabRef.current.position.y = state.y;
+    const group = cabRef.current;
+    if (!group) return;
+    group.position.y = state.y;
     const slide = 0.12 + state.doorsOpen * 0.72;
     if (doorNorthRef.current) doorNorthRef.current.position.z = cab.z - slide;
     if (doorSouthRef.current) doorSouthRef.current.position.z = cab.z + slide;
+
+    // The cab body spans [state.y, state.y + ~3]; hide once its floor reaches
+    // the focus ceiling, matching the zone floors above it.
+    const target = state.y >= ceilingY - 0.01 ? 0 : 1;
+    fade.current += (target - fade.current) * Math.min(1, delta * 6);
+    const opacity = fade.current;
+    group.visible = opacity > 0.02;
+    group.traverse((object) => {
+      const mesh = object as Mesh;
+      if (!mesh.material) return;
+      const material = mesh.material as unknown as { transparent: boolean; opacity: number; needsUpdate: boolean };
+      if (!material.transparent) {
+        material.transparent = true;
+        material.needsUpdate = true;
+      }
+      material.opacity = opacity;
+    });
   });
 
   return (
     <group ref={cabRef}>
       <mesh position={[cab.x, 1.5, cab.z]}>
         <boxGeometry args={[3.2, 2.9, 2.3]} />
-        <meshLambertMaterial color="#b9cdd4" />
+        <meshLambertMaterial color="#b9cdd4" transparent />
       </mesh>
       {/* Sliding doors on the east face */}
       <mesh ref={doorNorthRef} position={[doorX, 1.45, cab.z - 0.12]}>
         <boxGeometry args={[0.1, 2.7, 1.1]} />
-        <meshLambertMaterial color="#7fd4c0" />
+        <meshLambertMaterial color="#7fd4c0" transparent />
       </mesh>
       <mesh ref={doorSouthRef} position={[doorX, 1.45, cab.z + 0.12]}>
         <boxGeometry args={[0.1, 2.7, 1.1]} />
-        <meshLambertMaterial color="#7fd4c0" />
+        <meshLambertMaterial color="#7fd4c0" transparent />
       </mesh>
     </group>
   );
@@ -596,18 +619,23 @@ function MedicalQuadcopter() {
 }
 
 /** Glass elevator core riding the tower's open west end. */
-function ElevatorCore() {
-  const size: [number, number, number] = [
-    WORLD_ELEVATOR.max[0] - WORLD_ELEVATOR.min[0],
-    WORLD_ELEVATOR.max[1] - WORLD_ELEVATOR.min[1],
-    WORLD_ELEVATOR.max[2] - WORLD_ELEVATOR.min[2],
-  ];
-  const center: [number, number, number] = [
-    (WORLD_ELEVATOR.min[0] + WORLD_ELEVATOR.max[0]) / 2,
-    (WORLD_ELEVATOR.min[1] + WORLD_ELEVATOR.max[1]) / 2,
-    (WORLD_ELEVATOR.min[2] + WORLD_ELEVATOR.max[2]) / 2,
-  ];
-  const edges = useMemo(() => new EdgesGeometry(new BoxGeometry(...size)), []);
+function ElevatorCore({ ceilingY }: { ceilingY: number }) {
+  // Cap the glass shaft at the focused floor so it doesn't rise past the
+  // cutaway as a wireframe box (matches the floors fading above the focus).
+  const topY = Math.min(WORLD_ELEVATOR.max[1], Number.isFinite(ceilingY) ? ceilingY : WORLD_ELEVATOR.max[1]);
+  const { size, center, edges } = useMemo(() => {
+    const s: [number, number, number] = [
+      WORLD_ELEVATOR.max[0] - WORLD_ELEVATOR.min[0],
+      topY - WORLD_ELEVATOR.min[1],
+      WORLD_ELEVATOR.max[2] - WORLD_ELEVATOR.min[2],
+    ];
+    const c: [number, number, number] = [
+      (WORLD_ELEVATOR.min[0] + WORLD_ELEVATOR.max[0]) / 2,
+      (WORLD_ELEVATOR.min[1] + topY) / 2,
+      (WORLD_ELEVATOR.min[2] + WORLD_ELEVATOR.max[2]) / 2,
+    ];
+    return { size: s, center: c, edges: new EdgesGeometry(new BoxGeometry(...s)) };
+  }, [topY]);
   return (
     <group>
       <mesh position={center}>
@@ -727,8 +755,8 @@ export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
         <BedRow start={[2, Z["care-upper"].min[1] + 0.4, -12.5]} count={6} gap={2.4} />
       </FadeGroup>
 
-      <ElevatorCore />
-      <ElevatorCabs />
+      <ElevatorCore ceilingY={ceilingY} />
+      <ElevatorCabs ceilingY={ceilingY} />
       <Helipad />
       <MedicalQuadcopter />
       <ParkedCars />

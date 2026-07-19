@@ -190,7 +190,7 @@ const reducedMotionPass =
 // weakening the current release decision. Each must explicitly report a pass.
 const autoplay = optionalEvidenceStatus(
   "evals/evidence/current/autoplay-runtime.json",
-  (value) => value.pass === true && value.runtimeMs >= 120_000 && value.runtimeMs <= 130_000 && value.minimumSettledMs >= 800,
+  (value) => value.pass === true && value.runtimeMs >= 235_000 && value.runtimeMs <= 245_000 && value.minimumSettledMs >= 800,
 );
 const performance = optionalEvidenceStatus(
   "evals/evidence/current/performance-qa.json",

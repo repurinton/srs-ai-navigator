@@ -101,8 +101,8 @@ check(standard.thresholds?.layout?.maximumHorizontalOverflowPx === 0, "horizonta
 check(standard.thresholds?.layout?.maximumClippedTextElements === 0, "clipped text threshold must be zero");
 check(standard.thresholds?.layout?.minimumTouchTargetPx >= 44, "touch target threshold must be at least 44 pixels");
 check(standard.thresholds?.layout?.maximumForegroundCallouts === 1, "foreground callout threshold must be one");
-check(standard.thresholds?.motion?.minimumAutoplayRuntimeSeconds === 120, "minimum autoplay runtime must be 120 seconds");
-check(standard.thresholds?.motion?.maximumAutoplayRuntimeSeconds === 130, "maximum autoplay runtime must be 130 seconds");
+check(standard.thresholds?.motion?.minimumAutoplayRuntimeSeconds === 235, "minimum autoplay runtime must be 235 seconds");
+check(standard.thresholds?.motion?.maximumAutoplayRuntimeSeconds === 245, "maximum autoplay runtime must be 245 seconds");
 check(standard.thresholds?.motion?.minimumSettledTimeBeforeAdvanceMs >= 800, "settled time must be at least 800ms");
 check(standard.thresholds?.motion?.cameraMovesPerCycle === 1, "camera must move once per cycle");
 check(standard.thresholds?.motion?.maximumConcurrentForegroundPulses === 1, "only one foreground pulse may run");

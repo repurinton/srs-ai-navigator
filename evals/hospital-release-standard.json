@@ -104,8 +104,8 @@
       "maximumForegroundCallouts": 1
     },
     "motion": {
-      "minimumAutoplayRuntimeSeconds": 120,
-      "maximumAutoplayRuntimeSeconds": 130,
+      "minimumAutoplayRuntimeSeconds": 235,
+      "maximumAutoplayRuntimeSeconds": 245,
       "minimumSettledTimeBeforeAdvanceMs": 800,
       "cameraMovesPerCycle": 1,
       "maximumConcurrentForegroundPulses": 1,
@@ -220,9 +220,9 @@
       "id": "HG-MOT-01",
       "category": "motion",
       "name": "Executive pacing",
-      "requirement": "The uninterrupted guided story runs between 120 and 130 seconds and each foreground animation settles before the next beat.",
+      "requirement": "The uninterrupted guided story runs between 235 and 245 seconds and each foreground animation settles before the next beat.",
       "measure": "runtime-and-settle-window",
-      "pass": "120-130s; settle>=800ms"
+      "pass": "235-245s; settle>=800ms"
     },
     {
       "id": "HG-MOT-02",

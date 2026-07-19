@@ -33,10 +33,10 @@ export type CanonicalHospitalStoryState = HospitalStoryState & {
  * to presenter control; these dwell times support rehearsal and kiosk mode.
  */
 export const HOSPITAL_STORY_DWELL_MS: Record<HospitalStoryBeat, number> = {
-  surface: 7_200,
-  materialize: 5_400,
-  resolve: 6_800,
-  reveal: 7_200,
+  surface: 13_800,
+  materialize: 10_500,
+  resolve: 13_200,
+  reveal: 14_000,
 };
 
 /** A quiet beat between resolution and the next reveal keeps causality legible. */
@@ -79,7 +79,7 @@ function buildHospitalStoryStates(): CanonicalHospitalStoryState[] {
 export const HOSPITAL_STORY_STATES: readonly CanonicalHospitalStoryState[] =
   buildHospitalStoryStates();
 
-/** Includes the final reveal hold, so a complete unattended run lands at 123.6 seconds. */
+/** Includes the final reveal hold, so a complete unattended run lands at 240.0 seconds. */
 export const HOSPITAL_STORY_AUTOPLAY_RUNTIME_MS = HOSPITAL_STORY_STATES.reduce(
   (total, state) => total + HOSPITAL_STORY_DWELL_MS[state.beat],
   0,
