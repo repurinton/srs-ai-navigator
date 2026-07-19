@@ -73,14 +73,17 @@ function matchesSearchQuery(useCase: UseCase, query: string): boolean {
 }
 
 export function PortfolioView() {
-  const [areas, setAreas] = useState<Area[]>(["operations"]);
+  // Deep links from the Six Levers tab arrive as a one-shot lever filter.
+  // They open on the FULL catalog (no focus areas) so the count matches the
+  // "See the N use cases behind this lever" promise exactly.
+  const [deepLinkLever] = useState(() => consumePortfolioLeverFilter());
+  const [areas, setAreas] = useState<Area[]>(deepLinkLever ? [] : ["operations"]);
   const [mode, setMode] = useState<Mode>("cards");
   const [subFilter, setSubFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [maturity, setMaturity] = useState("all");
   const [autonomy, setAutonomy] = useState("all");
-  // Deep links from the Six Levers tab arrive as a one-shot lever filter.
-  const [lever, setLever] = useState(() => consumePortfolioLeverFilter() ?? "all");
+  const [lever, setLever] = useState(deepLinkLever ?? "all");
   const [modalUc, setModalUc] = useState<UseCase | null>(null);
 
   // Exactly one focus area selected → its own second row of sub-filters.
@@ -117,9 +120,13 @@ export function PortfolioView() {
       .sort((a, b) => priorityScore(b) - priorityScore(a));
   }, [areas, soloArea, subFilter, query, maturity, autonomy, lever]);
 
-  const scopeLabel = areas.length === 0
-    ? "across the full catalog"
-    : `in ${areas.map((area) => AREA_META[area].label.toLowerCase()) .join(" × ")}`;
+  const activeLever = lever === "all" ? null : LEVERS.find((item) => item.id === lever);
+  const scopeLabel = [
+    areas.length === 0
+      ? "across the full catalog"
+      : `in ${areas.map((area) => AREA_META[area].label.toLowerCase()).join(" × ")}`,
+    activeLever ? `· ${activeLever.name} lever` : "",
+  ].filter(Boolean).join(" ");
 
   return (
     <div className="mx-auto max-w-[1440px] px-5 pb-20 pt-12 sm:px-8 lg:px-12">
