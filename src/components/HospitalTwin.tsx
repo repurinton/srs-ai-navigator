@@ -180,6 +180,7 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
   const [story, setStory] = useState<HospitalStoryState>(INITIAL_HOSPITAL_STORY);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isStageMode, setIsStageMode] = useState(false);
+  const [showCallouts, setShowCallouts] = useState(true);
   const interactionLockUntil = useRef(0);
   const baseline = useMemo(() => simulateHospital([]), []);
   const cycle = currentHospitalStoryCycle(story) ?? HOSPITAL_STORYBOARD[0];
@@ -359,6 +360,15 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
               <button type="button" className="button-small-ghost" data-testid="story-reset" onClick={reset} disabled={stateIndex <= 0}>
                 Reset
               </button>
+              <button
+                type="button"
+                className="button-small-ghost"
+                data-testid="story-toggle-callouts"
+                onClick={() => setShowCallouts((current) => !current)}
+                aria-pressed={showCallouts}
+              >
+                {showCallouts ? "Hide explainers" : "Show explainers"}
+              </button>
             </div>
 
             <div className="twin-step-count" aria-label={`Story state ${stateIndex + 1} of 19. ${beatLabel[story.beat]}.`}>
@@ -384,6 +394,7 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
           cameraTarget={scene.focusAnchor}
           dashboardStage={scene.focusStage}
           focusLabel={story.beat === "materialize" ? "AI response" : story.beat === "resolve" ? "Operating impact" : scene.dashboardLabel}
+          showCallouts={showCallouts}
           className="cutaway-embedded mt-2"
           title="Animated hospital and medical-center cutaway"
           showHeader={false}

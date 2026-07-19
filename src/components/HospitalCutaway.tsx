@@ -84,6 +84,9 @@ export type HospitalCutawayProps = {
   dashboardStage?: StageId;
   /** Optional compact label for the mobile camera focus pill. */
   focusLabel?: string;
+  /** When false, the narrative explainer callout cards are hidden while the
+   * simulation itself (congestion, camera, metrics) keeps running. */
+  showCallouts?: boolean;
 };
 
 type SceneStyle = CSSProperties & Record<`--${string}`, string | number>;
@@ -301,6 +304,7 @@ export function HospitalCutaway({
   cameraTarget,
   dashboardStage,
   focusLabel,
+  showCallouts = true,
 }: HospitalCutawayProps) {
   const descriptionId = useId();
   const [rendererMode, setRendererMode] = useState<HospitalRendererMode>(resolveHospitalRendererMode);
@@ -508,7 +512,7 @@ export function HospitalCutaway({
           </div>
 
           <div className="cutaway-callout-layer">
-            {foregroundPainPoints.map((painPoint) => {
+            {(showCallouts ? foregroundPainPoints : []).map((painPoint) => {
               const card = painPoint.callout ?? defaultCallout(painPoint.anchor);
               const visualState = visualStateById.get(painPoint.id) ?? "pressure";
               const resolved = visualState === "resolved";
@@ -610,7 +614,7 @@ export function HospitalCutaway({
       </section>
 
       <div className="cutaway-mobile-callouts" aria-label="Current hospital pain points">
-        {mobilePainPoints.map((painPoint) => (
+        {(showCallouts ? mobilePainPoints : []).map((painPoint) => (
           <PainPointCard
             key={painPoint.id}
             painPoint={painPoint}
