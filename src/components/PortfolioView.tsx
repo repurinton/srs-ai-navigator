@@ -3,32 +3,16 @@ import type { ReactNode } from "react";
 import { useCases } from "@/data/use-cases";
 import { SERVICE_LINES, TRACKS, MATURITY_LEVELS } from "@/data/schema";
 import { TRACK_META } from "@/data/tracks";
-import { OPS_CATEGORIES, OPS_CATEGORY_COLOR, opsCategoriesFor } from "@/data/operations";
+import { OPS_CATEGORIES, opsCategoriesFor } from "@/data/operations";
 import { LEVERS, leverFor } from "@/data/levers";
 import { consumePortfolioLeverFilter } from "@/lib/portfolio-link";
 import { priorityScore, recommendation } from "@/lib/scoring";
-import { SERVICE_LINE_COLOR } from "@/data/service-lines";
 import { UseCaseCard } from "@/components/UseCaseCard";
 import { RadarView } from "@/components/RadarView";
 import { UseCaseModal } from "@/components/UseCaseModal";
 import type { UseCase } from "@/data/schema";
 
-type Area = "service-lines" | "robotics" | "operations";
 type Mode = "cards" | "radar";
-
-const AREA_META: Record<Area, { label: string; subLabel: string }> = {
-  "service-lines": { label: "Service lines", subLabel: "Clinical systems" },
-  robotics: { label: "Robotics", subLabel: "Robot categories" },
-  operations: { label: "Hospital operations", subLabel: "Operations functions" },
-};
-
-const AREA_ORDER: Area[] = ["service-lines", "robotics", "operations"];
-
-function inArea(useCase: UseCase, area: Area): boolean {
-  if (area === "service-lines") return useCase.serviceLines.length > 0;
-  if (area === "robotics") return useCase.track !== undefined;
-  return opsCategoriesFor(useCase).length > 0;
-}
 
 function autonomyBucket(value: string | null | undefined): string {
   const normalized = (value ?? "").toLowerCase();
@@ -73,27 +57,22 @@ function matchesSearchQuery(useCase: UseCase, query: string): boolean {
 }
 
 export function PortfolioView() {
-  // Deep links from the Six Levers tab arrive as a one-shot lever filter.
-  // They open on the FULL catalog (no focus areas) so the count matches the
-  // "See the N use cases behind this lever" promise exactly.
+  // Deep links from the Six Levers tab arrive as a one-shot lever filter;
+  // every other filter starts wide open, so the promised count always matches.
   const [deepLinkLever] = useState(() => consumePortfolioLeverFilter());
-  const [areas, setAreas] = useState<Area[]>(deepLinkLever ? [] : ["operations"]);
   const [mode, setMode] = useState<Mode>("cards");
-  const [subFilter, setSubFilter] = useState("all");
   const [query, setQuery] = useState("");
+  const [serviceLine, setServiceLine] = useState("all");
+  const [track, setTrack] = useState("all");
+  const [opsCategory, setOpsCategory] = useState("all");
+  const [lever, setLever] = useState(deepLinkLever ?? "all");
   const [maturity, setMaturity] = useState("all");
   const [autonomy, setAutonomy] = useState("all");
-  const [lever, setLever] = useState(deepLinkLever ?? "all");
   const [modalUc, setModalUc] = useState<UseCase | null>(null);
 
-  // Exactly one focus area selected → its own second row of sub-filters.
-  const soloArea = areas.length === 1 ? areas[0] : null;
-  const lens = areas.includes("robotics") ? "track" : "service-line";
-
-  function toggleArea(area: Area) {
-    setAreas((previous) => (previous.includes(area) ? previous.filter((a) => a !== area) : [...previous, area]));
-    setSubFilter("all");
-  }
+  // Card/modal accent follows the robotics taxonomy while a robotics
+  // category is selected, the service-line taxonomy otherwise.
+  const lens = track !== "all" ? "track" : "service-line";
 
   const plays = useMemo(() => {
     const counts = { "Adopt Now": 0, "Pilot & Scale": 0, "Watch & Partner": 0 };
@@ -105,28 +84,31 @@ export function PortfolioView() {
     const normalizedQuery = query.trim().toLowerCase();
     return useCases
       .filter((useCase) => {
-        for (const area of areas) if (!inArea(useCase, area)) return false;
-        if (soloArea && subFilter !== "all") {
-          if (soloArea === "service-lines" && !useCase.serviceLines.includes(subFilter as never)) return false;
-          if (soloArea === "robotics" && useCase.track !== subFilter) return false;
-          if (soloArea === "operations" && !(opsCategoriesFor(useCase) as string[]).includes(subFilter)) return false;
-        }
+        if (serviceLine !== "all" && !useCase.serviceLines.includes(serviceLine as never)) return false;
+        if (track !== "all" && useCase.track !== track) return false;
+        if (opsCategory !== "all" && !(opsCategoriesFor(useCase) as string[]).includes(opsCategory)) return false;
+        if (lever !== "all" && leverFor(useCase).id !== lever) return false;
         if (maturity !== "all" && useCase.maturity !== maturity) return false;
         if (autonomy !== "all" && autonomyBucket(useCase.autonomyLevel) !== autonomy) return false;
-        if (lever !== "all" && leverFor(useCase).id !== lever) return false;
         if (!normalizedQuery) return true;
         return matchesSearchQuery(useCase, normalizedQuery);
       })
       .sort((a, b) => priorityScore(b) - priorityScore(a));
-  }, [areas, soloArea, subFilter, query, maturity, autonomy, lever]);
+  }, [serviceLine, track, opsCategory, lever, maturity, autonomy, query]);
 
-  const activeLever = lever === "all" ? null : LEVERS.find((item) => item.id === lever);
-  const scopeLabel = [
-    areas.length === 0
-      ? "across the full catalog"
-      : `in ${areas.map((area) => AREA_META[area].label.toLowerCase()).join(" × ")}`,
-    activeLever ? `· ${activeLever.name} lever` : "",
-  ].filter(Boolean).join(" ");
+  const hasActiveFilters =
+    serviceLine !== "all" || track !== "all" || opsCategory !== "all" || lever !== "all"
+    || maturity !== "all" || autonomy !== "all" || query.trim() !== "";
+
+  function clearFilters() {
+    setServiceLine("all");
+    setTrack("all");
+    setOpsCategory("all");
+    setLever("all");
+    setMaturity("all");
+    setAutonomy("all");
+    setQuery("");
+  }
 
   return (
     <div className="mx-auto max-w-[1440px] px-5 pb-20 pt-12 sm:px-8 lg:px-12">
@@ -154,51 +136,8 @@ export function PortfolioView() {
       </div>
 
       <div className="mt-10 rounded-[26px] border border-white/10 bg-white/[0.035] p-5 shadow-[var(--shadow-soft)] sm:p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Areas of focus">
-            <span className="mr-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/40">Focus</span>
-            {AREA_ORDER.map((area) => (
-              <ToggleButton key={area} active={areas.includes(area)} onClick={() => toggleArea(area)}>
-                {AREA_META[area].label}
-              </ToggleButton>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Portfolio view">
-            <ToggleButton active={mode === "cards"} onClick={() => setMode("cards")}>Evidence cards</ToggleButton>
-            <ToggleButton active={mode === "radar"} onClick={() => setMode("radar")}>Portfolio radar</ToggleButton>
-          </div>
-        </div>
-
-        {soloArea && (
-          <div
-            className="mt-5 flex flex-wrap items-center gap-2 border-t border-white/10 pt-5"
-            role="group"
-            aria-label={`${AREA_META[soloArea].subLabel} filter`}
-          >
-            <span className="mr-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white/40">
-              {AREA_META[soloArea].subLabel}
-            </span>
-            <FilterButton active={subFilter === "all"} onClick={() => setSubFilter("all")}>All</FilterButton>
-            {soloArea === "service-lines" && SERVICE_LINES.map((line) => (
-              <FilterButton key={line} active={subFilter === line} onClick={() => setSubFilter(line)} color={SERVICE_LINE_COLOR[line]}>
-                {line}
-              </FilterButton>
-            ))}
-            {soloArea === "robotics" && TRACKS.map((track) => (
-              <FilterButton key={track} active={subFilter === track} onClick={() => setSubFilter(track)} color={`var(${TRACK_META[track].colorVar})`}>
-                {TRACK_META[track].label}
-              </FilterButton>
-            ))}
-            {soloArea === "operations" && OPS_CATEGORIES.map((category) => (
-              <FilterButton key={category} active={subFilter === category} onClick={() => setSubFilter(category)} color={OPS_CATEGORY_COLOR[category]}>
-                {category}
-              </FilterButton>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
-          <div>
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="w-full xl:max-w-xl">
             <label htmlFor="portfolio-search" className="sr-only">
               Search use cases by workflow, vendor, specialty, or outcome
             </label>
@@ -210,6 +149,25 @@ export function PortfolioView() {
               className="w-full rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/40 focus:border-[var(--color-mint)] focus:ring-2 focus:ring-[var(--color-mint)]/20"
             />
           </div>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Portfolio view">
+            <ToggleButton active={mode === "cards"} onClick={() => setMode("cards")}>Evidence cards</ToggleButton>
+            <ToggleButton active={mode === "radar"} onClick={() => setMode("radar")}>Portfolio radar</ToggleButton>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <select value={serviceLine} onChange={(event) => setServiceLine(event.target.value)} aria-label="Service line" className="filter-select">
+            <option value="all">All service lines</option>
+            {SERVICE_LINES.map((line) => <option key={line} value={line}>{line}</option>)}
+          </select>
+          <select value={track} onChange={(event) => setTrack(event.target.value)} aria-label="Robotics category" className="filter-select">
+            <option value="all">All robotics</option>
+            {TRACKS.map((item) => <option key={item} value={item}>{TRACK_META[item].label}</option>)}
+          </select>
+          <select value={opsCategory} onChange={(event) => setOpsCategory(event.target.value)} aria-label="Operations function" className="filter-select">
+            <option value="all">All operations</option>
+            {OPS_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
+          </select>
           <select value={lever} onChange={(event) => setLever(event.target.value)} aria-label="Lever" className="filter-select">
             <option value="all">All levers</option>
             {LEVERS.map((item, index) => (
@@ -227,9 +185,16 @@ export function PortfolioView() {
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex items-center justify-between gap-4">
         <p className="text-sm font-semibold text-white/60">
-          {filtered.length} use case{filtered.length === 1 ? "" : "s"} {scopeLabel}
+          {filtered.length === useCases.length
+            ? `All ${useCases.length} use cases`
+            : `${filtered.length} of ${useCases.length} use cases`}
+          {hasActiveFilters && (
+            <button type="button" onClick={clearFilters} className="ml-3 text-[11px] font-bold text-[var(--color-mint)] hover:underline">
+              Clear filters
+            </button>
+          )}
         </p>
         <p className="hidden text-[11px] text-white/50 sm:block">Heuristic readiness score · directional, not a financial recommendation</p>
       </div>
@@ -246,7 +211,10 @@ export function PortfolioView() {
 
       {filtered.length === 0 && (
         <div className="mt-8 rounded-[26px] border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center text-sm text-white/60">
-          No use cases match this combination of focus areas and filters.
+          No use cases match these filters.
+          <button type="button" onClick={clearFilters} className="ml-2 font-bold text-[var(--color-mint)] hover:underline">
+            Clear filters
+          </button>
         </div>
       )}
 
@@ -266,25 +234,6 @@ function ToggleButton({ active, onClick, children }: { active: boolean; onClick:
         borderColor: active ? "rgba(91,240,195,0.4)" : "rgba(255,255,255,0.16)",
         background: active ? "rgba(91,240,195,0.14)" : "transparent",
         color: active ? "var(--color-mint)" : "rgba(255,255,255,0.6)",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function FilterButton({ active, onClick, children, color }: { active: boolean; onClick: () => void; children: ReactNode; color?: string }) {
-  const activeColor = color ?? "var(--color-mint)";
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className="rounded-full border px-3 py-1.5 text-[10px] font-bold transition-colors"
-      style={{
-        borderColor: active ? `color-mix(in srgb, ${activeColor} 45%, transparent)` : "rgba(255,255,255,0.16)",
-        background: active ? `color-mix(in srgb, ${activeColor} 18%, transparent)` : "transparent",
-        color: active ? `color-mix(in srgb, ${activeColor} 55%, white)` : "rgba(255,255,255,0.6)",
       }}
     >
       {children}
