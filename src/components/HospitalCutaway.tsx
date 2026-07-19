@@ -20,7 +20,7 @@ import {
   projectedAnchorsVersion,
   subscribeProjectedAnchors,
 } from "@/lib/anchor-projection";
-import type { WorldPoseId } from "@/lib/hospital-world";
+import { WORLD_POSE_CEILING, type WorldPoseId } from "@/lib/hospital-world";
 import "./HospitalCutaway.css";
 
 const CutawayScene3D = lazy(() => import("@/components/hospital-3d/CutawayScene3D"));
@@ -123,12 +123,15 @@ function isAutomationFocused(painPoint: HospitalPainPoint | undefined, materiali
   return painPoint.id.includes("automation") || painPoint.id.includes("administrative-handoffs");
 }
 
+// `floorY` is the base height of the tower floor each label sits on, so a
+// label hides once the camera's fade ceiling drops it below (matching the
+// FadeGroup that fades the floor itself).
 const ZONE_LABELS = [
-  { id: "imaging", label: "Radiology", x: 36, y: 13 },
-  { id: "robotics", label: "Robotic ORs", x: 55, y: 29.5 },
-  { id: "recovery", label: "Recovery + beds", x: 76, y: 36 },
-  { id: "emergency", label: "ED + EMS", x: 13, y: 38 },
-  { id: "arrivals", label: "Valet + arrivals", x: 41, y: 73 },
+  { id: "imaging", label: "Radiology", x: 36, y: 13, floorY: 4.5 },
+  { id: "robotics", label: "Robotic ORs", x: 55, y: 29.5, floorY: 13.5 },
+  { id: "recovery", label: "Recovery + beds", x: 76, y: 36, floorY: 18 },
+  { id: "emergency", label: "ED + EMS", x: 13, y: 38, floorY: 0 },
+  { id: "arrivals", label: "Valet + arrivals", x: 41, y: 73, floorY: 0 },
 ] as const;
 
 function clampPosition(value: number) {
@@ -371,6 +374,8 @@ export function HospitalCutaway({
     : isAutomationFocused(primaryPainPoint, materializingLever)
       ? "automation"
       : focusStage;
+  // Fade ceiling for the current pose — labels above it hide with their floor.
+  const zoneCeilingY = WORLD_POSE_CEILING[cameraPoseId] ?? Number.POSITIVE_INFINITY;
   const throughputDelta = baseline ? simulation.completed - baseline.completed : undefined;
   const flowYield = Math.round((simulation.completed / simulation.episodes) * 1_000) / 10;
   const baselineFlowYield = baseline ? Math.round((baseline.completed / baseline.episodes) * 1_000) / 10 : undefined;
@@ -460,6 +465,10 @@ export function HospitalCutaway({
 
           <div className="cutaway-zone-labels" aria-hidden="true">
             {ZONE_LABELS.map((zone) => {
+              // In 3D, hide a label once the camera's fade ceiling drops its
+              // floor — the floor itself fades, so its label shouldn't linger.
+              // (2D has no floor fade, so every label stays.)
+              if (is3D && zone.floorY >= zoneCeilingY - 0.01) return null;
               const position = projected(`zone-${zone.id}`, { x: zone.x, y: zone.y });
               return (
                 <span
