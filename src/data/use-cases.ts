@@ -1,6 +1,8 @@
 import { parseUseCases, type UseCase } from "./schema";
 import { serviceLineUseCasesRaw } from "./service-line-use-cases.generated";
 import { deploymentAugments } from "./deployment-augments";
+import { withEvidenceAugments } from "./evidence-augments";
+import { expansion2026UseCasesRaw, roboticsExpansionNative } from "./expansion-2026";
 
 // Merge evidence-backed deployment additions into a raw use-case's deployedAt.
 function withAugmentedDeployments(uc: unknown): unknown {
@@ -67,8 +69,8 @@ const roboticsNative: Array<Record<string, unknown>> = [
     fdaCleared: true,
     keyPlatforms: ["da Vinci 5", "da Vinci Xi", "Hugo RAS", "Versius"],
     keyVendors: ["Intuitive Surgical", "Medtronic", "CMR Surgical"],
-    keyMetric: "12M+ procedures performed cumulatively on da Vinci platforms",
-    source: "Intuitive Surgical 2025 disclosures; multiple specialty RCTs",
+    keyMetric: "11,106 da Vinci systems installed (Dec 2025); 870 da Vinci 5 placements in 2025 alone; Hugo RAS FDA-cleared for US urology Dec 2025",
+    source: "Intuitive Q4 2025 earnings; Medtronic FDA clearance Dec 2025 (Expand URO, AUA 2025); multiple specialty RCTs",
     implementationComplexity: "Very High",
     investmentTier: "Capital — Major",
     regulatory: [
@@ -90,8 +92,8 @@ const roboticsNative: Array<Record<string, unknown>> = [
     fdaCleared: true,
     keyPlatforms: ["da Vinci SP"],
     keyVendors: ["Intuitive Surgical"],
-    keyMetric: "Expanded indications across urology, TORS, and colorectal since 2018",
-    source: "FDA 510(k) clearances; peer-reviewed single-port series",
+    keyMetric: "Indications expanded 2024–2025 to thoracic, colorectal, and transanal surgery; first single-port stapler cleared Apr 2025",
+    source: "FDA 510(k) clearances 2018–2025; peer-reviewed single-port series",
     implementationComplexity: "High",
     investmentTier: "Capital — Major",
     regulatory: [
@@ -136,8 +138,8 @@ const roboticsNative: Array<Record<string, unknown>> = [
     fdaCleared: false,
     keyPlatforms: ["MicroPort Toumai", "edge by SS Innovations"],
     keyVendors: ["MicroPort MedBot", "SS Innovations"],
-    keyMetric: "Successful intercontinental procedures at <150ms latency (2024–2025)",
-    source: "SRS Telesurgery Guidelines 2025; peer-reviewed case series",
+    keyMetric: "~400 Toumai telesurgeries incl. a 12,000km world record (2024); AdventHealth Celebration → Angola (~7,000mi) reported as longest-distance case, 2025",
+    source: "Annals of Surgery 2025 systematic review; SRS telesurgery best-practices framework 2025; MicroPort MedBot; AdventHealth Global Robotics Institute",
     implementationComplexity: "Very High",
     investmentTier: "Program & Infrastructure",
     regulatory: [],
@@ -148,7 +150,7 @@ const roboticsNative: Array<Record<string, unknown>> = [
     id: "SAI-01",
     name: "Intraoperative Surgical Phase Recognition",
     description:
-      "Computer-vision models analyze the laparoscopic/endoscopic video stream in real time to recognize the current surgical phase, anticipate next steps, and trigger context-aware decision support and documentation.",
+      "Computer-vision models analyze the laparoscopic/endoscopic video stream to recognize surgical phases, powering documentation, quality review, education, and benchmarking. Today this is a QI and analytics technology — real-time autonomous intraoperative guidance is not FDA-cleared.",
     track: "Surgical AI",
     specialties: ["General Surgery", "Colorectal", "Multispecialty"],
     setting: "Clinical",
@@ -158,8 +160,8 @@ const roboticsNative: Array<Record<string, unknown>> = [
     fdaCleared: false,
     keyPlatforms: ["Intuitive Hub", "Medtronic Touch Surgery", "Theator"],
     keyVendors: ["Theator", "Medtronic", "Intuitive Surgical"],
-    keyMetric: "Phase-recognition accuracy >90% on benchmark cholecystectomy datasets",
-    source: "Nature Medicine / IJCARS surgical data-science literature",
+    keyMetric: "Phase-recognition accuracy ~81–93% on benchmarks; Oracle Health × Theator partnership (2026); ~40 hospitals run OR Black Box QI capture",
+    source: "Nature Medicine / IJCARS surgical data-science literature; SAGES CVS Challenge 2025; Oracle Health partnership 2026",
     implementationComplexity: "High",
     investmentTier: "Software Add-On",
     regulatory: [],
@@ -247,8 +249,8 @@ const roboticsNative: Array<Record<string, unknown>> = [
     fdaCleared: false,
     keyPlatforms: ["Aethon TUG", "Moxi", "Relay"],
     keyVendors: ["ST Engineering Aethon", "Diligent Robotics", "Relay Robotics"],
-    keyMetric: "Thousands of autonomous deliveries/month per deployed fleet",
-    source: "Health-system case studies; press releases",
+    keyMetric: "1.25M+ Moxi deliveries across 25+ US hospitals (900+/month at high-volume sites); AI-native Moxi 2.0 ships 2026",
+    source: "The Robot Report; Diligent Robotics; Swisslog Healthcare partnership (Oct 2025)",
     implementationComplexity: "Medium",
     investmentTier: "Capital — Mid",
     regulatory: [],
@@ -267,8 +269,8 @@ const roboticsNative: Array<Record<string, unknown>> = [
     fdaCleared: false,
     keyPlatforms: ["Figure 02", "Apptronik Apollo", "Tesla Optimus"],
     keyVendors: ["Figure AI", "Apptronik", "Tesla"],
-    keyMetric: "Pilot deployments; no clinical-autonomy clearance to date",
-    source: "Industry announcements; SRS 2026 humanoids session",
+    keyMetric: "First hospital-ward humanoid pilot: Nurabot at Taichung Veterans General (2025); ~20–30% nursing-workload reduction claimed (vendor/hospital-reported)",
+    source: "CNN Business 2025 (Foxconn/NVIDIA/Kawasaki Nurabot pilot); SRS 2026 humanoids session",
     implementationComplexity: "Very High",
     investmentTier: "Program & Infrastructure",
     regulatory: [],
@@ -331,8 +333,8 @@ const roboticsNative: Array<Record<string, unknown>> = [
     fdaCleared: true,
     keyPlatforms: ["Ion", "Monarch"],
     keyVendors: ["Intuitive Surgical", "Johnson & Johnson MedTech"],
-    keyMetric: "Diagnostic yield ~80%+ for peripheral nodules in prospective studies",
-    source: "CHEST; Journal of Bronchology prospective trials",
+    keyMetric: "91% diagnostic yield with zero pneumothoraces (Ion + cone-beam CT, n=155, median nodule 14mm); MONARCH QUEST cleared Mar 2025",
+    source: "CHEST; Journal of Bronchology prospective trials; Intuitive multicenter CBCT outcomes; FDA 510(k) 2025 (MONARCH QUEST)",
     implementationComplexity: "High",
     investmentTier: "Capital — Mid",
     regulatory: [
@@ -398,8 +400,8 @@ const roboticsNative: Array<Record<string, unknown>> = [
     fdaCleared: false,
     keyPlatforms: ["Proximie", "Intuitive Telepresence", "Avail"],
     keyVendors: ["Proximie", "Intuitive Surgical", "Avail Medsystems"],
-    keyMetric: "Remote proctoring used for credentialing and training across networks",
-    source: "Surgical Endoscopy; telemedicine in surgery reviews",
+    keyMetric: "Proximie live in 500+ hospitals across 50 countries; 2025 feasibility and systematic-review evidence for robotic teleproctoring",
+    source: "Journal of Robotic Surgery 2025; 2025 systematic review of 5G/AI/XR telementoring; Surgical Endoscopy",
     implementationComplexity: "Medium",
     investmentTier: "Software Add-On",
     regulatory: [],
@@ -460,8 +462,8 @@ const roboticsNative: Array<Record<string, unknown>> = [
     fdaCleared: false,
     keyPlatforms: ["STAR (research)", "SRT-H (research)"],
     keyVendors: ["Academic / research consortia"],
-    keyMetric: "Supervised-autonomous anastomosis demonstrated preclinically (STAR)",
-    source: "Science Robotics (STAR); Johns Hopkins SRT-H research",
+    keyMetric: "SRT-H autonomously performed the clip-and-cut phase of cholecystectomy with 100% success on 8 ex vivo gallbladders (2025); still preclinical",
+    source: "Science Robotics 2025 (SRT-H); Science Robotics 2022 (STAR anastomosis); Johns Hopkins",
     implementationComplexity: "Very High",
     investmentTier: "Program & Infrastructure",
     regulatory: [],
@@ -548,8 +550,8 @@ const roboticsNative: Array<Record<string, unknown>> = [
     fdaCleared: false,
     keyPlatforms: ["Xenex LightStrike", "UVD Robots"],
     keyVendors: ["Xenex", "UVD Robots (Blue Ocean Robotics)"],
-    keyMetric: "Demonstrated reductions in environmental pathogen burden",
-    source: "Infection Control & Hospital Epidemiology studies",
+    keyMetric: "Consistent surface-contamination reduction; 2025 systematic reviews find real-world effect variable — an adjunct to multimodal cleaning, not a standalone",
+    source: "Journal of Hospital Infection 2025 systematic review; Journal of Field Robotics 2025; Infection Control & Hospital Epidemiology",
     implementationComplexity: "Low",
     investmentTier: "Capital — Mid",
     regulatory: [],
@@ -600,6 +602,13 @@ const AUTONOMY_MAP: Record<string, string> = {
 };
 // Best-fit service-line tag(s) for robotics cases (default Cross-Cutting)
 const SERVICE_LINE_BY_ID: Record<string, string[]> = {
+  "RBX-01": ["Gastrointestinal", "Cancer"],
+  "RBX-02": ["Cancer"],
+  "RBX-03": ["Gastrointestinal", "Cancer"],
+  "RBX-04": ["Heart, Lung & Vascular", "Neurosciences"],
+  "RBX-07": ["Neurosciences", "Orthopedics"],
+  "RBX-08": ["Cancer", "Gastrointestinal", "Women’s Health"],
+  "RBX-09": ["Gastrointestinal", "Women’s Health"],
   "PLT-01": ["Cancer", "Women’s Health", "Gastrointestinal"],
   "PLT-02": ["Cancer", "Gastrointestinal"],
   "PLT-03": ["Heart, Lung & Vascular", "Cancer"],
@@ -649,6 +658,22 @@ const CATEGORY_BY_ID: Record<string, string> = {
   "HUM-02": "Service & Non-Clinical Robotics",
   "HUM-03": "Service & Non-Clinical Robotics",
   "HUM-04": "Service & Non-Clinical Robotics",
+  // July 2026 expansion
+  "RBX-01": "Flexible & Endoluminal Robotics",
+  "RBX-02": "Flexible & Endoluminal Robotics",
+  "RBX-03": "Flexible & Endoluminal Robotics",
+  "RBX-04": "Flexible & Endoluminal Robotics",
+  "RBX-05": "Telesurgery & Remote Surgery",
+  "RBX-06": "Service & Non-Clinical Robotics",
+  "RBX-07": "Service & Non-Clinical Robotics",
+  "RBX-08": "Soft-Tissue Surgical Robotics",
+  "RBX-09": "Soft-Tissue Surgical Robotics",
+};
+// Per-id proximity overrides where the category default misreads the case
+// (exoskeletons are bedside therapy; phlebotomy robots run in clinical areas).
+const PROXIMITY_BY_ID: Record<string, string> = {
+  "RBX-06": "Clinical Operations",
+  "RBX-07": "Direct Care",
 };
 const PROXIMITY_BY_CATEGORY: Record<string, string> = {
   "Service & Non-Clinical Robotics": "Back Office",
@@ -662,7 +687,7 @@ function arr(v: unknown): string[] {
   return Array.isArray(v) ? (v as string[]) : [];
 }
 
-const roboticsCanonical: unknown[] = roboticsNative.map((uc) => {
+const roboticsCanonical: unknown[] = [...roboticsNative, ...roboticsExpansionNative].map((uc) => {
   const id = s(uc.id); // native id (e.g. "ORT-01") — used for lookups
   const category = CATEGORY_BY_ID[id] ?? "Soft-Tissue Surgical Robotics";
   return {
@@ -673,7 +698,7 @@ const roboticsCanonical: unknown[] = roboticsNative.map((uc) => {
     subSpecialty: arr(uc.specialties)[0],
     autonomyLevel: AUTONOMY_MAP[s(uc.autonomyLevel)] ?? "Augmentation",
     surgicalAutonomyLevel: s(uc.autonomyLevel),
-    patientProximity: PROXIMITY_BY_CATEGORY[category] ?? "Direct Care",
+    patientProximity: PROXIMITY_BY_ID[id] ?? PROXIMITY_BY_CATEGORY[category] ?? "Direct Care",
     evidenceTier: s(uc.evidenceTier),
     aiType: AI_TYPE_BY_ID[id] ?? "Robotics",
     metricsImpacted: ["Quality", "Growth"],
@@ -697,8 +722,9 @@ const roboticsCanonical: unknown[] = roboticsNative.map((uc) => {
 });
 
 export const useCases: UseCase[] = parseUseCases(
-  [...serviceLineUseCasesRaw, ...roboticsCanonical]
+  [...serviceLineUseCasesRaw, ...expansion2026UseCasesRaw, ...roboticsCanonical]
     .map(withAugmentedDeployments)
+    .map(withEvidenceAugments)
     .map(withRoboticsTrack)
     .map(withNormalizedServiceLines),
 );

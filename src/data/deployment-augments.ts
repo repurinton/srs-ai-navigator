@@ -99,4 +99,33 @@ export const deploymentAugments: Record<string, string[]> = {
   // Pharmacy automation — UCSF's robotic pharmacy (Swisslog PillPick + RIVA).
   // Source: UCSF; Pharmaceutical Technology.
   "RS-HUM-04": ["UCSF Health"],
+
+  // ── July 2026 research sweep (agentic audit, verified public sources) ─────
+  // Colonoscopy CADe: AdventHealth West Florida hospitals (Medtronic GI Genius).
+  "GI-01": ["AdventHealth"],
+  // Remote monitoring / hospital-at-home: AdventHealth × Biofourmis (2025).
+  "AUTO-17": ["AdventHealth"],
+  // Denials prevention: AdventHealth × Iodine Software (TechTarget 2025).
+  "ADM-04": ["AdventHealth"],
+  // Workforce scheduling: Mercy × Works OnDemand ($30M saved 2023).
+  "ADM-09": ["Mercy"],
+  // Patient flow/bed management: Qventus named systems (case studies 2024–25).
+  "ADM-10": ["HonorHealth", "OhioHealth", "Jackson Health System"],
+  // Autonomous coding: Nym live deployments (vendor-named, 2025).
+  "AUTO-10": ["Ochsner Health", "Geisinger", "Inova Health System"],
+  // Touchless prior auth: Humata × Allegheny Health Network (2025).
+  "AUTO-11": ["Allegheny Health Network"],
+  // Deterioration prediction: eCART across Yale New Haven Health (7 hospitals).
+  "HLV-25": ["Yale New Haven Health"],
 };
+
+// Ambient documentation, 2026 sweep: XC-01 already lists Emory/UPMC/Johns
+// Hopkins above; add AdventHealth (~2,000 clinicians on DAX Copilot, CIO.com),
+// Kaiser Permanente (2.5M+ encounters, NEJM Catalyst), and Mass General
+// Brigham (JAMA Network Open trial site).
+deploymentAugments["XC-01"] = [
+  ...deploymentAugments["XC-01"],
+  "AdventHealth",
+  "Kaiser Permanente",
+  "Mass General Brigham",
+];

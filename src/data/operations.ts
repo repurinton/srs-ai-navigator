@@ -40,6 +40,15 @@ export const OPS_CATEGORY_COLOR: Record<OpsCategory, string> = {
 
 // Curated assignments where keywords would misread the case.
 const OPS_OVERRIDES: Record<string, OpsCategory[]> = {
+  // July 2026 expansion cases
+  "FLW-04": ["Patient Flow & Capacity"],
+  "WFD-02": ["Documentation & Workforce"],
+  "PHR-01": ["Pharmacy & Supply Chain"],
+  "LOG-01": ["Logistics & Facilities", "Surgery & Procedures"],
+  "LOG-02": ["Logistics & Facilities"],
+  "LOG-03": ["Logistics & Facilities"],
+  "RS-RBX-06": ["Diagnosis & Imaging", "Nursing & Patient Care"],
+  "RS-RBX-07": ["Nursing & Patient Care"],
   "RS-HUM-01": ["Logistics & Facilities"],
   "RS-HUM-02": ["Nursing & Patient Care", "Logistics & Facilities"],
   "RS-HUM-03": ["Logistics & Facilities"],

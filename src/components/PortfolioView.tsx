@@ -121,7 +121,7 @@ export function PortfolioView() {
       <div className="grid gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:items-end">
         <div>
           <p className="eyebrow">Evidence library</p>
-          <h1 className="display-title mt-4">272 possibilities. One portfolio discipline.</h1>
+          <h1 className="display-title mt-4">{useCases.length} possibilities. One portfolio discipline.</h1>
           <p className="lede mt-5 max-w-3xl">
             The catalog is not the strategy. Sequence use cases by evidence, workflow fit, action rights, and the
             operating outcome they can prove.
