@@ -3,10 +3,12 @@ import { useFrame } from "@react-three/fiber";
 import { EdgesGeometry, BoxGeometry, type Group, type Mesh } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
+  WORLD_ANCHORS,
   WORLD_ELEVATOR,
   WORLD_HELIPAD,
   WORLD_SURFACES,
   WORLD_ZONES,
+  type Vec3,
 } from "@/lib/hospital-world";
 import { ELEVATOR_CABS, elevatorCabState, type ElevatorCabSpec } from "./elevators";
 import { FadeGroup } from "./FadeGroup";
@@ -358,22 +360,54 @@ function Helipad() {
   );
 }
 
+// One quadcopter arrival every PERIOD seconds; the pad-to-ED stretcher run
+// lasts longer than a period, so two runner instances alternate landings.
+const QUAD_PERIOD = 27.5;
+const QUAD_TOUCHDOWN = 14;
+const STRETCHER_RUN_START = 16; // two beats after touchdown = the handoff
+const STRETCHER_RUN_DURATION = 26; // must stay under 2×PERIOD − RUN_START
+
 /**
  * Medical delivery quadcopter: white X-frame drone with a red cross and an
  * underslung med-payload pod. Recurring cycle — approach, vertical descent,
- * idle on the pad, climb out, depart. The clock starts mid-cycle so the
- * first arrival lands shortly after the scene loads.
+ * idle on the pad, climb out, depart. Each landing hands a patient to a
+ * stretcher crew that rolls them around the front plaza into the ED. The
+ * clock starts mid-cycle so the first arrival lands shortly after load.
  */
 function MedicalQuadcopter() {
   const groupRef = useRef<Group>(null);
   const rotorsRef = useRef<Group>(null);
-  const clock = useRef(20);
-  const PERIOD = 55;
+  const stretcherRefs = [useRef<Group>(null), useRef<Group>(null)];
+  const clock = useRef(2);
   const [px, , pz] = WORLD_HELIPAD.center;
 
+  // Pad edge → east of the campus front → across the plaza → through the
+  // ED's open south face. Axis-aligned legs, so no wall planes are crossed.
+  const emsAnchor = WORLD_ANCHORS.ems;
+  const path = useMemo(() => {
+    const points: Vec3[] = [
+      [px, 0.45, pz + 2],
+      [px, 0.45, 14],
+      [emsAnchor[0], 0.45, 14],
+      [emsAnchor[0], 0.45, -2],
+    ];
+    const lengths: number[] = [0];
+    for (let i = 1; i < points.length; i += 1) {
+      lengths.push(lengths[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][2] - points[i - 1][2]));
+    }
+    return { points, lengths, total: lengths[lengths.length - 1] };
+  }, [px, pz, emsAnchor]);
+
   useFrame((_, delta) => {
+    // Verification hook mirroring __patientFlowFF: consume a one-shot
+    // fast-forward so headless checks can reach any point in the cycle.
+    const globals = window as unknown as { __quadFF?: number; __quadDebug?: unknown };
+    if (typeof globals.__quadFF === "number") {
+      clock.current += globals.__quadFF;
+      delete globals.__quadFF;
+    }
     clock.current += delta;
-    const t = clock.current % PERIOD;
+    const t = clock.current % QUAD_PERIOD;
     const group = groupRef.current;
     if (!group) return;
 
@@ -384,32 +418,32 @@ function MedicalQuadcopter() {
     let rotorSpeed = 30;
 
     const ease = (v: number) => v * v * (3 - 2 * v);
-    if (t >= 25 && t < 33) {
-      const p = ease((t - 25) / 8);
+    if (t >= 5 && t < 11) {
+      const p = ease((t - 5) / 6);
       x = px + 34 - 34 * p;
       y = 26 - 16 * p;
       z = pz - 22 + 22 * p;
       visible = true;
-    } else if (t >= 33 && t < 37) {
-      const p = ease((t - 33) / 4);
+    } else if (t >= 11 && t < QUAD_TOUCHDOWN) {
+      const p = ease((t - 11) / 3);
       x = px;
       y = 10 - 9.72 * p;
       z = pz;
       visible = true;
-    } else if (t >= 37 && t < 45) {
+    } else if (t >= QUAD_TOUCHDOWN && t < 20) {
       x = px;
       y = 0.28;
       z = pz;
       visible = true;
       rotorSpeed = 8;
-    } else if (t >= 45 && t < 49) {
-      const p = ease((t - 45) / 4);
+    } else if (t >= 20 && t < 23) {
+      const p = ease((t - 20) / 3);
       x = px;
       y = 0.28 + 12 * p;
       z = pz;
       visible = true;
-    } else if (t >= 49 && t < 55) {
-      const p = ease((t - 49) / 6);
+    } else if (t >= 23 && t < QUAD_PERIOD) {
+      const p = ease((t - 23) / 4.5);
       x = px + 40 * p;
       y = 12.5 + 14 * p;
       z = pz - 26 * p;
@@ -423,6 +457,44 @@ function MedicalQuadcopter() {
         rotor.rotation.y += delta * rotorSpeed * (index % 2 === 0 ? 1 : -1);
       });
     }
+
+    // Stretcher runs: landing n belongs to instance n % 2, departing the pad
+    // STRETCHER_RUN_START into its cycle and rolling the patient into the ED.
+    for (let k = 0; k < 2; k += 1) {
+      const runner = stretcherRefs[k].current;
+      if (!runner) continue;
+      const doublePeriods = Math.floor((clock.current - STRETCHER_RUN_START - k * QUAD_PERIOD) / (2 * QUAD_PERIOD));
+      const startTime = k * QUAD_PERIOD + doublePeriods * 2 * QUAD_PERIOD + STRETCHER_RUN_START;
+      const u = (clock.current - startTime) / STRETCHER_RUN_DURATION;
+      if (u < 0 || u > 1) {
+        runner.visible = false;
+        continue;
+      }
+      const distance = u * path.total;
+      let segment = 1;
+      while (segment < path.lengths.length - 1 && path.lengths[segment] < distance) segment += 1;
+      const a = path.points[segment - 1];
+      const b = path.points[segment];
+      const span = path.lengths[segment] - path.lengths[segment - 1];
+      const p = span > 0 ? (distance - path.lengths[segment - 1]) / span : 0;
+      runner.position.set(a[0] + (b[0] - a[0]) * p, a[1], a[2] + (b[2] - a[2]) * p);
+      runner.rotation.y = Math.atan2(b[0] - a[0], b[2] - a[2]) - Math.PI / 2;
+      // Shrink out over the last stretch — the crew wheels into the bay.
+      const shrink = u > 0.94 ? Math.max((1 - u) / 0.06, 0.001) : 1;
+      runner.scale.setScalar(shrink);
+      runner.visible = true;
+    }
+
+    globals.__quadDebug = {
+      t: Number(t.toFixed(2)),
+      copterVisible: group.visible,
+      copterY: Number(group.position.y.toFixed(2)),
+      runners: stretcherRefs.map((ref) => ({
+        visible: ref.current?.visible ?? false,
+        x: Number((ref.current?.position.x ?? 0).toFixed(1)),
+        z: Number((ref.current?.position.z ?? 0).toFixed(1)),
+      })),
+    };
   });
 
   const armLength = 1.55;
@@ -434,6 +506,7 @@ function MedicalQuadcopter() {
   ];
 
   return (
+    <>
     <group ref={groupRef} visible={false}>
     <group scale={2}>
       {/* Body with red cross */}
@@ -499,6 +572,26 @@ function MedicalQuadcopter() {
       </group>
     </group>
     </group>
+      {stretcherRefs.map((ref, index) => (
+        <group key={`helipad-stretcher-${index}`} ref={ref} visible={false}>
+          {/* Frame + wheels hint, long axis along +x to match vehicle yaw */}
+          <mesh position={[0, 0.35, 0]}>
+            <boxGeometry args={[1.9, 0.1, 0.6]} />
+            <meshLambertMaterial color="#8fa3ad" />
+          </mesh>
+          {/* Mattress */}
+          <mesh position={[0, 0.52, 0]}>
+            <boxGeometry args={[1.9, 0.16, 0.62]} />
+            <meshLambertMaterial color="#e8ecef" />
+          </mesh>
+          {/* Patient lying on the stretcher */}
+          <mesh position={[0, 0.72, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.21, 1.05, 4, 8]} />
+            <meshLambertMaterial color="#cfd9e6" />
+          </mesh>
+        </group>
+      ))}
+    </>
   );
 }
 
