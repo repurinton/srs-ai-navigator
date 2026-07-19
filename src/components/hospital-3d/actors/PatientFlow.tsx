@@ -152,8 +152,9 @@ function spriteWalkerMaterial() {
   return new ShaderMaterial({
     uniforms: { map: { value: createWalkSpriteTexture() } },
     vertexShader: /* glsl */ `
-      attribute mat4 instanceMatrix;
-      attribute vec3 instanceColor;
+      // three.js injects instanceMatrix (USE_INSTANCING) and instanceColor
+      // (USE_INSTANCING_COLOR, once setColorAt allocates it) for InstancedMesh —
+      // redeclaring them here caused a GLSL "redefinition" compile error.
       attribute float frame;
       attribute float flip;
       varying vec2 vUv;
