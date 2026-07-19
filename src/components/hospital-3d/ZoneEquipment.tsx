@@ -216,21 +216,6 @@ function SeatRows({ position }: { position: [number, number, number] }) {
   );
 }
 
-function House({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
-  return (
-    <group position={position} scale={scale}>
-      <mesh position={[0, 1, 0]}>
-        <boxGeometry args={[3, 2, 2.6]} />
-        <meshLambertMaterial color="#8a8378" />
-      </mesh>
-      <mesh position={[0, 2.55, 0]} rotation={[0, Math.PI / 4, 0]}>
-        <coneGeometry args={[2.35, 1.4, 4]} />
-        <meshLambertMaterial color="#6d675e" />
-      </mesh>
-    </group>
-  );
-}
-
 function Counter({ position, width }: { position: [number, number, number]; width: number }) {
   return (
     <mesh position={position}>
@@ -648,11 +633,6 @@ export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
         <BedRow start={[-21, Z["care-upper"].min[1] + 0.4, -9.5]} count={8} gap={2.4} />
         <BedRow start={[2, Z["care-upper"].min[1] + 0.4, -12.5]} count={6} gap={2.4} />
       </FadeGroup>
-
-      {/* Home node — the longitudinal-care destination */}
-      <House position={[43, Z.home.min[1], 11]} />
-      <House position={[48.5, Z.home.min[1], 15]} scale={0.85} />
-      <House position={[43.5, Z.home.min[1], 17.5]} scale={0.7} />
 
       <ElevatorCore />
       <ElevatorCabs />
