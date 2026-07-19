@@ -389,18 +389,6 @@ export function HospitalTwin({ onOpenCase }: { onOpenCase: () => void }) {
           showHeader={false}
         />
 
-        <div className="twin-stage-caption mx-auto max-w-[1240px]">
-          <div>
-            <span>{beatLabel[story.beat]}</span>
-            <strong>{moment.title}</strong>
-            <p>{moment.copy}</p>
-          </div>
-          <div className="twin-trust-line">
-            <span className="status-dot status-dot-ready" aria-hidden="true" />
-            Same demand trace · metrics change only when the operating rule changes
-          </div>
-        </div>
-
         <div className="twin-lever-rail twin-lever-rail-immersive mx-auto mt-4 max-w-[1240px]" aria-label="Jump to a transformation lever">
           {LEVER_SEQUENCE.map((lever) => {
             const item = LEVER_META[lever];
