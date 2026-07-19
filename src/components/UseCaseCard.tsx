@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { UseCase } from "@/data/schema";
 import { TRACK_META } from "@/data/tracks";
 import { SERVICE_LINE_COLOR } from "@/data/service-lines";
+import { leverFor } from "@/data/levers";
 import { priorityScore, recommendation } from "@/lib/scoring";
 
 const MATURITY_COLOR: Record<string, string> = {
@@ -57,7 +58,19 @@ export function UseCaseCard({
         >
           {badge}
         </span>
-        <span className="font-mono text-[11px] text-white/50">{uc.id}</span>
+        <span className="flex items-center gap-1.5">
+          <i
+            className="rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold not-italic"
+            style={{
+              color: `color-mix(in srgb, ${leverFor(uc).color} 70%, white)`,
+              background: `color-mix(in srgb, ${leverFor(uc).color} 14%, transparent)`,
+            }}
+            title={`Lever: ${leverFor(uc).name}`}
+          >
+            {leverFor(uc).monogram}
+          </i>
+          <span className="font-mono text-[11px] text-white/50">{uc.id}</span>
+        </span>
       </div>
 
       <h3 className="mb-1.5 text-[15px] font-bold leading-snug text-white">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import type { View } from "@/App";
+import { setPortfolioLeverFilter } from "@/lib/portfolio-link";
 
 // Ordered to match the hospital twin: the sequence in which the simulation
 // materializes each lever as the constraint moves through the building.
@@ -105,6 +106,26 @@ export function SixLevers({ onNavigate }: { onNavigate: (view: View) => void }) 
   const [selectedId, setSelectedId] = useState<(typeof LEVERS)[number]["id"]>("front-door");
   const selected = LEVERS.find((lever) => lever.id === selectedId) ?? LEVERS[0];
 
+  // Lever → use-case counts for the portfolio cross-link. Loaded lazily so
+  // the evidence dataset stays out of the eager bundle (it ships with the
+  // portfolio chunk, which the app already preloads on idle).
+  const [leverCounts, setLeverCounts] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([import("@/data/use-cases"), import("@/data/levers")]).then(([{ useCases }, { leverFor }]) => {
+      if (cancelled) return;
+      const counts: Record<string, number> = {};
+      for (const useCase of useCases) {
+        const id = leverFor(useCase).id;
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+      setLeverCounts(counts);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // The compounding loop highlights each step in turn so it reads as a cycle,
   // not a static list. Respect reduced motion by holding on "Learn".
   const [loopStep, setLoopStep] = useState(0);
@@ -199,6 +220,16 @@ export function SixLevers({ onNavigate }: { onNavigate: (view: View) => void }) 
                 </div>
               ))}
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setPortfolioLeverFilter(selected.id);
+                onNavigate("portfolio");
+              }}
+              className="source-link mt-8 text-[var(--color-mint)]"
+            >
+              See the {leverCounts ? `${leverCounts[selected.id] ?? 0} ` : ""}use cases behind this lever →
+            </button>
           </div>
         </div>
       </section>

@@ -4,6 +4,8 @@ import { useCases } from "@/data/use-cases";
 import { SERVICE_LINES, TRACKS, MATURITY_LEVELS } from "@/data/schema";
 import { TRACK_META } from "@/data/tracks";
 import { OPS_CATEGORIES, OPS_CATEGORY_COLOR, opsCategoriesFor } from "@/data/operations";
+import { LEVERS, leverFor } from "@/data/levers";
+import { consumePortfolioLeverFilter } from "@/lib/portfolio-link";
 import { priorityScore, recommendation } from "@/lib/scoring";
 import { SERVICE_LINE_COLOR } from "@/data/service-lines";
 import { UseCaseCard } from "@/components/UseCaseCard";
@@ -77,6 +79,8 @@ export function PortfolioView() {
   const [query, setQuery] = useState("");
   const [maturity, setMaturity] = useState("all");
   const [autonomy, setAutonomy] = useState("all");
+  // Deep links from the Six Levers tab arrive as a one-shot lever filter.
+  const [lever, setLever] = useState(() => consumePortfolioLeverFilter() ?? "all");
   const [modalUc, setModalUc] = useState<UseCase | null>(null);
 
   // Exactly one focus area selected → its own second row of sub-filters.
@@ -106,11 +110,12 @@ export function PortfolioView() {
         }
         if (maturity !== "all" && useCase.maturity !== maturity) return false;
         if (autonomy !== "all" && autonomyBucket(useCase.autonomyLevel) !== autonomy) return false;
+        if (lever !== "all" && leverFor(useCase).id !== lever) return false;
         if (!normalizedQuery) return true;
         return matchesSearchQuery(useCase, normalizedQuery);
       })
       .sort((a, b) => priorityScore(b) - priorityScore(a));
-  }, [areas, soloArea, subFilter, query, maturity, autonomy]);
+  }, [areas, soloArea, subFilter, query, maturity, autonomy, lever]);
 
   const scopeLabel = areas.length === 0
     ? "across the full catalog"
@@ -185,7 +190,7 @@ export function PortfolioView() {
           </div>
         )}
 
-        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]">
+        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
           <div>
             <label htmlFor="portfolio-search" className="sr-only">
               Search use cases by workflow, vendor, specialty, or outcome
@@ -198,6 +203,12 @@ export function PortfolioView() {
               className="w-full rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/40 focus:border-[var(--color-mint)] focus:ring-2 focus:ring-[var(--color-mint)]/20"
             />
           </div>
+          <select value={lever} onChange={(event) => setLever(event.target.value)} aria-label="Lever" className="filter-select">
+            <option value="all">All levers</option>
+            {LEVERS.map((item, index) => (
+              <option key={item.id} value={item.id}>{`0${index + 1} ${item.name}`}</option>
+            ))}
+          </select>
           <select value={maturity} onChange={(event) => setMaturity(event.target.value)} aria-label="Maturity" className="filter-select">
             <option value="all">All maturity</option>
             {MATURITY_LEVELS.map((level) => <option key={level}>{level}</option>)}

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { UseCase } from "@/data/schema";
 import { TRACK_META } from "@/data/tracks";
 import { SERVICE_LINE_COLOR } from "@/data/service-lines";
+import { leverFor } from "@/data/levers";
 import { priorityScore, recommendation } from "@/lib/scoring";
 import { clearanceUrl, grantUrl } from "@/lib/links";
 
@@ -147,6 +148,16 @@ export function UseCaseModal({
                   }}
                 >
                   {lens === "track" && uc.track ? TRACK_META[uc.track].label : (uc.serviceLines[0] ?? "Cross-Cutting")}
+                </span>
+                <span
+                  className="rounded-md px-1.5 py-0.5 font-mono text-[9px] font-bold"
+                  style={{
+                    color: `color-mix(in srgb, ${leverFor(uc).color} 70%, white)`,
+                    background: `color-mix(in srgb, ${leverFor(uc).color} 14%, transparent)`,
+                  }}
+                  title={`Lever: ${leverFor(uc).name}`}
+                >
+                  {leverFor(uc).monogram} · {leverFor(uc).name}
                 </span>
                 <span className="font-mono text-[11px] text-white/50">{uc.id}</span>
               </div>
