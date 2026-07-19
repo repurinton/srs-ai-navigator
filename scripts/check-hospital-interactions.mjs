@@ -105,24 +105,39 @@ for (let i = 1; i < STRETCHER_PATH.length; i += 1) {
 }
 assert.ok(!stretcherInLake, "Quad stretcher path crosses the lake");
 
-// 4) The motorboat stays on the lake while visible and completes a U-turn
-// (heading sweeps through ~180°).
+// 4) The motorboat stays on the lake (ellipse) whenever visible, and each
+// cycle it enters, turns (heading changes ≥90°), and exits. Maneuvers vary
+// per cycle (U-turn / J-turn / double-loop), so we check many cycles and
+// confirm at least two distinct turn magnitudes appear.
 let boatOffLake = false;
-let minHeading = Infinity;
-let maxHeading = -Infinity;
-for (let t = 0; t < BOAT_PERIOD; t += 0.05) {
-  const b = boatState(t);
-  if (b.visible && !inLake(b.x, b.z, 1.5)) boatOffLake = true;
-  if (b.visible) {
-    minHeading = Math.min(minHeading, b.heading);
-    maxHeading = Math.max(maxHeading, b.heading);
+const turnMagnitudes = [];
+for (let cycle = 0; cycle < 12; cycle += 1) {
+  let minH = Infinity;
+  let maxH = -Infinity;
+  let sawVisible = false;
+  let enteredDeep = false;
+  for (let s = 0; s < BOAT_PERIOD; s += 0.05) {
+    const b = boatState(cycle * BOAT_PERIOD + s);
+    if (b.visible) {
+      sawVisible = true;
+      if (!inLake(b.x, b.z, 1.2)) boatOffLake = true;
+      minH = Math.min(minH, b.heading);
+      maxH = Math.max(maxH, b.heading);
+      if (b.x < 50) enteredDeep = true; // came in from the edge
+    }
   }
+  assert.ok(sawVisible, `Motorboat cycle ${cycle} is never visible`);
+  assert.ok(enteredDeep, `Motorboat cycle ${cycle} never enters the visible lake`);
+  const turn = maxH - minH;
+  assert.ok(turn >= Math.PI / 2 - 0.1, `Motorboat cycle ${cycle} barely turns (${turn.toFixed(2)} rad)`);
+  turnMagnitudes.push(turn);
 }
 assert.ok(!boatOffLake, "Motorboat leaves the lake footprint while visible");
-assert.ok(maxHeading - minHeading >= Math.PI - 0.2, "Motorboat must complete a U-turn (heading ~180°)");
+const distinctTurns = new Set(turnMagnitudes.map((t) => Math.round(t))).size;
+assert.ok(distinctTurns >= 2, "Motorboat maneuvers must vary across cycles");
 
 console.log(
   `Hospital interaction QA passed: ${vehicleActors.length} vehicles (min gap ${minVeh.toFixed(2)}m), `
   + `${parked.length} parked cars (moving-car min gap ${minPark.toFixed(2)}m), `
-  + `stretcher clear of lake, motorboat U-turns on the lake.`,
+  + `stretcher clear of lake, motorboat varies its maneuver and stays on the lake.`,
 );

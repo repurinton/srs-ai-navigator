@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { BufferAttribute, Color, EdgesGeometry, BoxGeometry, PlaneGeometry, ShaderMaterial, type Group, type Mesh } from "three";
+import { BufferAttribute, Color, EdgesGeometry, BoxGeometry, PlaneGeometry, ShaderMaterial, Vector3, type Group, type Mesh } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   WORLD_ELEVATOR,
@@ -274,59 +274,103 @@ function Workstations({ position }: { position: [number, number, number] }) {
   );
 }
 
-/** Shimmering, rippling lake on the east side. The plane over-hangs the map's
- * right edge so it reads as attached to a broader body of water off-screen. */
+/** Shimmering, rippling elliptical lake on the east side, its east lobe pushed
+ * off the map edge (implied broader water). Water shading uses summed
+ * directional waves with analytic normals, a Fresnel deep→sky blend,
+ * Blinn-Phong specular sparkle, and crest + shoreline foam — masked to the
+ * ellipse with a soft foam edge so the shoreline reads curved, not square. */
 function Lake() {
-  const matRef = useRef<ShaderMaterial>(null);
   const { geometry, material, center } = useMemo(() => {
-    const minX = WORLD_LAKE.min[0];
-    const maxX = WORLD_LAKE.max[0] + 4; // run past the map edge (implied ocean)
-    const minZ = WORLD_LAKE.min[2];
-    const maxZ = WORLD_LAKE.max[2];
-    const geo = new PlaneGeometry(maxX - minX, maxZ - minZ, 48, 44);
+    const [rx, rz] = WORLD_LAKE.radius;
+    const geo = new PlaneGeometry(rx * 2, rz * 2, 64, 48);
     geo.rotateX(-Math.PI / 2);
     const mat = new ShaderMaterial({
       transparent: true,
-      uniforms: { uTime: { value: 0 } },
+      depthWrite: false, // translucent surface — avoid depth-sort artifacts
+      uniforms: {
+        uTime: { value: 0 },
+        uLight: { value: new Vector3(-0.35, 0.9, 0.28).normalize() },
+      },
       vertexShader: /* glsl */ `
         uniform float uTime;
         varying vec2 vUv;
-        varying float vWave;
+        varying vec3 vNormal;
+        varying vec3 vWorld;
+        varying float vCrest;
+
+        // Three drifting directional waves; analytic normal from their slopes.
+        void wave(vec2 pos, out float h, out vec2 slope) {
+          vec2 d1 = vec2(0.95, 0.31); float a1 = 0.11, w1 = 0.42, s1 = 1.05;
+          vec2 d2 = vec2(-0.45, 0.89); float a2 = 0.08, w2 = 0.7, s2 = 0.9;
+          vec2 d3 = vec2(0.6, -0.8); float a3 = 0.05, w3 = 1.15, s3 = 1.4;
+          float p1 = dot(d1, pos) * w1 + uTime * s1;
+          float p2 = dot(d2, pos) * w2 + uTime * s2;
+          float p3 = dot(d3, pos) * w3 - uTime * s3;
+          h = a1 * sin(p1) + a2 * sin(p2) + a3 * sin(p3);
+          slope = a1 * w1 * d1 * cos(p1) + a2 * w2 * d2 * cos(p2) + a3 * w3 * d3 * cos(p3);
+        }
+
         void main() {
           vUv = uv;
           vec3 p = position;
-          float w = sin(p.x * 0.5 + uTime * 1.3) * 0.05
-                  + sin(p.z * 0.75 + uTime * 0.9) * 0.045
-                  + sin((p.x + p.z) * 0.35 - uTime * 1.1) * 0.03;
-          p.y += w;
-          vWave = w;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+          float h; vec2 slope;
+          wave(p.xz, h, slope);
+          p.y += h;
+          vCrest = h;
+          vNormal = normalize(vec3(-slope.x, 1.0, -slope.y));
+          vec4 world = modelMatrix * vec4(p, 1.0);
+          vWorld = world.xyz;
+          gl_Position = projectionMatrix * viewMatrix * world;
         }
       `,
       fragmentShader: /* glsl */ `
         uniform float uTime;
+        uniform vec3 uLight;
         varying vec2 vUv;
-        varying float vWave;
+        varying vec3 vNormal;
+        varying vec3 vWorld;
+        varying float vCrest;
+
         void main() {
-          vec3 deep = vec3(0.06, 0.24, 0.33);
-          vec3 shallow = vec3(0.16, 0.46, 0.55);
-          vec3 col = mix(deep, shallow, clamp(0.5 + vWave * 3.0, 0.0, 1.0));
-          // Two drifting specular bands read as sun-shimmer on the surface.
-          float g1 = sin(vUv.x * 60.0 + uTime * 2.4 + sin(vUv.y * 8.0) * 2.0) * 0.5 + 0.5;
-          float g2 = sin(vUv.y * 44.0 - uTime * 1.7) * 0.5 + 0.5;
-          float glint = smoothstep(0.86, 1.0, g1) * smoothstep(0.8, 1.0, g2);
-          col += glint * 0.6;
-          gl_FragColor = vec4(col, 0.92);
+          vec2 c = vUv * 2.0 - 1.0;
+          float edge = length(c);
+          if (edge > 1.0) discard;
+
+          vec3 N = normalize(vNormal);
+          vec3 V = normalize(cameraPosition - vWorld);
+          // Schlick Fresnel: grazing angles catch the sky, steep angles go deep.
+          float fres = 0.02 + 0.98 * pow(1.0 - max(dot(N, V), 0.0), 4.0);
+
+          vec3 deep = vec3(0.03, 0.16, 0.24);
+          vec3 shallow = vec3(0.10, 0.40, 0.48);
+          vec3 sky = vec3(0.42, 0.66, 0.74);
+          vec3 col = mix(deep, shallow, clamp(0.5 + vCrest * 3.5, 0.0, 1.0));
+          col = mix(col, sky, fres * 0.7);
+
+          // Blinn-Phong specular glint from the key light.
+          vec3 H = normalize(uLight + V);
+          float spec = pow(max(dot(N, H), 0.0), 140.0);
+          col += spec * 0.9;
+          // Fine drifting sparkle so still water still glitters.
+          float sp = sin(vWorld.x * 3.1 + uTime * 2.2) * sin(vWorld.z * 2.7 - uTime * 1.8);
+          col += smoothstep(0.86, 1.0, sp) * 0.25;
+
+          // Crest whitecaps + soft curved shoreline foam.
+          float foam = smoothstep(0.11, 0.16, vCrest);
+          float shore = smoothstep(0.9, 1.0, edge);
+          col = mix(col, vec3(0.80, 0.90, 0.95), max(foam * 0.4, shore * 0.85));
+
+          float alpha = 0.94 * (1.0 - smoothstep(0.985, 1.0, edge));
+          gl_FragColor = vec4(col, alpha);
         }
       `,
     });
     return {
       geometry: geo,
       material: mat,
-      center: [(minX + maxX) / 2, 0.12, (minZ + maxZ) / 2] as [number, number, number],
+      center: [WORLD_LAKE.center[0], WORLD_LAKE.y, WORLD_LAKE.center[2]] as [number, number, number],
     };
   }, []);
-  matRef.current = material;
   useFrame((_, delta) => {
     material.uniforms.uTime.value += delta;
   });
