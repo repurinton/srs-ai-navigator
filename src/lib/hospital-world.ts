@@ -142,6 +142,12 @@ export const WORLD_SURFACES = {
   parkingConnector: { min: [-40, 0, 17] as Vec3, max: [-30, 0.1, 21] as Vec3 },
   // West service dock the delivery truck backs into.
   serviceDock: { min: [-30, 0, 0] as Vec3, max: [-20, 0.1, 4] as Vec3 },
+  // Service drive connecting the highway down to the west dock — keeps the
+  // delivery truck on pavement for its whole descent.
+  serviceDrive: { min: [-26, 0, 2] as Vec3, max: [-2, 0.1, 15] as Vec3 },
+  // EMS access drive: paved apron from the highway down to the ambulance bay
+  // so the ambulance never crosses grass on its western approach.
+  emsDrive: { min: [-58, 0, -8] as Vec3, max: [-46, 0.1, 16] as Vec3 },
   dischargePlaza: { min: [12, 0, 4] as Vec3, max: [28, 0.1, 12] as Vec3 },
 } as const;
 
@@ -243,8 +249,10 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     duration: 16,
     closed: true,
     phaseOffset: 0.85,
-    // A rounder loop — extra waypoints soften the entrance turns into arcs.
-    points: [[-6, 0.2, 8.6], [2, 0.2, 9.3], [9, 0.2, 8.6], [10, 0.2, 6], [6, 0.2, 4.4], [-1, 0.2, 4.4], [-6, 0.2, 6.2]],
+    // Drop-off circuit kept on the arrival-loop pavement (z 8.6–10.2): north of
+    // the building face at z8 (never in the lobby) and clear of the westbound
+    // through-lane at z12.1.
+    points: [[-5, 0.2, 9], [3, 0.2, 8.6], [9, 0.2, 9], [9.2, 0.2, 10], [2, 0.2, 10.2], [-5, 0.2, 9.9]],
   },
   // Cars circulating the south lot's two aisles (z 23.75 / 29.25); the turns
   // at x -57 / -12 sit clear of the parked-car x-extent (see campus-props).
@@ -443,13 +451,15 @@ export type PatientStation = readonly [number, number, number, number];
 const HALF_PI = Math.PI / 2;
 
 export const WORLD_PATIENT_STATIONS: Partial<Record<StageId, readonly PatientStation[]>> = {
+  // One berth just in front of each back-wall scanner; stretchers traverse the
+  // clear front corridor, then dock facing the scanner (long axis along z).
   diagnosis: [
-    [-22, 5.7, -7.4, HALF_PI],
-    [-17, 5.7, -7.4, HALF_PI],
-    [-11, 5.65, -7.8, HALF_PI],
-    [-6, 5.65, -7.8, HALF_PI],
-    [-1, 5.75, -9, 0],
-    [-19, 5.75, -13, 0],
+    [-22, 5.7, -13, 0],
+    [-18, 5.7, -13, 0],
+    [-13.5, 5.65, -13, 0],
+    [-9, 5.65, -13, 0],
+    [-4.5, 5.75, -13, 0],
+    [-0.5, 5.75, -13, 0],
   ],
   readiness: Array.from({ length: 8 }, (_, i) => [-21 + i * 2.4, 10.2, -9.15, HALF_PI] as const),
   robotics: Array.from({ length: 8 }, (_, i) => [-21 + i * 5.6, 14.88, -9.5, 0] as const),

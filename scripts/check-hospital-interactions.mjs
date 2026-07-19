@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { CatmullRomCurve3, Vector3 } from "three";
-import { WORLD_ROUTES, WORLD_ACTORS_PER_ROUTE } from "../src/lib/hospital-world.ts";
-import { parkedCarSlots, routeTimeRemap } from "../src/lib/campus-props.ts";
+import { WORLD_ROUTES, WORLD_ACTORS_PER_ROUTE, WORLD_SURFACES } from "../src/lib/hospital-world.ts";
+import {
+  routeTimeRemap,
+  parkingStalls,
+  parkingAisleForRow,
+  PARKING_TARGET_EMPTY,
+  PARKING_ROWS,
+  PARKING_AISLES,
+} from "../src/lib/campus-props.ts";
 
 /**
  * Master simulation QA: samples every deterministic movable prop over a long
@@ -31,9 +38,14 @@ function poseOnRoute(route, phase, t) {
   return { x: scratch.x, z: scratch.z, presence };
 }
 
-const vehicleActors = WORLD_ROUTES.filter((r) => VEHICLE_KINDS.has(r.kind)).flatMap((route) =>
-  Array.from({ length: WORLD_ACTORS_PER_ROUTE }, (_, i) => ({ route, phase: i / WORLD_ACTORS_PER_ROUTE })),
-);
+// car-parking stays in the world data for the motion/world contracts, but it
+// is no longer rendered as circulating actors (the ParkingLot stall system
+// replaced it), so it is excluded from the moving-vehicle spacing check.
+const vehicleActors = WORLD_ROUTES
+  .filter((r) => VEHICLE_KINDS.has(r.kind) && r.id !== "car-parking")
+  .flatMap((route) =>
+    Array.from({ length: WORLD_ACTORS_PER_ROUTE }, (_, i) => ({ route, phase: i / WORLD_ACTORS_PER_ROUTE })),
+  );
 
 const SAMPLES = [];
 for (let t = 0; t < 120; t += 0.25) SAMPLES.push(t);
@@ -59,30 +71,53 @@ for (const t of SAMPLES) {
 }
 assert.ok(minVeh >= MIN_VEHICLE_GAP, `Vehicles overlap: min gap ${minVeh.toFixed(2)}m (${minVehWhere})`);
 
-// 2) The moving parking car never clips a parked car. Parked cars sit long-axis
-// along z (half-length 1.1); the aisle car is long-axis along x. Require the
-// center distance to clear their combined footprint.
-const parked = parkedCarSlots();
-const parkingRoute = WORLD_ROUTES.find((r) => r.id === "car-parking");
-assert.ok(parkingRoute, "car-parking route must exist");
-const MIN_PARK_GAP = 1.6;
-let minPark = Infinity;
-let minParkWhere = "";
-for (const t of SAMPLES) {
-  for (let i = 0; i < WORLD_ACTORS_PER_ROUTE; i += 1) {
-    const p = poseOnRoute(parkingRoute, i / WORLD_ACTORS_PER_ROUTE, t);
-    for (const slot of parked) {
-      const d = Math.hypot(p.x - slot.x, p.z - slot.z);
-      if (d < minPark) {
-        minPark = d;
-        minParkWhere = `moving car @(${p.x.toFixed(1)},${p.z.toFixed(1)}) vs slot @(${slot.x.toFixed(1)},${slot.z.toFixed(1)}) t=${t.toFixed(1)}`;
-      }
-    }
+// 2) The live parking lot is collision-free BY CONSTRUCTION rather than by
+// sampled positions (arrivals/departures are random, so exact poses vary run to
+// run). We assert the invariants the ParkingLot animation relies on:
+//   a) every stall centre sits inside the parking surface;
+//   b) no two stalls are closer than a car footprint;
+//   c) each service aisle is clear of every stall row, so a car turning in or
+//      out (which only ever sits in its own stall column plus the aisle cell)
+//      can never clip a parked neighbour;
+//   d) the empty-stall target is a sane fraction of the lot.
+const stalls = parkingStalls();
+const lot = WORLD_SURFACES.parking;
+for (const stall of stalls) {
+  assert.ok(
+    stall.x >= lot.min[0] && stall.x <= lot.max[0] && stall.z >= lot.min[2] && stall.z <= lot.max[2],
+    `Parking stall @(${stall.x},${stall.z}) sits outside the parking surface`,
+  );
+}
+const MIN_STALL_GAP = 3.0;
+let minStall = Infinity;
+for (let i = 0; i < stalls.length; i += 1) {
+  for (let j = i + 1; j < stalls.length; j += 1) {
+    minStall = Math.min(minStall, Math.hypot(stalls[i].x - stalls[j].x, stalls[i].z - stalls[j].z));
   }
 }
-assert.ok(minPark >= MIN_PARK_GAP, `Parking-lot car clips a parked car: min gap ${minPark.toFixed(2)}m (${minParkWhere})`);
+assert.ok(minStall >= MIN_STALL_GAP, `Parking stalls too close: min centre gap ${minStall.toFixed(2)}m`);
+
+// Combined half-extents of a moving car (width) and a parked car (length) is
+// ~1.63m; require every aisle to clear every row by more than that.
+const AISLE_ROW_CLEAR = 2.0;
+for (const aisle of PARKING_AISLES) {
+  for (const row of PARKING_ROWS) {
+    assert.ok(
+      Math.abs(row - aisle) >= AISLE_ROW_CLEAR,
+      `Aisle z=${aisle} runs too close to stall row z=${row} (${Math.abs(row - aisle).toFixed(2)}m)`,
+    );
+  }
+}
+// Every row must be served by a defined aisle.
+for (let row = 0; row < PARKING_ROWS.length; row += 1) {
+  assert.ok(PARKING_AISLES.includes(parkingAisleForRow(row)), `Row ${row} has no valid service aisle`);
+}
+assert.ok(
+  PARKING_TARGET_EMPTY >= 1 && PARKING_TARGET_EMPTY < stalls.length,
+  `Parking empty-target ${PARKING_TARGET_EMPTY} out of range for ${stalls.length} stalls`,
+);
 
 console.log(
   `Hospital interaction QA passed: ${vehicleActors.length} vehicles (min gap ${minVeh.toFixed(2)}m), `
-  + `${parked.length} parked cars (moving-car min gap ${minPark.toFixed(2)}m).`,
+  + `${stalls.length}-stall live lot (min stall gap ${minStall.toFixed(2)}m, ${PARKING_TARGET_EMPTY} empty target).`,
 );

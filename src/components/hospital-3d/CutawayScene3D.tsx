@@ -84,7 +84,7 @@ export default function CutawayScene3D({ scene, poseId, tier, onFallback }: Cuta
         <CameraDirector poseId={poseId} reducedMotion={reducedMotion} />
         <AnchorProjector />
         <CampusShell ceilingY={ceilingY} />
-        <ZoneEquipment ceilingY={ceilingY} />
+        <ZoneEquipment ceilingY={ceilingY} reducedMotion={reducedMotion} />
         <ZoneStateEffects
           focusStage={scene.focusStage}
           visualState={scene.painPoints?.[0]?.visualState as ZoneVisualState | undefined}

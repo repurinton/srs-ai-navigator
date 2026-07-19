@@ -37,6 +37,39 @@ export function parkedCarSlots(): ParkedSlot[] {
   return slots;
 }
 
+// ── Dynamic parking lot ──────────────────────────────────────────────────────
+/**
+ * The full stall grid the live parking lot manages. Occupancy is decided at
+ * runtime: the lot holds ~PARKING_TARGET_EMPTY empty stalls, and cars arrive
+ * and depart one at a time so a moving car is only ever in its own stall plus
+ * the adjacent aisle cell — collision-free by construction. Every stall centre
+ * sits inside the parking surface and stalls never overlap (QA-enforced).
+ */
+export const PARKING_TARGET_EMPTY = 7;
+
+export interface ParkingStall { x: number; z: number; row: number; index: number }
+
+export function parkingStalls(): ParkingStall[] {
+  const p = WORLD_SURFACES.parking;
+  const stride = 3.2;
+  const xStart = p.min[0] + 4; // -54
+  const xEnd = p.max[0] - 5; // -17
+  const stalls: ParkingStall[] = [];
+  let index = 0;
+  PARKING_ROWS.forEach((z, row) => {
+    for (let x = xStart; x <= xEnd + 1e-6; x += stride) {
+      stalls.push({ x, z, row, index });
+      index += 1;
+    }
+  });
+  return stalls;
+}
+
+/** The aisle a stall's row is served from (the moving car turns in from here). */
+export function parkingAisleForRow(row: number): number {
+  return row === 2 ? PARKING_AISLES[1] : PARKING_AISLES[0];
+}
+
 // ── Quad-stretcher run (rerouted around the lake) ────────────────────────────
 /**
  * Pad → west along the pad's south edge (north of the lake) → south down the

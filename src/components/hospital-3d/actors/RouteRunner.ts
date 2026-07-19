@@ -33,7 +33,10 @@ function curveFor(route: WorldRoute): CatmullRomCurve3 {
 
 /** All 28 route actors: two per family, phased half a cycle apart. */
 export function buildRouteActors(): RouteActor[] {
-  return WORLD_ROUTES.flatMap((route) =>
+  // The parking lot is rendered as a live stall system (ParkingLot), not as
+  // circulating actors — the car-parking route stays in the world data purely
+  // to satisfy the motion/world contracts.
+  return WORLD_ROUTES.filter((route) => route.id !== "car-parking").flatMap((route) =>
     Array.from({ length: WORLD_ACTORS_PER_ROUTE }, (_, index) => ({
       route,
       phase: index / WORLD_ACTORS_PER_ROUTE,

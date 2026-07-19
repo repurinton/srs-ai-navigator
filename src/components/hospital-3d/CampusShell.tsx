@@ -99,6 +99,8 @@ export function CampusShell({ ceilingY }: { ceilingY: number }) {
       <Surface min={WORLD_SURFACES.parkingConnector.min} max={WORLD_SURFACES.parkingConnector.max} color="#233842" />
       <Surface min={WORLD_SURFACES.parking.min} max={WORLD_SURFACES.parking.max} color="#1d323c" />
       <Surface min={WORLD_SURFACES.serviceDock.min} max={WORLD_SURFACES.serviceDock.max} color="#26333b" />
+      <Surface min={WORLD_SURFACES.serviceDrive.min} max={WORLD_SURFACES.serviceDrive.max} color="#233842" />
+      <Surface min={WORLD_SURFACES.emsDrive.min} max={WORLD_SURFACES.emsDrive.max} color="#233842" />
       <Surface min={WORLD_SURFACES.dischargePlaza.min} max={WORLD_SURFACES.dischargePlaza.max} color="#26404b" />
       <Surface min={home.min} max={[home.max[0], home.min[1] + 0.1, home.max[2]] as Vec3} color="#1e3226" />
 

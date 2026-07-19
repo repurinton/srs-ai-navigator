@@ -441,7 +441,9 @@ export function HospitalCutaway({
             <CutawayScene2D visualSet={visualSet} />
           ) : (
             <SceneErrorBoundary key={sceneAttempt} onError={fallbackTo2D}>
-              <Suspense fallback={<CutawayScene2D visualSet={visualSet} />}>
+              {/* Plain dark backdrop while the 3D chunk loads — no legacy
+                  raster or 2D actors flashing before the canvas paints. */}
+              <Suspense fallback={<div className="cutaway-raster" aria-hidden="true" />}>
                 <CutawayScene3D
                   tier={rendererMode}
                   poseId={cameraPoseId}

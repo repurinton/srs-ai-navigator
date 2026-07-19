@@ -1,6 +1,16 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { BufferAttribute, Color, EdgesGeometry, BoxGeometry, type Group, type Mesh } from "three";
+import {
+  Color,
+  EdgesGeometry,
+  BoxGeometry,
+  Object3D,
+  Vector3,
+  Quaternion,
+  type Group,
+  type InstancedMesh,
+  type Mesh,
+} from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   WORLD_ELEVATOR,
@@ -9,28 +19,19 @@ import {
   WORLD_ZONES,
 } from "@/lib/hospital-world";
 import { ELEVATOR_CABS, elevatorCabState, elevatorClock, type ElevatorCabSpec } from "./elevators";
-import { STRETCHER_PATH, parkedCarSlots, PARKING_ROWS } from "@/lib/campus-props";
+import {
+  STRETCHER_PATH,
+  PARKING_ROWS,
+  PARKED_CAR_COLORS,
+  PARKING_TARGET_EMPTY,
+  parkingStalls,
+  parkingAisleForRow,
+} from "@/lib/campus-props";
 import { FadeGroup } from "./FadeGroup";
 
 function translatedBox(size: [number, number, number], position: [number, number, number]) {
   const geometry = new BoxGeometry(...size);
   geometry.translate(...position);
-  return geometry;
-}
-
-/** Translated box carrying a uniform vertex color, so a palette of parked
- * cars merges into one vertex-colored draw call. */
-function coloredBox(size: [number, number, number], position: [number, number, number], hex: string) {
-  const geometry = translatedBox(size, position);
-  const c = new Color(hex);
-  const count = geometry.attributes.position.count;
-  const colors = new Float32Array(count * 3);
-  for (let i = 0; i < count; i += 1) {
-    colors[i * 3] = c.r;
-    colors[i * 3 + 1] = c.g;
-    colors[i * 3 + 2] = c.b;
-  }
-  geometry.setAttribute("color", new BufferAttribute(colors, 3));
   return geometry;
 }
 
@@ -104,7 +105,7 @@ function XRayMachine({ position }: { position: [number, number, number] }) {
 }
 
 /** All OR bays merged into three draw calls: structure, dividers, lights. */
-function ORRow({ positions }: { positions: [number, number, number][] }) {
+function ORRow({ positions, animate }: { positions: [number, number, number][]; animate: boolean }) {
   const { structure, dividers, lights } = useMemo(() => {
     const structureParts = [];
     const dividerParts = [];
@@ -126,15 +127,11 @@ function ORRow({ positions }: { positions: [number, number, number][] }) {
       table.translate(x, y + 0.98, z);
       const column = new BoxGeometry(0.3, 2.1, 0.3);
       column.translate(x + 1.15, y + 1.05, z - 0.85);
-      const boomA = new BoxGeometry(1.35, 0.14, 0.16);
-      boomA.rotateZ(-0.35);
-      boomA.rotateY(0.7);
-      boomA.translate(x + 0.7, y + 1.95, z - 0.5);
-      const boomB = new BoxGeometry(1.05, 0.12, 0.14);
-      boomB.rotateZ(0.5);
-      boomB.rotateY(0.4);
-      boomB.translate(x + 0.25, y + 1.55, z - 0.15);
-      structureParts.push(pedestal, table, column, boomA, boomB);
+      // Ceiling mount the animated robot arms hang from (the moving arms
+      // themselves are rendered by ORRobotArms below).
+      const mount = new BoxGeometry(2.0, 0.2, 0.4);
+      mount.translate(x, y + 2.35, z - 0.2);
+      structureParts.push(pedestal, table, column, mount);
       const light = new BoxGeometry(0.8, 0.14, 0.8);
       light.translate(x - 0.7, y + 2.3, z + 0.35);
       lightParts.push(light);
@@ -157,6 +154,106 @@ function ORRow({ positions }: { positions: [number, number, number][] }) {
       <mesh geometry={lights}>
         <meshLambertMaterial color="#f2f6f8" emissive="#8fb9c9" emissiveIntensity={0.35} />
       </mesh>
+      <ORRobotArms positions={positions} animate={animate} />
+    </group>
+  );
+}
+
+/**
+ * Articulated surgical robot arms — two per OR table — driven every frame in a
+ * single InstancedMesh (two box segments per arm). Each arm's tool tip hovers
+ * and works over the patient on the table with an independent phase so no two
+ * arms move in lockstep. Freezes when animation is disabled (reduced motion).
+ */
+function ORRobotArms({ positions, animate }: { positions: [number, number, number][]; animate: boolean }) {
+  const armRef = useRef<InstancedMesh>(null);
+  const tipRef = useRef<InstancedMesh>(null);
+  const clock = useRef(0);
+  const segCount = positions.length * 2 * 2; // 2 arms × 2 segments
+  const tipCount = positions.length * 2;
+
+  const kit = useMemo(
+    () => ({
+      dummy: new Object3D(),
+      shoulder: new Vector3(),
+      elbow: new Vector3(),
+      tool: new Vector3(),
+      dir: new Vector3(),
+      mid: new Vector3(),
+      quat: new Quaternion(),
+      zAxis: new Vector3(0, 0, 1),
+    }),
+    [],
+  );
+
+  useFrame((_, delta) => {
+    const arm = armRef.current;
+    if (!arm) return;
+    if (animate) clock.current += delta;
+    const t = clock.current;
+    const { dummy, shoulder, elbow, tool, dir, mid, quat, zAxis } = kit;
+    const tip = tipRef.current;
+
+    const setSegment = (index: number, a: Vector3, b: Vector3, thick: number) => {
+      dir.subVectors(b, a);
+      const len = dir.length();
+      if (len < 1e-4) return;
+      mid.addVectors(a, b).multiplyScalar(0.5);
+      dir.normalize();
+      quat.setFromUnitVectors(zAxis, dir);
+      dummy.position.copy(mid);
+      dummy.quaternion.copy(quat);
+      dummy.scale.set(thick, thick, len);
+      dummy.updateMatrix();
+      arm.setMatrixAt(index, dummy.matrix);
+    };
+
+    let seg = 0;
+    let ti = 0;
+    for (let i = 0; i < positions.length; i += 1) {
+      const [x, y, z] = positions[i];
+      for (let a = 0; a < 2; a += 1) {
+        const side = a === 0 ? 1 : -1;
+        const phase = i * 1.27 + a * 2.4;
+        // Shoulder is bolted to the ceiling mount, offset to each side.
+        shoulder.set(x + side * 0.72, y + 2.28, z - 0.2);
+        // Tool tip works over the patient's torso with a small orbit.
+        tool.set(
+          x + Math.sin(t * 1.05 + phase) * 0.3,
+          y + 1.16 + Math.sin(t * 1.9 + phase) * 0.07,
+          z + 0.18 + Math.cos(t * 0.85 + phase) * 0.24,
+        );
+        // Elbow bends outward and up so the joint reads as a real linkage.
+        elbow.set(
+          (shoulder.x + tool.x) / 2 + side * 0.32,
+          Math.max(shoulder.y, tool.y) + 0.12 + Math.sin(t * 1.35 + phase) * 0.09,
+          (shoulder.z + tool.z) / 2 - 0.12,
+        );
+        setSegment(seg++, shoulder, elbow, 0.14);
+        setSegment(seg++, elbow, tool, 0.1);
+        if (tip) {
+          dummy.position.copy(tool);
+          dummy.quaternion.identity();
+          dummy.scale.setScalar(1);
+          dummy.updateMatrix();
+          tip.setMatrixAt(ti++, dummy.matrix);
+        }
+      }
+    }
+    arm.instanceMatrix.needsUpdate = true;
+    if (tip) tip.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <group>
+      <instancedMesh ref={armRef} args={[undefined, undefined, segCount]}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshLambertMaterial color="#c9d2d8" />
+      </instancedMesh>
+      <instancedMesh ref={tipRef} args={[undefined, undefined, tipCount]}>
+        <boxGeometry args={[0.17, 0.17, 0.17]} />
+        <meshLambertMaterial color="#eaf4f7" emissive="#5fd0c4" emissiveIntensity={0.7} />
+      </instancedMesh>
     </group>
   );
 }
@@ -270,22 +367,177 @@ function Workstations({ position }: { position: [number, number, number] }) {
 
 /** Static parked cars filling stalls while animated traffic comes and goes.
  * Layout comes from campus-props so the interaction QA checks the same slots. */
-function ParkedCars() {
-  const geometry = useMemo(() => {
-    const parts = [];
-    // Nose-in cars sit long-axis along z, facing the aisles; each a palette hue.
-    for (const { x, z, color } of parkedCarSlots()) {
-      parts.push(
-        coloredBox([1.05, 0.55, 2.2], [x, 0.45, z], color),
-        coloredBox([0.9, 0.42, 1.15], [x, 0.93, z + 0.12], color),
-      );
+/**
+ * A living parking lot. Every stall is tracked; the lot holds ~7 empty stalls
+ * and cars arrive and depart one at a time at a matched rate, so the empty
+ * spots wander around the lot. A moving car only ever occupies its own stall
+ * plus the adjacent aisle cell, so it can never clip a parked car. Random stall
+ * choice + random timing make the churn non-deterministic. One instanced mesh
+ * (per-instance colour) → one draw call.
+ */
+const PARK_TRANSITION_SECONDS = 3.4;
+
+function ParkingLot({ animate }: { animate: boolean }) {
+  const meshRef = useRef<InstancedMesh>(null);
+  const stalls = useMemo(() => parkingStalls(), []);
+
+  // Baked car body (hull + cabin), long-axis along z, origin at the stall centre.
+  const carGeometry = useMemo(
+    () =>
+      mergeGeometries([
+        translatedBox([1.05, 0.55, 2.2], [0, 0.45, 0]),
+        translatedBox([0.9, 0.42, 1.15], [0, 0.93, 0.12]),
+      ]),
+    [],
+  );
+
+  const state = useMemo(() => {
+    const occupied = stalls.map(() => true);
+    // Open PARKING_TARGET_EMPTY random stalls to start.
+    let opened = 0;
+    let guard = 0;
+    while (opened < PARKING_TARGET_EMPTY && guard < 500) {
+      const s = Math.floor(Math.random() * stalls.length);
+      if (occupied[s]) {
+        occupied[s] = false;
+        opened += 1;
+      }
+      guard += 1;
     }
-    return mergeGeometries(parts);
-  }, []);
+    const colorIndex = stalls.map((_, i) => (i * 7 + 3) % PARKED_CAR_COLORS.length);
+    return {
+      occupied,
+      colorIndex,
+      clock: 0,
+      nextAt: 1.5,
+      lastKind: "in" as "in" | "out",
+      trans: null as null | { kind: "in" | "out"; stall: number; progress: number },
+    };
+  }, [stalls]);
+
+  const kit = useMemo(
+    () => ({
+      dummy: new Object3D(),
+      color: new Color(),
+      p0: new Vector3(),
+      p1: new Vector3(),
+      p2: new Vector3(),
+      pos: new Vector3(),
+    }),
+    [],
+  );
+
+  useFrame((_, delta) => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    const s = state;
+    const { dummy, color, p0, p1, p2, pos } = kit;
+
+    if (animate) {
+      s.clock += delta;
+      // Kick off a new arrival/departure when the lot is idle.
+      if (!s.trans && s.clock >= s.nextAt) {
+        const emptyCount = s.occupied.reduce((n, o) => n + (o ? 0 : 1), 0);
+        let kind: "in" | "out";
+        if (emptyCount > PARKING_TARGET_EMPTY) kind = "in";
+        else if (emptyCount < PARKING_TARGET_EMPTY) kind = "out";
+        else kind = s.lastKind === "in" ? "out" : "in";
+        // Pick a random stall of the needed occupancy.
+        const pool: number[] = [];
+        for (let i = 0; i < s.occupied.length; i += 1) {
+          if (kind === "in" ? !s.occupied[i] : s.occupied[i]) pool.push(i);
+        }
+        if (pool.length > 0) {
+          const stall = pool[Math.floor(Math.random() * pool.length)];
+          if (kind === "in") s.colorIndex[stall] = Math.floor(Math.random() * PARKED_CAR_COLORS.length);
+          s.trans = { kind, stall, progress: 0 };
+          s.lastKind = kind;
+        } else {
+          s.nextAt = s.clock + 0.5;
+        }
+      }
+      if (s.trans) {
+        s.trans.progress += delta / PARK_TRANSITION_SECONDS;
+        if (s.trans.progress >= 1) {
+          s.occupied[s.trans.stall] = s.trans.kind === "in";
+          s.trans = null;
+          s.nextAt = s.clock + 1.4 + Math.random() * 1.9;
+        }
+      }
+    }
+
+    for (let i = 0; i < stalls.length; i += 1) {
+      const stall = stalls[i];
+      let visible = s.occupied[i];
+      let x = stall.x;
+      let z = stall.z;
+      let heading = 0;
+      let scale = 1;
+
+      if (s.trans && s.trans.stall === i) {
+        // Two-segment approach: along the aisle, then turn into the stall.
+        const aisle = parkingAisleForRow(stall.row);
+        p0.set(Math.max(stall.x - 4, -57), aisle, 0); // (x, aisleZ) packed as (x, z)
+        p1.set(stall.x, aisle, 0);
+        p2.set(stall.x, stall.z, 0);
+        const progress = s.trans.kind === "in" ? s.trans.progress : 1 - s.trans.progress;
+        // Walk P0→P1→P2 by arc fraction (P0..P1 is the long leg).
+        const l1 = Math.abs(p1.x - p0.x);
+        const l2 = Math.abs(p2.y - p1.y);
+        const total = l1 + l2;
+        const dist = progress * total;
+        if (dist <= l1) {
+          const u = l1 > 1e-4 ? dist / l1 : 1;
+          x = p0.x + (p1.x - p0.x) * u;
+          z = aisle;
+          heading = Math.PI / 2; // driving along +x
+        } else {
+          const u = l2 > 1e-4 ? (dist - l1) / l2 : 1;
+          x = stall.x;
+          z = aisle + (stall.z - aisle) * u;
+          heading = stall.z >= aisle ? 0 : Math.PI; // turning into the stall along z
+        }
+        // Fade the car in as it arrives / out as it leaves.
+        const fadeEdge = 0.14;
+        const fp = s.trans.kind === "in" ? s.trans.progress : 1 - s.trans.progress;
+        scale = Math.min(1, fp / fadeEdge);
+        visible = true;
+      }
+
+      if (!visible) {
+        dummy.position.set(stall.x, -50, stall.z); // park it far below (scale 0 too)
+        dummy.scale.setScalar(0);
+        dummy.rotation.set(0, 0, 0);
+      } else {
+        pos.set(x, 0, z);
+        dummy.position.copy(pos);
+        dummy.scale.setScalar(scale);
+        dummy.rotation.set(0, heading, 0);
+      }
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+      color.set(PARKED_CAR_COLORS[s.colorIndex[i]]);
+      mesh.setColorAt(i, color);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+
+    if (typeof window !== "undefined") {
+      const empty = s.occupied.reduce((n, o) => n + (o ? 0 : 1), 0);
+      (window as unknown as { __parkingDebug?: unknown }).__parkingDebug = {
+        stalls: stalls.length,
+        empty,
+        occupied: stalls.length - empty,
+        transition: s.trans ? { kind: s.trans.kind, stall: s.trans.stall, progress: Number(s.trans.progress.toFixed(2)) } : null,
+        clock: Number(s.clock.toFixed(1)),
+      };
+    }
+  });
+
   return (
-    <mesh geometry={geometry}>
-      <meshLambertMaterial vertexColors />
-    </mesh>
+    <instancedMesh ref={meshRef} args={[carGeometry, undefined, stalls.length]}>
+      <meshLambertMaterial />
+    </instancedMesh>
   );
 }
 
@@ -718,7 +970,7 @@ function ZoneOutlines({ ceilingY }: { ceilingY: number }) {
   );
 }
 
-export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
+export function ZoneEquipment({ ceilingY, reducedMotion = false }: { ceilingY: number; reducedMotion?: boolean }) {
   const hiddenAbove = (floorMinY: number) => floorMinY >= ceilingY - 0.01;
 
   return (
@@ -733,12 +985,14 @@ export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
 
       {/* Floor 2 — radiology (two CT, two MRI, two X-ray) + precision */}
       <FadeGroup hidden={hiddenAbove(Z.diagnosis.min[1])}>
-        <CTScanner position={[-22, Z.diagnosis.min[1] + 0.4, -9]} />
-        <CTScanner position={[-17, Z.diagnosis.min[1] + 0.4, -9]} />
-        <MRIScanner position={[-11, Z.diagnosis.min[1] + 0.4, -9.5]} />
-        <MRIScanner position={[-6, Z.diagnosis.min[1] + 0.4, -9.5]} />
-        <XRayMachine position={[-1, Z.diagnosis.min[1] + 0.4, -9]} />
-        <XRayMachine position={[-19, Z.diagnosis.min[1] + 0.4, -13]} />
+        {/* Scanners lined along the back wall (z-15) so the front half of the
+            floor stays clear for stretchers to traverse and dock. */}
+        <CTScanner position={[-22, Z.diagnosis.min[1] + 0.4, -15]} />
+        <CTScanner position={[-18, Z.diagnosis.min[1] + 0.4, -15]} />
+        <MRIScanner position={[-13.5, Z.diagnosis.min[1] + 0.4, -15.2]} />
+        <MRIScanner position={[-9, Z.diagnosis.min[1] + 0.4, -15.2]} />
+        <XRayMachine position={[-4.5, Z.diagnosis.min[1] + 0.4, -15]} />
+        <XRayMachine position={[-0.5, Z.diagnosis.min[1] + 0.4, -15]} />
         <Workstations position={[9, Z.precision.min[1] + 0.4, -9]} />
         <Workstations position={[9, Z.precision.min[1] + 0.4, -13]} />
       </FadeGroup>
@@ -752,6 +1006,7 @@ export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
       <FadeGroup hidden={hiddenAbove(Z.robotics.min[1])}>
         <ORRow
           positions={Array.from({ length: 8 }, (_, i) => [-21 + i * 5.6, Z.robotics.min[1] + 0.4, -9.5])}
+          animate={!reducedMotion}
         />
       </FadeGroup>
 
@@ -769,7 +1024,7 @@ export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
       <ElevatorCabs ceilingY={ceilingY} />
       <Helipad />
       <MedicalQuadcopter />
-      <ParkedCars />
+      <ParkingLot animate={!reducedMotion} />
       <RoadMarkings />
       <ZoneOutlines ceilingY={ceilingY} />
     </group>
