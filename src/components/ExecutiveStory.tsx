@@ -129,12 +129,12 @@ export function ExecutiveStory({ onNavigate }: { onNavigate: (view: View) => voi
           </div>
           <div className="mt-12 grid gap-px overflow-hidden rounded-[26px] bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              ["01", "Clinical diagnosis", "Interpretation becomes pathway intelligence."],
-              ["02", "Digital front door", "Channels become one resolution layer."],
-              ["03", "Robotics", "A device becomes distributed capacity."],
-              ["04", "Longitudinal care", "Visits become continuous orchestration."],
-              ["05", "Task automation", "Tasks become governed outcomes."],
-              ["06", "Precision medicine", "A report becomes a learning system."],
+              ["01", "Digital front door", "Channels become one resolution layer."],
+              ["02", "Clinical diagnosis", "Interpretation becomes pathway intelligence."],
+              ["03", "Precision medicine", "A report becomes a learning system."],
+              ["04", "Robotics", "A device becomes distributed capacity."],
+              ["05", "Longitudinal care", "Visits become continuous orchestration."],
+              ["06", "Task automation", "Tasks become governed outcomes."],
             ].map(([number, title, copy]) => (
               <button key={number} type="button" onClick={() => onNavigate("levers")} className="six-lever-preview">
                 <span>{number}</span>
