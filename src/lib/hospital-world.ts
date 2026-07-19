@@ -245,14 +245,15 @@ export const WORLD_ROUTES: readonly WorldRoute[] = [
     phaseOffset: 0.85,
     points: [[-6, 0.2, 9], [10, 0.2, 9], [9, 0.2, 5], [0, 0.2, 4], [-5, 0.2, 6]],
   },
-  // Cars circulating the south lot's aisles between the parked rows.
+  // Cars circulating the south lot's two aisles (z 23.75 / 29.25); the turns
+  // at x -57 / -12 sit clear of the parked-car x-extent (see campus-props).
   {
     id: "car-parking",
     kind: "car",
     duration: 22,
     closed: true,
     phaseOffset: 0.6,
-    points: [[-52, 0.2, 24], [-16, 0.2, 24], [-16, 0.2, 29], [-52, 0.2, 29]],
+    points: [[-57, 0.2, 23.75], [-34, 0.2, 23.75], [-12, 0.2, 23.75], [-12, 0.2, 29.25], [-34, 0.2, 29.25], [-57, 0.2, 29.25]],
   },
   // Ambulance loop: dives south at the far-west edge (crossing the highway
   // lanes only where through-cars are faded near their spawn/despawn), runs

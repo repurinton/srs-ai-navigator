@@ -9,6 +9,14 @@ import { WORLD_ELEVATOR_STOPS } from "@/lib/hospital-world";
 export const ELEVATOR_TRAVEL_SECONDS = 2.2;
 export const ELEVATOR_DWELL_SECONDS = 3.2;
 
+/**
+ * Shared elevator time, written once per frame by PatientFlow's single gated
+ * accumulator (which handles pause / reduced-motion / fast-forward) and read
+ * by the rendered cabs. Both therefore sample elevatorCabState() at the exact
+ * same time, so riders and cabs can never drift out of sync.
+ */
+export const elevatorClock = { current: 0 };
+
 export interface ElevatorCabSpec {
   x: number;
   z: number;

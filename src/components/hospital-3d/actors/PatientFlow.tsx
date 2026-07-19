@@ -24,7 +24,7 @@ import {
   type PatientTravelMode,
 } from "@/lib/hospital-world";
 import { createWalkSpriteTexture, WALK_FRAME_COUNT } from "./walk-sprite";
-import { ELEVATOR_CABS, elevatorCabState, elevatorStopIndexForY } from "../elevators";
+import { ELEVATOR_CABS, elevatorCabState, elevatorClock, elevatorStopIndexForY } from "../elevators";
 
 const BASE_COLOR = new Color("#cfd9e6");
 const WAIT_COLOR = new Color("#ff5347");
@@ -278,6 +278,9 @@ export function PatientFlow({
     if (fastForward) ffWindow.__patientFlowFF = 0;
     const delta = reducedMotion || !playing ? 0 : Math.min(rawDelta, 0.06) + fastForward;
     elapsed.current += delta;
+    // Publish the single shared elevator time so the rendered cabs sample the
+    // exact same schedule as the boarding logic below (no rider/cab drift).
+    elevatorClock.current = elapsed.current;
 
     if (previousGate.current !== gateStage) {
       let releaseIndex = 0;

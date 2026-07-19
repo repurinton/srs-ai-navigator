@@ -7,7 +7,7 @@
     { "id": "car-eastbound", "kind": "car", "corridor": { "min": [-60, 0, 17], "max": [60, 1, 18] }, "minimumTravelMeters": 100 },
     { "id": "car-westbound", "kind": "car", "corridor": { "min": [-60, 0, 11.5], "max": [60, 1, 13] }, "minimumTravelMeters": 100 },
     { "id": "car-dropoff", "kind": "car", "corridor": { "min": [-8, 0, 3], "max": [12, 1, 11] }, "minimumTravelMeters": 20 },
-    { "id": "car-parking", "kind": "car", "corridor": { "min": [-54, 0, 22], "max": [-14, 1, 31] }, "minimumTravelMeters": 40 },
+    { "id": "car-parking", "kind": "car", "corridor": { "min": [-59, 0, 22], "max": [-10, 1, 31] }, "minimumTravelMeters": 40 },
     { "id": "ambulance", "kind": "ambulance", "corridor": { "min": [-60, 0, -8], "max": [-24, 1, 17] }, "minimumTravelMeters": 40 },
     { "id": "truck-delivery", "kind": "truck", "corridor": { "min": [-26, 0, 1], "max": [60, 1, 16] }, "minimumTravelMeters": 50 },
     { "id": "valet-curb", "kind": "person", "corridor": { "min": [-2, 0, 3], "max": [6, 1, 10] }, "minimumTravelMeters": 8 },

@@ -1,16 +1,21 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { BufferAttribute, Color, EdgesGeometry, BoxGeometry, type Group, type Mesh } from "three";
+import { BufferAttribute, Color, EdgesGeometry, BoxGeometry, PlaneGeometry, ShaderMaterial, type Group, type Mesh } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
-  WORLD_ANCHORS,
   WORLD_ELEVATOR,
   WORLD_HELIPAD,
   WORLD_SURFACES,
   WORLD_ZONES,
-  type Vec3,
 } from "@/lib/hospital-world";
-import { ELEVATOR_CABS, elevatorCabState, type ElevatorCabSpec } from "./elevators";
+import { ELEVATOR_CABS, elevatorCabState, elevatorClock, type ElevatorCabSpec } from "./elevators";
+import {
+  WORLD_LAKE,
+  STRETCHER_PATH,
+  boatState,
+  parkedCarSlots,
+  PARKING_ROWS,
+} from "@/lib/campus-props";
 import { FadeGroup } from "./FadeGroup";
 
 function translatedBox(size: [number, number, number], position: [number, number, number]) {
@@ -34,11 +39,6 @@ function coloredBox(size: [number, number, number], position: [number, number, n
   geometry.setAttribute("color", new BufferAttribute(colors, 3));
   return geometry;
 }
-
-const PARKED_CAR_COLORS = [
-  "#8fa2b3", "#c7cfd6", "#4f6f8f", "#b5493f", "#5e768a",
-  "#e6e9ec", "#3a4b57", "#c9b283", "#6d8a7d", "#7f6f9a",
-];
 
 const Z = WORLD_ZONES;
 
@@ -274,29 +274,115 @@ function Workstations({ position }: { position: [number, number, number] }) {
   );
 }
 
-/** Static parked cars filling stalls while animated traffic comes and goes. */
+/** Shimmering, rippling lake on the east side. The plane over-hangs the map's
+ * right edge so it reads as attached to a broader body of water off-screen. */
+function Lake() {
+  const matRef = useRef<ShaderMaterial>(null);
+  const { geometry, material, center } = useMemo(() => {
+    const minX = WORLD_LAKE.min[0];
+    const maxX = WORLD_LAKE.max[0] + 4; // run past the map edge (implied ocean)
+    const minZ = WORLD_LAKE.min[2];
+    const maxZ = WORLD_LAKE.max[2];
+    const geo = new PlaneGeometry(maxX - minX, maxZ - minZ, 48, 44);
+    geo.rotateX(-Math.PI / 2);
+    const mat = new ShaderMaterial({
+      transparent: true,
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */ `
+        uniform float uTime;
+        varying vec2 vUv;
+        varying float vWave;
+        void main() {
+          vUv = uv;
+          vec3 p = position;
+          float w = sin(p.x * 0.5 + uTime * 1.3) * 0.05
+                  + sin(p.z * 0.75 + uTime * 0.9) * 0.045
+                  + sin((p.x + p.z) * 0.35 - uTime * 1.1) * 0.03;
+          p.y += w;
+          vWave = w;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform float uTime;
+        varying vec2 vUv;
+        varying float vWave;
+        void main() {
+          vec3 deep = vec3(0.06, 0.24, 0.33);
+          vec3 shallow = vec3(0.16, 0.46, 0.55);
+          vec3 col = mix(deep, shallow, clamp(0.5 + vWave * 3.0, 0.0, 1.0));
+          // Two drifting specular bands read as sun-shimmer on the surface.
+          float g1 = sin(vUv.x * 60.0 + uTime * 2.4 + sin(vUv.y * 8.0) * 2.0) * 0.5 + 0.5;
+          float g2 = sin(vUv.y * 44.0 - uTime * 1.7) * 0.5 + 0.5;
+          float glint = smoothstep(0.86, 1.0, g1) * smoothstep(0.8, 1.0, g2);
+          col += glint * 0.6;
+          gl_FragColor = vec4(col, 0.92);
+        }
+      `,
+    });
+    return {
+      geometry: geo,
+      material: mat,
+      center: [(minX + maxX) / 2, 0.12, (minZ + maxZ) / 2] as [number, number, number],
+    };
+  }, []);
+  matRef.current = material;
+  useFrame((_, delta) => {
+    material.uniforms.uTime.value += delta;
+  });
+  return <mesh geometry={geometry} material={material} position={center} />;
+}
+
+/** A motorboat that noses onto the visible lake, U-turns, and heads back off
+ * the east edge every BOAT_PERIOD seconds (see campus-props). */
+function Motorboat() {
+  const ref = useRef<Group>(null);
+  const clock = useRef(0);
+  useFrame((_, delta) => {
+    clock.current += delta;
+    const boat = boatState(clock.current);
+    const group = ref.current;
+    if (!group) return;
+    group.position.set(boat.x, 0.35, boat.z);
+    group.rotation.y = boat.heading;
+    group.visible = boat.visible;
+  });
+  return (
+    <group ref={ref} visible={false}>
+      {/* hull, modeled along +x with a tapered bow */}
+      <mesh position={[0, 0.15, 0]}>
+        <boxGeometry args={[2.6, 0.4, 1.1]} />
+        <meshLambertMaterial color="#c4ccd2" />
+      </mesh>
+      <mesh position={[1.5, 0.2, 0]} rotation={[0, Math.PI / 4, 0]}>
+        <boxGeometry args={[0.8, 0.4, 0.8]} />
+        <meshLambertMaterial color="#c4ccd2" />
+      </mesh>
+      {/* cabin / windscreen */}
+      <mesh position={[-0.2, 0.5, 0]}>
+        <boxGeometry args={[0.9, 0.5, 0.85]} />
+        <meshLambertMaterial color="#3f6f9a" />
+      </mesh>
+      {/* white wake trailing the stern */}
+      <mesh position={[-2.0, 0.02, 0]}>
+        <boxGeometry args={[1.6, 0.02, 1.4]} />
+        <meshLambertMaterial color="#dfeaf0" transparent opacity={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Static parked cars filling stalls while animated traffic comes and goes.
+ * Layout comes from campus-props so the interaction QA checks the same slots. */
 function ParkedCars() {
   const geometry = useMemo(() => {
-    const parking = WORLD_SURFACES.parking;
     const parts = [];
-    // Three nose-in rows across the south lot; cars sit long-axis along z so
-    // they face the aisles. ~3× the prior car count, each a palette color.
-    const rowZ = [parking.min[2] + 2, (parking.min[2] + parking.max[2]) / 2, parking.max[2] - 2];
-    const stride = 3.1;
-    const stallCount = Math.floor((parking.max[0] - parking.min[0] - 4) / stride);
-    let paint = 0;
-    for (let row = 0; row < rowZ.length; row += 1) {
-      const z = rowZ[row];
-      for (let i = 0; i < stallCount; i += 1) {
-        if ((i + row) % 4 === 3) continue; // leave gaps for the animated flow
-        const x = parking.min[0] + 3 + i * stride;
-        const color = PARKED_CAR_COLORS[paint % PARKED_CAR_COLORS.length];
-        paint += 1;
-        parts.push(
-          coloredBox([1.05, 0.55, 2.2], [x, 0.45, z], color),
-          coloredBox([0.9, 0.42, 1.15], [x, 0.93, z + 0.12], color),
-        );
-      }
+    // Nose-in cars sit long-axis along z, facing the aisles; each a palette hue.
+    for (const { x, z, color } of parkedCarSlots()) {
+      parts.push(
+        coloredBox([1.05, 0.55, 2.2], [x, 0.45, z], color),
+        coloredBox([0.9, 0.42, 1.15], [x, 0.93, z + 0.12], color),
+      );
     }
     return mergeGeometries(parts);
   }, []);
@@ -327,7 +413,6 @@ function ElevatorCabUnit({ cab, ceilingY }: { cab: ElevatorCabSpec; ceilingY: nu
   const cabRef = useRef<Group>(null);
   const doorNorthRef = useRef<Mesh>(null);
   const doorSouthRef = useRef<Mesh>(null);
-  const clock = useRef(0);
   // Fade toward whatever the floors are doing: a cab riding above the focused
   // floor must not hang in the air as a solid box (matches FadeGroup behavior,
   // but tracked per-frame because the cab moves).
@@ -335,8 +420,9 @@ function ElevatorCabUnit({ cab, ceilingY }: { cab: ElevatorCabSpec; ceilingY: nu
   const doorX = WORLD_ELEVATOR.max[0] - 0.12;
 
   useFrame((_, delta) => {
-    clock.current += delta;
-    const state = elevatorCabState(clock.current, cab);
+    // Read the shared elevator time PatientFlow publishes, so the cab and its
+    // riders are always sampled at the identical moment.
+    const state = elevatorCabState(elevatorClock.current, cab);
     const group = cabRef.current;
     if (!group) return;
     group.position.y = state.y;
@@ -434,22 +520,16 @@ function MedicalQuadcopter() {
   const clock = useRef(2);
   const [px, , pz] = WORLD_HELIPAD.center;
 
-  // Pad edge → east of the campus front → across the plaza → through the
-  // ED's open south face. Axis-aligned legs, so no wall planes are crossed.
-  const emsAnchor = WORLD_ANCHORS.ems;
+  // Rerouted (campus-props): skirts north/west of the lake and enters the ED
+  // from the south apron — never crossing the lake or the highway.
   const path = useMemo(() => {
-    const points: Vec3[] = [
-      [px, 0.45, pz + 2],
-      [px, 0.45, 14],
-      [emsAnchor[0], 0.45, 14],
-      [emsAnchor[0], 0.45, -2],
-    ];
+    const points = STRETCHER_PATH;
     const lengths: number[] = [0];
     for (let i = 1; i < points.length; i += 1) {
       lengths.push(lengths[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][2] - points[i - 1][2]));
     }
     return { points, lengths, total: lengths[lengths.length - 1] };
-  }, [px, pz, emsAnchor]);
+  }, []);
 
   useFrame((_, delta) => {
     // Verification hook mirroring __patientFlowFF: consume a one-shot
@@ -689,10 +769,9 @@ function RoadMarkings() {
     for (let x = road.min[0] + 4; x < road.max[0] - 4; x += 6) {
       parts.push(translatedBox([2.4, 0.03, 0.22], [x, 0.16, 15]));
     }
-    // Stall lines for the three parking rows.
-    const rowZ = [parking.min[2] + 2, (parking.min[2] + parking.max[2]) / 2, parking.max[2] - 2];
-    for (const z of rowZ) {
-      for (let x = parking.min[0] + 1.5; x <= parking.max[0] - 1.5; x += 3.1) {
+    // Stall lines for the parking rows (matching campus-props PARKING_ROWS).
+    for (const z of PARKING_ROWS) {
+      for (let x = parking.min[0] + 2.5; x <= parking.max[0] - 4.5; x += 3.1) {
         parts.push(translatedBox([0.16, 0.03, 2.4], [x, 0.16, z]));
       }
     }
@@ -789,6 +868,8 @@ export function ZoneEquipment({ ceilingY }: { ceilingY: number }) {
       <ElevatorCabs ceilingY={ceilingY} />
       <Helipad />
       <MedicalQuadcopter />
+      <Lake />
+      <Motorboat />
       <ParkedCars />
       <RoadMarkings />
       <ZoneOutlines ceilingY={ceilingY} />

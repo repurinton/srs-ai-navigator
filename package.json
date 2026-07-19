@@ -14,10 +14,11 @@
     "check:motion": "node scripts/check-hospital-motion.mjs",
     "check:motion-3d": "node scripts/check-hospital-motion-3d.mjs",
     "check:world": "node scripts/check-hospital-world.mjs",
+    "check:interactions": "node scripts/check-hospital-interactions.mjs",
     "check:evals": "node scripts/check-hospital-evals.mjs",
     "check:browser-evidence": "node scripts/check-hospital-browser-evidence.mjs",
     "eval:release": "node scripts/build-hospital-release-scorecard.mjs",
-    "check:all": "npm run typecheck && npm run check:story && npm run check:simulation && npm run check:motion && npm run check:motion-3d && npm run check:world && npm run check:evals && npm run check:browser-evidence && npm run build",
+    "check:all": "npm run typecheck && npm run check:story && npm run check:simulation && npm run check:motion && npm run check:motion-3d && npm run check:world && npm run check:interactions && npm run check:evals && npm run check:browser-evidence && npm run build",
     "migrate": "node scripts/migrate-original.mjs"
   },
   "dependencies": {
